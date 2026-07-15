@@ -81,17 +81,19 @@ SEJOLI_AFFILIATE_PARAM=ref
 4. Pilih jenis artikel: **Edukasi umum**, **Edukasi + produk**, atau
    **Affiliate SEJOLI**.
 5. Isi topik dan klik satu atau beberapa kategori.
-6. Pilih jumlah **1**, **3**, atau **5 artikel**.
-7. Pilih hasil **Draf** atau **Terjadwal**. Untuk jadwal, tentukan jam artikel
+6. Aktifkan **Gunakan Pustaka STIFIn**, lalu gunakan pencarian otomatis atau
+   pilih sumber tertentu. Lihat `PANDUAN_PUSTAKA_STIFIN.md` untuk konfigurasi.
+7. Pilih jumlah **1**, **3**, atau **5 artikel**.
+8. Pilih hasil **Draf** atau **Terjadwal**. Untuk jadwal, tentukan jam artikel
    pertama dan jarak hari antarartikel.
-8. Untuk produk/affiliate, masukkan nama produk, URL checkout SEJOLI, dan teks
+9. Untuk produk/affiliate, masukkan nama produk, URL checkout SEJOLI, dan teks
    tombol.
-9. Buka **Pengaturan lanjutan** jika ingin menentukan pembaca, tujuan, kata
+10. Buka **Pengaturan lanjutan** jika ingin menentukan pembaca, tujuan, kata
    kunci, panjang, nada, atau catatan sumber.
-10. Tekan tombol pembuatan artikel dan tunggu seluruh antrean selesai. Untuk
+11. Tekan tombol pembuatan artikel dan tunggu seluruh antrean selesai. Untuk
     lima artikel, setiap hasil dibuat dan disimpan satu per satu; jangan menutup
     halaman selama proses berjalan.
-11. Periksa judul, ringkasan, isi, inti artikel, tautan, dan catatan AI sebelum
+12. Periksa judul, ringkasan, isi, inti artikel, sumber halaman, tautan, dan catatan AI sebelum
     menerbitkan.
 
 Hasil tidak langsung diterbitkan tanpa pilihan admin. Mode terjadwal akan

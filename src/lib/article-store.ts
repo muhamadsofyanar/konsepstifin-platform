@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { articles, type ArticleBlock, type ArticleTone } from '@/app/edukasi/articles';
+import type { KnowledgeReference } from '@/lib/knowledge-store';
 
 export type ArticleStatus = 'draft' | 'scheduled' | 'published';
 export type ArticleContentType = 'education' | 'product' | 'affiliate';
@@ -23,6 +24,7 @@ export type StoredArticle = {
   productUrl: string;
   ctaLabel: string;
   scheduledAt: string;
+  sourceReferences: KnowledgeReference[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -124,6 +126,7 @@ function fallbackArticles(): StoredArticle[] {
     productUrl: '',
     ctaLabel: 'Pilih layanan',
     scheduledAt: '',
+    sourceReferences: [],
   }));
 }
 
@@ -154,6 +157,7 @@ export async function ensureArticleSchema() {
       await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS product_url TEXT NOT NULL DEFAULT ''`;
       await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS cta_label TEXT NOT NULL DEFAULT 'Pilih layanan'`;
       await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS source_references JSONB NOT NULL DEFAULT '[]'::jsonb`;
       await sql`CREATE INDEX IF NOT EXISTS education_articles_schedule_idx ON education_articles(status, scheduled_at)`;
       for (const article of fallbackArticles()) {
         await sql`
@@ -196,6 +200,10 @@ function rowToArticle(row: Record<string, unknown>): StoredArticle {
     productUrl: String(row.product_url ?? ''),
     ctaLabel: String(row.cta_label ?? 'Pilih layanan'),
     scheduledAt: row.scheduled_at ? new Date(String(row.scheduled_at)).toISOString() : '',
+    sourceReferences: Array.isArray(row.source_references)
+      ? row.source_references.filter((item): item is KnowledgeReference => Boolean(
+        item && typeof item === 'object' && Number((item as KnowledgeReference).sourceId) > 0,
+      )) : [],
     createdAt: row.created_at ? new Date(String(row.created_at)).toISOString() : undefined,
     updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : undefined,
   };
@@ -249,13 +257,14 @@ export async function getAdminArticles(): Promise<StoredArticle[]> {
 
 export async function createArticle(input: ArticleInput): Promise<StoredArticle> {
   await ensureArticleSchema();
-  const rows = await getDatabaseClient()`
+  const sql = getDatabaseClient();
+  const rows = await sql`
     INSERT INTO education_articles
       (slug, category, title, excerpt, published_at, read_time, tone, featured, body, takeaway, status,
-       content_type, product_name, product_url, cta_label, scheduled_at)
+       content_type, product_name, product_url, cta_label, scheduled_at, source_references)
     VALUES
       (${input.slug}, ${input.category}, ${input.title}, ${input.excerpt}, ${input.publishedAt}, ${input.readTime}, ${input.tone}, ${input.featured}, ${input.body}, ${input.takeaway}, ${input.status},
-       ${input.contentType}, ${input.productName}, ${input.productUrl}, ${input.ctaLabel}, ${input.scheduledAt || null})
+       ${input.contentType}, ${input.productName}, ${input.productUrl}, ${input.ctaLabel}, ${input.scheduledAt || null}, ${sql.json(input.sourceReferences)})
     RETURNING *
   `;
   return rowToArticle(rows[0]);
@@ -263,7 +272,8 @@ export async function createArticle(input: ArticleInput): Promise<StoredArticle>
 
 export async function updateArticle(id: number, input: ArticleInput): Promise<StoredArticle | undefined> {
   await ensureArticleSchema();
-  const rows = await getDatabaseClient()`
+  const sql = getDatabaseClient();
+  const rows = await sql`
     UPDATE education_articles SET
       slug = ${input.slug},
       category = ${input.category},
@@ -281,6 +291,7 @@ export async function updateArticle(id: number, input: ArticleInput): Promise<St
       product_url = ${input.productUrl},
       cta_label = ${input.ctaLabel},
       scheduled_at = ${input.scheduledAt || null},
+      source_references = ${sql.json(input.sourceReferences)},
       updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -353,5 +364,21 @@ export function validateArticleInput(value: unknown): ArticleInput {
     productUrl,
     ctaLabel: String(data.ctaLabel ?? 'Pilih layanan').trim().slice(0, 80) || 'Pilih layanan',
     scheduledAt,
+    sourceReferences: Array.isArray(data.sourceReferences)
+      ? data.sourceReferences.flatMap((item) => {
+        if (!item || typeof item !== 'object') return [];
+        const reference = item as Record<string, unknown>;
+        const sourceId = Number(reference.sourceId);
+        const pageNumber = Number(reference.pageNumber);
+        if (!Number.isInteger(sourceId) || sourceId <= 0 || !Number.isInteger(pageNumber) || pageNumber <= 0) return [];
+        return [{
+          sourceId,
+          pageNumber,
+          title: String(reference.title ?? '').trim().slice(0, 180),
+          category: String(reference.category ?? '').trim().slice(0, 100),
+          accessLevel: ['reference', 'internal', 'restricted'].includes(String(reference.accessLevel))
+            ? reference.accessLevel as KnowledgeReference['accessLevel'] : 'internal',
+        }];
+      }).slice(0, 30) : [],
   };
 }

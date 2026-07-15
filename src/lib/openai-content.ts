@@ -1,4 +1,5 @@
 import type { ArticleContentType, ArticleInput } from '@/lib/article-store';
+import { findKnowledgeContext } from '@/lib/knowledge-store';
 
 export type ArticleGenerationRequest = {
   topic: string;
@@ -16,6 +17,9 @@ export type ArticleGenerationRequest = {
   variationNumber: number;
   variationTotal: number;
   avoidTitles: string[];
+  useKnowledge: boolean;
+  knowledgeSourceIds: number[];
+  knowledgeContext?: string;
 };
 
 type GeneratedArticle = {
@@ -110,6 +114,10 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
   const variationNumber = Math.min(variationTotal, Math.max(1, Number(data.variationNumber) || 1));
   const avoidTitles = Array.isArray(data.avoidTitles)
     ? data.avoidTitles.map((title) => cleanText(title, 180)).filter(Boolean).slice(0, 20) : [];
+  const useKnowledge = data.useKnowledge !== false;
+  const knowledgeSourceIds = Array.isArray(data.knowledgeSourceIds)
+    ? [...new Set(data.knowledgeSourceIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))].slice(0, 30)
+    : [];
 
   if (topic.length < 8) throw new Error('Topik minimal 8 karakter.');
   if (audience.length < 3) throw new Error('Tentukan pembaca sasaran.');
@@ -120,14 +128,20 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
   return {
     topic, audience, objective, category, keywords, sourceNotes, length, tone,
     contentType, productName, productUrl, ctaLabel, variationNumber, variationTotal, avoidTitles,
+    useKnowledge, knowledgeSourceIds,
   };
 }
 
 function buildArticlePrompt(input: ArticleGenerationRequest) {
   const wordTargets = { ringkas: '600–800', sedang: '900–1.200', mendalam: '1.400–1.800' };
+  const knowledgeInstruction = input.knowledgeContext
+    ? `Gunakan potongan Pustaka STIFIn berikut sebagai landasan utama. Nomor halaman hanya untuk jejak pemeriksaan admin. Jangan mengarang isi yang tidak terdapat di dalam potongan. Jangan menyalin panjang secara verbatim.\n\n${input.knowledgeContext}`
+    : input.useKnowledge
+      ? 'Tidak ditemukan potongan Pustaka STIFIn yang relevan. Jangan membuat klaim khusus tentang STIFIn yang tidak diberikan oleh admin.'
+      : 'Pustaka STIFIn tidak dipakai pada permintaan ini.';
   const sourceInstruction = input.sourceNotes
-    ? `Gunakan catatan sumber admin berikut sebagai batas fakta utama:\n${input.sourceNotes}`
-    : 'Tidak ada catatan sumber khusus. Hindari angka, riset, kutipan, atau klaim ilmiah spesifik yang tidak dapat diverifikasi.';
+    ? `Catatan tambahan admin:\n${input.sourceNotes}`
+    : 'Tidak ada catatan tambahan admin. Hindari angka, riset, kutipan, atau klaim ilmiah spesifik yang tidak dapat diverifikasi.';
   const contentInstruction = input.contentType === 'education'
     ? 'Jenis konten: edukasi umum. Fokus pada manfaat pembaca dan jangan memaksakan penjualan.'
     : input.contentType === 'product'
@@ -146,7 +160,9 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
       'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
       'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
-      'Isi body memakai format sederhana: setiap subjudul diawali ##, daftar diawali -, dan paragraf dipisahkan baris kosong.',
+      'Buat pembuka 2–3 kalimat, lalu 3–5 subjudul yang runtut. Setiap paragraf berisi 2–4 kalimat dan dipisahkan satu baris kosong.',
+      'Isi body memakai format: subjudul diawali ## dan daftar diawali -. Gunakan daftar hanya jika benar-benar membantu, bukan untuk seluruh isi.',
+      'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, dan kesimpulan yang sekadar mengulang pembuka.',
       'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
     ].join(' '),
     userInput: [
@@ -160,6 +176,7 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       contentInstruction,
       variationInstruction,
       avoidInstruction,
+      knowledgeInstruction,
       sourceInstruction,
       'Pada editorialNotes, tuliskan singkat bagian faktual yang tetap perlu dicek admin sebelum diterbitkan.',
     ].join('\n'),
@@ -313,9 +330,23 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
     throw new AiProviderError(`${variable} belum dikonfigurasi di Coolify.`, 503);
   }
 
+  let knowledge = { context: '', references: [] as Awaited<ReturnType<typeof findKnowledgeContext>>['references'] };
+  if (input.useKnowledge) {
+    try {
+      const result = await findKnowledgeContext({
+        query: `${input.topic} ${input.category} ${input.keywords}`,
+        sourceIds: input.knowledgeSourceIds,
+      });
+      knowledge = { context: result.context, references: result.references };
+    } catch (error) {
+      console.error('Pustaka STIFIn tidak dapat dicari.', error);
+      throw new AiProviderError('Pustaka STIFIn tidak dapat dibaca. Periksa database lalu coba kembali.', 503);
+    }
+  }
+  const groundedInput = { ...input, knowledgeContext: knowledge.context };
   const raw = configuration.provider === 'gemini'
-    ? await generateWithGemini(input, configuration.model)
-    : await generateWithOpenAi(input, configuration.model);
+    ? await generateWithGemini(groundedInput, configuration.model)
+    : await generateWithOpenAi(groundedInput, configuration.model);
   const generated = parseGeneratedArticle(raw);
   const slugSource = generated.slug || generated.title;
   const slug = cleanText(slugSource, 180).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -337,6 +368,7 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
     productUrl: input.productUrl,
     ctaLabel: input.ctaLabel,
     scheduledAt: '',
+    sourceReferences: knowledge.references,
   };
   if (!article.title || !article.slug || !article.excerpt || !article.body) {
     throw new AiProviderError('Hasil AI belum lengkap. Silakan coba lagi.', 502);
@@ -346,6 +378,7 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
     editorialNotes: cleanText(generated.editorialNotes, 1000),
     model: configuration.model,
     provider: configuration.provider,
+    sources: knowledge.references,
   };
 }
 

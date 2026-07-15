@@ -11,6 +11,7 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
 - Dashboard artikel dengan login admin, status draf/terjadwal/terbit, serta penyimpanan PostgreSQL.
 - Generator Gemini/OpenAI untuk 1, 3, atau 5 artikel sekaligus dengan kategori yang dapat diklik.
+- Pustaka STIFIn privat untuk mengunggah PDF, mengekstrak teks per halaman, dan memberi sumber pada artikel AI.
 - Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
 - Komentar bermoderasi, like, share, klik produk, dan statistik interaksi.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
@@ -19,6 +20,7 @@ Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 Panduan mengaktifkan editor dan PostgreSQL tersedia di
 `PANDUAN_DASHBOARD_ARTIKEL.md`.
 Panduan fitur AI dan interaksi tersedia di `PANDUAN_AI_DAN_INTERAKSI.md`.
+Panduan Pustaka STIFIn tersedia di `PANDUAN_PUSTAKA_STIFIN.md`.
 
 ## Memasang link checkout SEJOLI
 
