@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { articles } from './edukasi/articles';
 import { affiliatePrograms, faqItems, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from './site-config';
 
 type Tab = 'ringkasan' | 'pesanan' | 'pelanggan' | 'promotor' | 'voucher' | 'program' | 'laporan' | 'pengaturan';
@@ -155,7 +157,7 @@ function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: 
       <a className="public-brand logo-brand" href="#" aria-label="STIFIn Konsep - kembali ke beranda">
         <Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority />
       </a>
-      <nav><a href="#manfaat">Manfaat</a><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Jadi Promotor</a><a href="#affiliate">Affiliate</a></nav>
+      <nav><a href="#manfaat">Manfaat</a><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Jadi Promotor</a><a href="#affiliate">Affiliate</a><Link href="/edukasi">Edukasi</Link></nav>
       <div><button className="text-button" onClick={onAdmin}>Masuk tim</button><a className="public-cta" href="#produk">Pilih layanan</a></div>
     </header>
     <main>
@@ -175,11 +177,13 @@ function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: 
 
       <section id="affiliate" className="section affiliate-section"><div className="section-heading"><span>PROGRAM AFFILIATE</span><h2>Dua jalur untuk ikut bertumbuh.</h2><p>Mulai dari merekomendasikan layanan, membangun penghasilan, dan bila sesuai melanjutkan perjalanan menuju promotor resmi.</p></div><div className="affiliate-grid">{affiliatePrograms.map((program,index)=><article className={index===1?'affiliate-card official':'affiliate-card'} key={program.title}><small>{program.eyebrow}</small><h3>{program.title}</h3><p>{program.description}</p><ul>{program.points.map(point=><li key={point}>✓ {point}</li>)}</ul><button onClick={()=>checkout(program.linkKey)}>{program.action} →</button></article>)}</div><div className="affiliate-flow"><span>Bagikan tautan</span><i>→</i><span>Transaksi tervalidasi</span><i>→</i><span>Komisi tercatat</span><i>→</i><span>Tumbuh ke tahap berikutnya</span></div></section>
 
+      <section className="section home-education"><div className="education-section-head"><div><span>PUSAT EDUKASI</span><h2>Wawasan umum untuk bertumbuh lebih sadar.</h2></div><div><p>Artikel praktis tentang pengembangan diri, keluarga, belajar, dan kolaborasi.</p><Link href="/edukasi">Lihat semua artikel →</Link></div></div><div className="home-article-grid">{articles.slice(0,3).map((article,index)=><article key={article.slug}><Link className={`article-cover ${article.tone}`} href={`/edukasi/${article.slug}`}><span>{article.category}</span><b>{String(index+1).padStart(2,'0')}</b><small>{article.readTime}</small></Link><div><span>{article.category}</span><h3><Link href={`/edukasi/${article.slug}`}>{article.title}</Link></h3><p>{article.excerpt}</p><Link href={`/edukasi/${article.slug}`}>Baca artikel →</Link></div></article>)}</div></section>
+
       <section className="section faq-section"><div className="section-heading"><span>PERTANYAAN UMUM</span><h2>Sebelum Anda memilih.</h2></div><div className="faq-list">{faqItems.map(([question,answer],index)=><details key={question} open={index===0}><summary>{question}<span>＋</span></summary><p>{answer}</p></details>)}</div></section>
 
       <section className="final-cta"><div><span>SIAP MEMULAI?</span><h2>Pilih jalur yang sesuai dengan tujuan Anda.</h2><p>Pesan tes untuk diri dan keluarga, ajukan program kelompok, atau mulai perjalanan sebagai affiliate maupun calon promotor.</p></div><div><a className="public-cta big" href="#produk">Pilih layanan tes →</a><a href="#promotor">Lihat jalur promotor</a></div></section>
     </main>
-    <footer><div className="public-brand logo-brand footer-logo"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} /></div><div className="footer-links"><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Promotor</a><a href="#affiliate">Affiliate</a></div><p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p><small>Identitas cabang resmi dicantumkan pada dokumen dan kegiatan formal sesuai ketentuan. Informasi harga, bonus, komisi, dan persyaratan final mengikuti halaman checkout serta kebijakan resmi yang berlaku.</small></footer>
+    <footer><div className="public-brand logo-brand footer-logo"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} /></div><div className="footer-links"><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Promotor</a><a href="#affiliate">Affiliate</a><Link href="/edukasi">Edukasi</Link></div><p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p><small>Identitas cabang resmi dicantumkan pada dokumen dan kegiatan formal sesuai ketentuan. Informasi harga, bonus, komisi, dan persyaratan final mengikuti halaman checkout serta kebijakan resmi yang berlaku.</small></footer>
   </div>;
 }
 

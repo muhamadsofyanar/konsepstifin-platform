@@ -8,7 +8,10 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Bonus produk berupa e-book, video, atau fasilitas lain yang mudah disesuaikan.
 - Jalur calon promotor: Preview, WSL 1, WSL 2, lalu ID dan alat sesuai persyaratan.
 - Dua program affiliate: Affiliate Umum dan Affiliate Promotor Resmi.
+- Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
 - Dashboard operasional versi MVP tetap tersedia melalui tombol **Masuk tim**.
+
+Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 
 ## Memasang link checkout SEJOLI
 
