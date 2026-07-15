@@ -140,6 +140,17 @@ export async function recordShare(slug: string, visitorToken: string, channel: s
   return true;
 }
 
+export async function recordCta(slug: string, visitorToken: string, channel: string) {
+  const articleId = await articleIdForSlug(slug);
+  if (!articleId) return false;
+  await getDatabaseClient()`
+    INSERT INTO article_events (article_id, visitor_token, event_type, channel)
+    VALUES (${articleId}, ${visitorToken}, 'cta', ${channel})
+    ON CONFLICT DO NOTHING
+  `;
+  return true;
+}
+
 export async function createComment(slug: string, input: { name: string; email: string; body: string; status: CommentStatus }) {
   const articleId = await articleIdForSlug(slug);
   if (!articleId) return undefined;
@@ -160,6 +171,7 @@ export async function getAdminEngagement() {
         (SELECT COUNT(*)::int FROM article_events WHERE event_type = 'view') AS views,
         (SELECT COUNT(*)::int FROM article_likes) AS likes,
         (SELECT COUNT(*)::int FROM article_events WHERE event_type = 'share') AS shares,
+        (SELECT COUNT(*)::int FROM article_events WHERE event_type = 'cta') AS cta_clicks,
         (SELECT COUNT(*)::int FROM article_comments WHERE status = 'approved') AS approved_comments,
         (SELECT COUNT(*)::int FROM article_comments WHERE status = 'pending') AS pending_comments
     `,
@@ -174,11 +186,13 @@ export async function getAdminEngagement() {
         COALESCE(v.views, 0)::int AS views,
         COALESCE(l.likes, 0)::int AS likes,
         COALESCE(s.shares, 0)::int AS shares,
+        COALESCE(ct.cta_clicks, 0)::int AS cta_clicks,
         COALESCE(c.comments, 0)::int AS comments
       FROM education_articles a
       LEFT JOIN (SELECT article_id, COUNT(*) AS views FROM article_events WHERE event_type = 'view' GROUP BY article_id) v ON v.article_id = a.id
       LEFT JOIN (SELECT article_id, COUNT(*) AS likes FROM article_likes GROUP BY article_id) l ON l.article_id = a.id
       LEFT JOIN (SELECT article_id, COUNT(*) AS shares FROM article_events WHERE event_type = 'share' GROUP BY article_id) s ON s.article_id = a.id
+      LEFT JOIN (SELECT article_id, COUNT(*) AS cta_clicks FROM article_events WHERE event_type = 'cta' GROUP BY article_id) ct ON ct.article_id = a.id
       LEFT JOIN (SELECT article_id, COUNT(*) AS comments FROM article_comments WHERE status = 'approved' GROUP BY article_id) c ON c.article_id = a.id
       WHERE a.status = 'published'
       ORDER BY COALESCE(v.views, 0) + COALESCE(l.likes, 0) * 3 + COALESCE(s.shares, 0) * 2 DESC, a.published_at DESC
@@ -191,6 +205,7 @@ export async function getAdminEngagement() {
       views: Number(metrics.views ?? 0),
       likes: Number(metrics.likes ?? 0),
       shares: Number(metrics.shares ?? 0),
+      ctaClicks: Number(metrics.cta_clicks ?? 0),
       approvedComments: Number(metrics.approved_comments ?? 0),
       pendingComments: Number(metrics.pending_comments ?? 0),
     },
@@ -208,6 +223,7 @@ export async function getAdminEngagement() {
       views: Number(row.views),
       likes: Number(row.likes),
       shares: Number(row.shares),
+      ctaClicks: Number(row.cta_clicks),
       comments: Number(row.comments),
     })),
   };
@@ -226,4 +242,3 @@ export async function deleteComment(id: number) {
   const rows = await getDatabaseClient()`DELETE FROM article_comments WHERE id = ${id} RETURNING id`;
   return Boolean(rows[0]);
 }
-

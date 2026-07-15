@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseConfigured } from '@/lib/article-store';
-import { createComment, getPublicEngagement, recordShare, recordView, toggleLike, type CommentStatus } from '@/lib/engagement-store';
+import { createComment, getPublicEngagement, recordCta, recordShare, recordView, toggleLike, type CommentStatus } from '@/lib/engagement-store';
 import { moderateComment } from '@/lib/openai-content';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -77,6 +77,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return withVisitorCookie(NextResponse.json({ ok: true }), currentVisitor.token, currentVisitor.fresh);
     }
 
+    if (action === 'cta') {
+      if (String(data.channel ?? '') !== 'sejoli') return NextResponse.json({ message: 'Tujuan tautan tidak valid.' }, { status: 400 });
+      const rate = checkRateLimit(request, `cta:${slug}`, 30, 60 * 1000);
+      if (rate.allowed) await recordCta(slug, currentVisitor.token, 'sejoli');
+      return withVisitorCookie(NextResponse.json({ ok: true }), currentVisitor.token, currentVisitor.fresh);
+    }
+
     if (action === 'comment') {
       const rate = checkRateLimit(request, `comment:${slug}`, 4, 30 * 60 * 1000);
       if (!rate.allowed) {
@@ -105,4 +112,3 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   return NextResponse.json({ message: 'Aksi tidak dikenal.' }, { status: 400 });
 }
-

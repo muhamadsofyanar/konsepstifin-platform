@@ -1,4 +1,4 @@
-import type { ArticleInput } from '@/lib/article-store';
+import type { ArticleContentType, ArticleInput } from '@/lib/article-store';
 
 export type ArticleGenerationRequest = {
   topic: string;
@@ -9,6 +9,13 @@ export type ArticleGenerationRequest = {
   sourceNotes: string;
   length: 'ringkas' | 'sedang' | 'mendalam';
   tone: 'hangat' | 'praktis' | 'profesional';
+  contentType: ArticleContentType;
+  productName: string;
+  productUrl: string;
+  ctaLabel: string;
+  variationNumber: number;
+  variationTotal: number;
+  avoidTitles: string[];
 };
 
 type GeneratedArticle = {
@@ -22,10 +29,60 @@ type GeneratedArticle = {
   editorialNotes: string;
 };
 
+export type AiProvider = 'gemini' | 'openai';
+
+export class AiProviderError extends Error {
+  constructor(message: string, public status = 502, public retryAfter?: number) {
+    super(message);
+    this.name = 'AiProviderError';
+  }
+}
+
 const allowedLengths = ['ringkas', 'sedang', 'mendalam'] as const;
 const allowedTones = ['hangat', 'praktis', 'profesional'] as const;
+const allowedContentTypes: ArticleContentType[] = ['education', 'product', 'affiliate'];
+const articleSchema = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    slug: { type: 'string' },
+    category: { type: 'string' },
+    excerpt: { type: 'string' },
+    body: { type: 'string' },
+    takeaway: { type: 'string' },
+    readTime: { type: 'string' },
+    editorialNotes: { type: 'string' },
+  },
+  required: ['title', 'slug', 'category', 'excerpt', 'body', 'takeaway', 'readTime', 'editorialNotes'],
+} as const;
 
-export const aiConfigured = () => Boolean(process.env.OPENAI_API_KEY);
+export function getAiConfiguration() {
+  const requested = process.env.AI_PROVIDER?.trim().toLowerCase();
+  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+  const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
+  let provider: AiProvider | null = null;
+
+  if (requested === 'gemini') provider = 'gemini';
+  else if (requested === 'openai') provider = 'openai';
+  else if (hasGemini) provider = 'gemini';
+  else if (hasOpenAi) provider = 'openai';
+
+  const ready = provider === 'gemini' ? hasGemini : provider === 'openai' ? hasOpenAi : false;
+  const model = provider === 'gemini'
+    ? process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite'
+    : provider === 'openai'
+      ? process.env.OPENAI_MODEL?.trim() || process.env.AI_MODEL?.trim() || 'gpt-5.6-luna'
+      : '';
+
+  return {
+    ready,
+    provider,
+    providerLabel: provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : 'Belum aktif',
+    model,
+  };
+}
+
+export const aiConfigured = () => getAiConfiguration().ready;
 
 function cleanText(value: unknown, max: number) {
   return String(value ?? '').trim().slice(0, max);
@@ -44,14 +101,72 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
     ? data.length as ArticleGenerationRequest['length'] : 'sedang';
   const tone = allowedTones.includes(data.tone as typeof allowedTones[number])
     ? data.tone as ArticleGenerationRequest['tone'] : 'hangat';
+  const contentType = allowedContentTypes.includes(data.contentType as ArticleContentType)
+    ? data.contentType as ArticleContentType : 'education';
+  const productName = cleanText(data.productName, 160);
+  const productUrl = cleanText(data.productUrl, 1000);
+  const ctaLabel = cleanText(data.ctaLabel, 80) || 'Lihat pilihan layanan';
+  const variationTotal = Math.min(5, Math.max(1, Number(data.variationTotal) || 1));
+  const variationNumber = Math.min(variationTotal, Math.max(1, Number(data.variationNumber) || 1));
+  const avoidTitles = Array.isArray(data.avoidTitles)
+    ? data.avoidTitles.map((title) => cleanText(title, 180)).filter(Boolean).slice(0, 20) : [];
 
   if (topic.length < 8) throw new Error('Topik minimal 8 karakter.');
   if (audience.length < 3) throw new Error('Tentukan pembaca sasaran.');
   if (objective.length < 8) throw new Error('Tujuan artikel minimal 8 karakter.');
-  return { topic, audience, objective, category, keywords, sourceNotes, length, tone };
+  if (contentType !== 'education' && (!productName || !productUrl)) {
+    throw new Error('Nama dan alamat produk wajib diisi untuk artikel produk atau affiliate.');
+  }
+  return {
+    topic, audience, objective, category, keywords, sourceNotes, length, tone,
+    contentType, productName, productUrl, ctaLabel, variationNumber, variationTotal, avoidTitles,
+  };
 }
 
-function outputText(result: Record<string, unknown>) {
+function buildArticlePrompt(input: ArticleGenerationRequest) {
+  const wordTargets = { ringkas: '600–800', sedang: '900–1.200', mendalam: '1.400–1.800' };
+  const sourceInstruction = input.sourceNotes
+    ? `Gunakan catatan sumber admin berikut sebagai batas fakta utama:\n${input.sourceNotes}`
+    : 'Tidak ada catatan sumber khusus. Hindari angka, riset, kutipan, atau klaim ilmiah spesifik yang tidak dapat diverifikasi.';
+  const contentInstruction = input.contentType === 'education'
+    ? 'Jenis konten: edukasi umum. Fokus pada manfaat pembaca dan jangan memaksakan penjualan.'
+    : input.contentType === 'product'
+      ? `Jenis konten: edukasi dengan rekomendasi produk “${input.productName}”. Jelaskan konteks kebutuhan secara wajar tanpa janji hasil atau klaim berlebihan.`
+      : `Jenis konten: artikel affiliate transparan untuk produk “${input.productName}”. Tetap utamakan edukasi, jangan berpura-pura memiliki pengalaman pribadi, dan jangan menyembunyikan sifat promosinya.`;
+  const variationInstruction = input.variationTotal > 1
+    ? `Ini artikel ${input.variationNumber} dari ${input.variationTotal}. Pilih sudut pandang, judul, pembuka, dan struktur yang berbeda dari artikel lain dalam paket.`
+    : 'Buat satu artikel dengan sudut pandang yang spesifik dan tidak generik.';
+  const avoidInstruction = input.avoidTitles.length
+    ? `Jangan memakai atau mendekati judul berikut:\n- ${input.avoidTitles.join('\n- ')}`
+    : 'Tidak ada daftar judul yang perlu dihindari.';
+
+  return {
+    systemInstruction: [
+      'Anda adalah editor senior berbahasa Indonesia untuk pusat edukasi umum Konsep STIFIn.',
+      'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
+      'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
+      'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
+      'Isi body memakai format sederhana: setiap subjudul diawali ##, daftar diawali -, dan paragraf dipisahkan baris kosong.',
+      'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
+    ].join(' '),
+    userInput: [
+      `Topik: ${input.topic}`,
+      `Pembaca: ${input.audience}`,
+      `Tujuan: ${input.objective}`,
+      `Kategori: ${input.category}`,
+      `Kata kunci: ${input.keywords || '-'}`,
+      `Nada: ${input.tone}`,
+      `Panjang target: ${wordTargets[input.length]} kata`,
+      contentInstruction,
+      variationInstruction,
+      avoidInstruction,
+      sourceInstruction,
+      'Pada editorialNotes, tuliskan singkat bagian faktual yang tetap perlu dicek admin sebelum diterbitkan.',
+    ].join('\n'),
+  };
+}
+
+function openAiOutputText(result: Record<string, unknown>) {
   const outputs = Array.isArray(result.output) ? result.output : [];
   for (const output of outputs) {
     if (!output || typeof output !== 'object') continue;
@@ -66,88 +181,143 @@ function outputText(result: Record<string, unknown>) {
   return '';
 }
 
-export async function generateArticleDraft(input: ArticleGenerationRequest) {
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY belum dikonfigurasi di Coolify.');
-  const model = process.env.AI_MODEL?.trim() || 'gpt-5.6-luna';
-  const wordTargets = { ringkas: '600–800', sedang: '900–1.200', mendalam: '1.400–1.800' };
-  const sourceInstruction = input.sourceNotes
-    ? `Gunakan catatan sumber admin berikut sebagai batas fakta utama:\n${input.sourceNotes}`
-    : 'Tidak ada catatan sumber khusus. Hindari angka, riset, kutipan, atau klaim ilmiah spesifik yang tidak dapat diverifikasi.';
+function geminiOutputText(result: Record<string, unknown>) {
+  if (typeof result.text === 'string') return result.text;
+  const candidates = Array.isArray(result.candidates) ? result.candidates : [];
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== 'object') continue;
+    const content = (candidate as { content?: unknown }).content;
+    if (!content || typeof content !== 'object') continue;
+    const parts = Array.isArray((content as { parts?: unknown[] }).parts)
+      ? (content as { parts: unknown[] }).parts : [];
+    const text = parts.map((part) => part && typeof part === 'object'
+      ? String((part as { text?: unknown }).text ?? '') : '').join('');
+    if (text) return text;
+  }
+  if (typeof result.title === 'string' && typeof result.body === 'string') return JSON.stringify(result);
+  return '';
+}
 
+async function responseJson(response: Response) {
+  const text = await response.text();
+  if (!text) return {} as Record<string, unknown>;
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { raw: text } as Record<string, unknown>;
+  }
+}
+
+function apiErrorMessage(result: Record<string, unknown>) {
+  return result.error && typeof result.error === 'object'
+    ? String((result.error as { message?: unknown }).message ?? '') : '';
+}
+
+async function generateWithGemini(input: ArticleGenerationRequest, model: string) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new AiProviderError('GEMINI_API_KEY belum dikonfigurasi di Coolify.', 503);
+  const prompt = buildArticlePrompt(input);
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'x-goog-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: prompt.systemInstruction }] },
+      contents: [{ role: 'user', parts: [{ text: prompt.userInput }] }],
+      generationConfig: {
+        responseFormat: { text: { mimeType: 'application/json', schema: articleSchema } },
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+      },
+    }),
+    signal: AbortSignal.timeout(90_000),
+  });
+  const result = await responseJson(response);
+  if (!response.ok) {
+    const detail = apiErrorMessage(result);
+    console.error('Gemini article generation failed', response.status, detail);
+    const retryAfter = Number(response.headers.get('retry-after')) || undefined;
+    if (response.status === 429) {
+      throw new AiProviderError('Batas gratis Gemini sedang tercapai. Tunggu sebentar lalu coba kembali, atau cek Rate Limits di Google AI Studio.', 429, retryAfter);
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new AiProviderError('API key Gemini tidak valid atau belum diizinkan. Periksa GEMINI_API_KEY di Coolify.', 503);
+    }
+    if (response.status === 400 || response.status === 404) {
+      throw new AiProviderError('Model Gemini tidak tersedia untuk API key ini. Periksa GEMINI_MODEL di Coolify.', 400);
+    }
+    throw new AiProviderError('Gemini belum dapat membuat artikel. Coba lagi atau periksa status layanan Google AI.', 502);
+  }
+  return geminiOutputText(result);
+}
+
+async function generateWithOpenAi(input: ArticleGenerationRequest, model: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new AiProviderError('OPENAI_API_KEY belum dikonfigurasi di Coolify.', 503);
+  const prompt = buildArticlePrompt(input);
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       model,
       store: false,
-      instructions: [
-        'Anda adalah editor senior berbahasa Indonesia untuk pusat edukasi umum Konsep STIFIn.',
-        'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
-        'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
-        'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
-        'Isi body memakai format sederhana: setiap subjudul diawali ##, daftar diawali -, dan paragraf dipisahkan baris kosong.',
-        'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
-      ].join(' '),
-      input: [
-        `Topik: ${input.topic}`,
-        `Pembaca: ${input.audience}`,
-        `Tujuan: ${input.objective}`,
-        `Kategori: ${input.category}`,
-        `Kata kunci: ${input.keywords || '-'}`,
-        `Nada: ${input.tone}`,
-        `Panjang target: ${wordTargets[input.length]} kata`,
-        sourceInstruction,
-        'Pada editorialNotes, tuliskan singkat bagian faktual yang tetap perlu dicek admin sebelum diterbitkan.',
-      ].join('\n'),
+      instructions: prompt.systemInstruction,
+      input: prompt.userInput,
       text: {
         format: {
           type: 'json_schema',
           name: 'konsepstifin_article_draft',
           strict: true,
-          schema: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              title: { type: 'string' },
-              slug: { type: 'string' },
-              category: { type: 'string' },
-              excerpt: { type: 'string' },
-              body: { type: 'string' },
-              takeaway: { type: 'string' },
-              readTime: { type: 'string' },
-              editorialNotes: { type: 'string' },
-            },
-            required: ['title', 'slug', 'category', 'excerpt', 'body', 'takeaway', 'readTime', 'editorialNotes'],
-          },
+          schema: { ...articleSchema, additionalProperties: false },
         },
       },
     }),
     signal: AbortSignal.timeout(90_000),
   });
-
-  const result = await response.json() as Record<string, unknown>;
+  const result = await responseJson(response);
   if (!response.ok) {
-    const apiError = result.error && typeof result.error === 'object'
-      ? String((result.error as { message?: unknown }).message ?? '') : '';
-    console.error('OpenAI article generation failed', response.status, apiError);
-    throw new Error(response.status === 429
-      ? 'Batas penggunaan AI sedang tercapai. Coba lagi beberapa saat.'
-      : 'AI belum dapat membuat artikel. Periksa API key, model, dan saldo API.');
+    const detail = apiErrorMessage(result);
+    console.error('OpenAI article generation failed', response.status, detail);
+    const retryAfter = Number(response.headers.get('retry-after')) || undefined;
+    if (response.status === 429) {
+      throw new AiProviderError('Kuota atau saldo OpenAI habis. Isi billing OpenAI atau ubah AI_PROVIDER ke gemini.', 429, retryAfter);
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new AiProviderError('API key OpenAI tidak valid atau tidak memiliki izin.', 503);
+    }
+    throw new AiProviderError('OpenAI belum dapat membuat artikel. Periksa API key, model, dan saldo API.', 502);
   }
+  return openAiOutputText(result);
+}
 
-  const raw = outputText(result);
-  if (!raw) throw new Error('AI tidak mengembalikan isi artikel. Silakan coba lagi.');
-  let generated: GeneratedArticle;
+function parseGeneratedArticle(raw: string) {
+  if (!raw) throw new AiProviderError('AI tidak mengembalikan isi artikel. Silakan coba lagi.', 502);
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   try {
-    generated = JSON.parse(raw) as GeneratedArticle;
+    return JSON.parse(cleaned) as GeneratedArticle;
   } catch {
-    throw new Error('Format hasil AI tidak valid. Silakan coba lagi.');
+    throw new AiProviderError('Format hasil AI tidak valid. Silakan coba lagi.', 502);
+  }
+}
+
+export async function generateArticleDraft(input: ArticleGenerationRequest) {
+  const configuration = getAiConfiguration();
+  if (!configuration.provider || !configuration.ready) {
+    const variable = configuration.provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
+    throw new AiProviderError(`${variable} belum dikonfigurasi di Coolify.`, 503);
   }
 
-  const slug = generated.slug.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const raw = configuration.provider === 'gemini'
+    ? await generateWithGemini(input, configuration.model)
+    : await generateWithOpenAi(input, configuration.model);
+  const generated = parseGeneratedArticle(raw);
+  const slugSource = generated.slug || generated.title;
+  const slug = cleanText(slugSource, 180).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120);
   const article: ArticleInput = {
     title: cleanText(generated.title, 180),
@@ -161,8 +331,21 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
     tone: 'forest',
     featured: false,
     status: 'draft',
+    contentType: input.contentType,
+    productName: input.productName,
+    productUrl: input.productUrl,
+    ctaLabel: input.ctaLabel,
+    scheduledAt: '',
   };
-  return { article, editorialNotes: cleanText(generated.editorialNotes, 1000), model };
+  if (!article.title || !article.slug || !article.excerpt || !article.body) {
+    throw new AiProviderError('Hasil AI belum lengkap. Silakan coba lagi.', 502);
+  }
+  return {
+    article,
+    editorialNotes: cleanText(generated.editorialNotes, 1000),
+    model: configuration.model,
+    provider: configuration.provider,
+  };
 }
 
 export async function moderateComment(text: string) {
@@ -185,4 +368,3 @@ export async function moderateComment(text: string) {
     return { flagged: false, checked: false };
   }
 }
-

@@ -51,4 +51,6 @@ Pilihan `tone`: `forest`, `leaf`, `sand`, `mint`, atau `charcoal`.
 
 Jika mengubah artikel bawaan secara manual, jalankan `npm run lint` dan
 `npm run build` sebelum deployment. Untuk pengelolaan harian, gunakan dashboard
-agar artikel dapat disimpan sebagai draf atau diterbitkan tanpa mengubah kode.
+agar artikel dapat disimpan sebagai draf, dijadwalkan, atau diterbitkan tanpa
+mengubah kode. Editor juga mendukung artikel edukasi, produk, dan affiliate
+SEJOLI.

@@ -72,7 +72,11 @@ Isi paragraf artikel.
 ```
 
 - Pilih **Draf** untuk menyimpan tanpa menampilkannya kepada publik.
-- Pilih **Terbitkan** agar artikel muncul di `/edukasi`.
+- Pilih **Jadwalkan** lalu tentukan tanggal dan jam WIB agar artikel terbit
+  otomatis sesuai jadwal.
+- Pilih **Terbitkan** agar artikel langsung muncul di `/edukasi`.
+- Pilih jenis **Edukasi + produk** atau **Affiliate SEJOLI** untuk menambahkan
+  nama produk, URL checkout, dan tombol produk ke halaman artikel.
 - Aktifkan **Jadikan artikel pilihan** untuk menempatkan artikel lebih atas.
 - Artikel yang dihapus tidak dapat dipulihkan dari dashboard.
 
@@ -83,4 +87,5 @@ Isi paragraf artikel.
   artikel bawaan agar halaman edukasi tetap tersedia.
 - Sesi login menggunakan cookie `HttpOnly`, `Secure`, dan `SameSite=Strict`.
 - Login dibatasi setelah beberapa percobaan gagal berulang.
-
+- Artikel terjadwal yang sudah jatuh tempo akan dipublikasikan saat website
+  menerima akses berikutnya. Tidak perlu menambahkan cron terpisah.

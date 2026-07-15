@@ -1,7 +1,8 @@
 import postgres from 'postgres';
 import { articles, type ArticleBlock, type ArticleTone } from '@/app/edukasi/articles';
 
-export type ArticleStatus = 'draft' | 'published';
+export type ArticleStatus = 'draft' | 'scheduled' | 'published';
+export type ArticleContentType = 'education' | 'product' | 'affiliate';
 
 export type StoredArticle = {
   id: number | string;
@@ -17,6 +18,11 @@ export type StoredArticle = {
   body: string;
   takeaway: string;
   status: ArticleStatus;
+  contentType: ArticleContentType;
+  productName: string;
+  productUrl: string;
+  ctaLabel: string;
+  scheduledAt: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -24,7 +30,8 @@ export type StoredArticle = {
 export type ArticleInput = Omit<StoredArticle, 'id' | 'publishedLabel' | 'createdAt' | 'updatedAt'>;
 
 const tones: ArticleTone[] = ['forest', 'leaf', 'sand', 'mint', 'charcoal'];
-const statuses: ArticleStatus[] = ['draft', 'published'];
+const statuses: ArticleStatus[] = ['draft', 'scheduled', 'published'];
+const contentTypes: ArticleContentType[] = ['education', 'product', 'affiliate'];
 
 const globalForDatabase = globalThis as unknown as {
   konsepStifinSql?: ReturnType<typeof postgres>;
@@ -112,6 +119,11 @@ function fallbackArticles(): StoredArticle[] {
     body: blocksToBody(article.blocks),
     takeaway: article.takeaway,
     status: 'published',
+    contentType: 'education',
+    productName: '',
+    productUrl: '',
+    ctaLabel: 'Pilih layanan',
+    scheduledAt: '',
   }));
 }
 
@@ -137,6 +149,12 @@ export async function ensureArticleSchema() {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'education'`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS product_name TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS product_url TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS cta_label TEXT NOT NULL DEFAULT 'Pilih layanan'`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ`;
+      await sql`CREATE INDEX IF NOT EXISTS education_articles_schedule_idx ON education_articles(status, scheduled_at)`;
       for (const article of fallbackArticles()) {
         await sql`
           INSERT INTO education_articles
@@ -172,15 +190,33 @@ function rowToArticle(row: Record<string, unknown>): StoredArticle {
     body: String(row.body),
     takeaway: String(row.takeaway),
     status: statuses.includes(row.status as ArticleStatus) ? row.status as ArticleStatus : 'draft',
+    contentType: contentTypes.includes(row.content_type as ArticleContentType)
+      ? row.content_type as ArticleContentType : 'education',
+    productName: String(row.product_name ?? ''),
+    productUrl: String(row.product_url ?? ''),
+    ctaLabel: String(row.cta_label ?? 'Pilih layanan'),
+    scheduledAt: row.scheduled_at ? new Date(String(row.scheduled_at)).toISOString() : '',
     createdAt: row.created_at ? new Date(String(row.created_at)).toISOString() : undefined,
     updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : undefined,
   };
 }
 
+async function publishDueArticles() {
+  if (!databaseConfigured()) return;
+  await ensureArticleSchema();
+  await getDatabaseClient()`
+    UPDATE education_articles
+    SET status = 'published',
+        published_at = (scheduled_at AT TIME ZONE 'Asia/Jakarta')::date,
+        updated_at = NOW()
+    WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <= NOW()
+  `;
+}
+
 export async function getPublishedArticles(limit?: number): Promise<StoredArticle[]> {
   if (!databaseConfigured()) return fallbackArticles().slice(0, limit);
   try {
-    await ensureArticleSchema();
+    await publishDueArticles();
     const sql = getDatabaseClient();
     const rows = limit
       ? await sql`SELECT * FROM education_articles WHERE status = 'published' ORDER BY featured DESC, published_at DESC, id DESC LIMIT ${limit}`
@@ -195,7 +231,7 @@ export async function getPublishedArticles(limit?: number): Promise<StoredArticl
 export async function getPublishedArticleBySlug(slug: string): Promise<StoredArticle | undefined> {
   if (!databaseConfigured()) return fallbackArticles().find((article) => article.slug === slug);
   try {
-    await ensureArticleSchema();
+    await publishDueArticles();
     const sql = getDatabaseClient();
     const rows = await sql`SELECT * FROM education_articles WHERE slug = ${slug} AND status = 'published' LIMIT 1`;
     return rows[0] ? rowToArticle(rows[0]) : undefined;
@@ -206,7 +242,7 @@ export async function getPublishedArticleBySlug(slug: string): Promise<StoredArt
 }
 
 export async function getAdminArticles(): Promise<StoredArticle[]> {
-  await ensureArticleSchema();
+  await publishDueArticles();
   const rows = await getDatabaseClient()`SELECT * FROM education_articles ORDER BY updated_at DESC, id DESC`;
   return rows.map((row) => rowToArticle(row));
 }
@@ -215,9 +251,11 @@ export async function createArticle(input: ArticleInput): Promise<StoredArticle>
   await ensureArticleSchema();
   const rows = await getDatabaseClient()`
     INSERT INTO education_articles
-      (slug, category, title, excerpt, published_at, read_time, tone, featured, body, takeaway, status)
+      (slug, category, title, excerpt, published_at, read_time, tone, featured, body, takeaway, status,
+       content_type, product_name, product_url, cta_label, scheduled_at)
     VALUES
-      (${input.slug}, ${input.category}, ${input.title}, ${input.excerpt}, ${input.publishedAt}, ${input.readTime}, ${input.tone}, ${input.featured}, ${input.body}, ${input.takeaway}, ${input.status})
+      (${input.slug}, ${input.category}, ${input.title}, ${input.excerpt}, ${input.publishedAt}, ${input.readTime}, ${input.tone}, ${input.featured}, ${input.body}, ${input.takeaway}, ${input.status},
+       ${input.contentType}, ${input.productName}, ${input.productUrl}, ${input.ctaLabel}, ${input.scheduledAt || null})
     RETURNING *
   `;
   return rowToArticle(rows[0]);
@@ -238,6 +276,11 @@ export async function updateArticle(id: number, input: ArticleInput): Promise<St
       body = ${input.body},
       takeaway = ${input.takeaway},
       status = ${input.status},
+      content_type = ${input.contentType},
+      product_name = ${input.productName},
+      product_url = ${input.productUrl},
+      cta_label = ${input.ctaLabel},
+      scheduled_at = ${input.scheduledAt || null},
       updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -265,8 +308,34 @@ export function validateArticleInput(value: unknown): ArticleInput {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(publishedAt) || Number.isNaN(Date.parse(`${publishedAt}T00:00:00Z`))) throw new Error('Tanggal terbit tidak valid.');
   const tone = String(data.tone ?? 'forest') as ArticleTone;
   const status = String(data.status ?? 'draft') as ArticleStatus;
+  const contentType = String(data.contentType ?? 'education') as ArticleContentType;
   if (!tones.includes(tone)) throw new Error('Warna sampul tidak valid.');
   if (!statuses.includes(status)) throw new Error('Status artikel tidak valid.');
+  if (!contentTypes.includes(contentType)) throw new Error('Jenis artikel tidak valid.');
+  const scheduledAtValue = String(data.scheduledAt ?? '').trim();
+  let scheduledAt = '';
+  if (scheduledAtValue) {
+    const parsed = new Date(scheduledAtValue);
+    if (Number.isNaN(parsed.getTime())) throw new Error('Jadwal terbit tidak valid.');
+    scheduledAt = parsed.toISOString();
+  }
+  if (status === 'scheduled' && !scheduledAt) throw new Error('Tentukan tanggal dan jam untuk artikel terjadwal.');
+  const productName = String(data.productName ?? '').trim().slice(0, 160);
+  const productUrlValue = String(data.productUrl ?? '').trim().slice(0, 1000);
+  let productUrl = '';
+  if (productUrlValue) {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(productUrlValue);
+    } catch {
+      throw new Error('Alamat produk SEJOLI tidak valid.');
+    }
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Alamat produk harus menggunakan http atau https.');
+    productUrl = parsedUrl.toString();
+  }
+  if (contentType !== 'education' && (!productName || !productUrl)) {
+    throw new Error('Nama dan alamat produk wajib diisi untuk artikel produk atau affiliate.');
+  }
   return {
     slug,
     category: text('category', 2, 80),
@@ -279,5 +348,10 @@ export function validateArticleInput(value: unknown): ArticleInput {
     body: text('body', 80, 50000),
     takeaway: text('takeaway', 15, 500),
     status,
+    contentType,
+    productName,
+    productUrl,
+    ctaLabel: String(data.ctaLabel ?? 'Pilih layanan').trim().slice(0, 80) || 'Pilih layanan',
+    scheduledAt,
   };
 }

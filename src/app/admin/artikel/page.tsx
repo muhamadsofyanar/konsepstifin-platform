@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { isAdminAuthenticated } from '@/lib/admin-auth';
 import { databaseConfigured, getAdminArticles, type StoredArticle } from '@/lib/article-store';
 import ArticleEditor from './article-editor';
-import { aiConfigured } from '@/lib/openai-content';
+import { getAiConfiguration } from '@/lib/openai-content';
 
 export const metadata = { title: 'Kelola Artikel | Konsep STIFIn' };
 export const dynamic = 'force-dynamic';
@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminArticlePage() {
   if (!await isAdminAuthenticated()) redirect('/admin/login');
   const databaseReady = databaseConfigured();
+  const ai = getAiConfiguration();
   let initialArticles: StoredArticle[] = [];
   let initialError = '';
   if (databaseReady) {
@@ -20,5 +21,5 @@ export default async function AdminArticlePage() {
       initialError = 'Database sudah dikonfigurasi, tetapi belum dapat dihubungi.';
     }
   }
-  return <ArticleEditor databaseReady={databaseReady} aiReady={aiConfigured()} initialArticles={initialArticles} initialError={initialError} />;
+  return <ArticleEditor databaseReady={databaseReady} aiReady={ai.ready} aiProvider={ai.providerLabel} aiModel={ai.model} initialArticles={initialArticles} initialError={initialError} />;
 }

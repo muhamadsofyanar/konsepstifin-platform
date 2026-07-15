@@ -9,8 +9,10 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Jalur calon promotor: Preview, WSL 1, WSL 2, lalu ID dan alat sesuai persyaratan.
 - Dua program affiliate: Affiliate Umum dan Affiliate Promotor Resmi.
 - Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
-- Dashboard artikel dengan login admin, status draf/terbit, serta penyimpanan PostgreSQL.
-- Generator draf artikel AI, komentar bermoderasi, like, share, dan statistik interaksi.
+- Dashboard artikel dengan login admin, status draf/terjadwal/terbit, serta penyimpanan PostgreSQL.
+- Generator Gemini/OpenAI untuk 1, 3, atau 5 artikel sekaligus dengan kategori yang dapat diklik.
+- Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
+- Komentar bermoderasi, like, share, klik produk, dan statistik interaksi.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.

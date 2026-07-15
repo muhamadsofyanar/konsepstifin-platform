@@ -1,5 +1,5 @@
 import { isAdminAuthenticated } from '@/lib/admin-auth';
-import { generateArticleDraft, validateGenerationRequest } from '@/lib/openai-content';
+import { AiProviderError, generateArticleDraft, validateGenerationRequest } from '@/lib/openai-content';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
@@ -16,8 +16,10 @@ export async function POST(request: Request) {
     return Response.json(generated);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Artikel AI gagal dibuat.';
-    const status = message.includes('OPENAI_API_KEY') ? 503 : 400;
-    return Response.json({ message }, { status });
+    if (error instanceof AiProviderError) {
+      const headers = error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : undefined;
+      return Response.json({ message }, { status: error.status, headers });
+    }
+    return Response.json({ message }, { status: 400 });
   }
 }
-
