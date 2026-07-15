@@ -1,4 +1,5 @@
-import type { ArticleContentType, ArticleInput } from '@/lib/article-store';
+import { blocksToBody, normalizeArticleBody, type ArticleContentType, type ArticleInput } from '@/lib/article-store';
+import type { ArticleBlock } from '@/app/edukasi/articles';
 import { findKnowledgeContext } from '@/lib/knowledge-store';
 
 export type ArticleGenerationRequest = {
@@ -27,7 +28,7 @@ type GeneratedArticle = {
   slug: string;
   category: string;
   excerpt: string;
-  body: string;
+  body: string | Array<{ heading: string; paragraphs: string[]; bullets: string[] }>;
   takeaway: string;
   readTime: string;
   editorialNotes: string;
@@ -52,7 +53,19 @@ const articleSchema = {
     slug: { type: 'string' },
     category: { type: 'string' },
     excerpt: { type: 'string' },
-    body: { type: 'string' },
+    body: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          heading: { type: 'string' },
+          paragraphs: { type: 'array', items: { type: 'string' } },
+          bullets: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['heading', 'paragraphs', 'bullets'],
+        additionalProperties: false,
+      },
+    },
     takeaway: { type: 'string' },
     readTime: { type: 'string' },
     editorialNotes: { type: 'string' },
@@ -160,8 +173,8 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
       'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
       'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
-      'Buat pembuka 2–3 kalimat, lalu 3–5 subjudul yang runtut. Setiap paragraf berisi 2–4 kalimat dan dipisahkan satu baris kosong.',
-      'Isi body memakai format: subjudul diawali ## dan daftar diawali -. Gunakan daftar hanya jika benar-benar membantu, bukan untuk seluruh isi.',
+      'Field body wajib berupa array berisi 3–5 bagian yang runtut. Setiap bagian memiliki heading, paragraphs, dan bullets.',
+      'Setiap isi paragraphs harus berupa paragraf utuh sepanjang 2–4 kalimat. Isi bullets dengan array kosong jika daftar tidak diperlukan.',
       'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, dan kesimpulan yang sekadar mengulang pembuka.',
       'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
     ].join(' '),
@@ -323,6 +336,23 @@ function parseGeneratedArticle(raw: string) {
   }
 }
 
+function generatedBodyToText(value: GeneratedArticle['body']) {
+  if (!Array.isArray(value)) return normalizeArticleBody(cleanText(value, 50_000));
+  const blocks: ArticleBlock[] = value.flatMap((section) => {
+    if (!section || typeof section !== 'object') return [];
+    const heading = cleanText(section.heading, 160) || 'Pembahasan';
+    const paragraphs = Array.isArray(section.paragraphs)
+      ? section.paragraphs.map((paragraph) => cleanText(paragraph, 3000)).filter(Boolean).slice(0, 12)
+      : [];
+    const bullets = Array.isArray(section.bullets)
+      ? section.bullets.map((bullet) => cleanText(bullet, 600)).filter(Boolean).slice(0, 12)
+      : [];
+    if (!paragraphs.length && !bullets.length) return [];
+    return [{ heading, paragraphs, bullets: bullets.length ? bullets : undefined }];
+  });
+  return normalizeArticleBody(blocksToBody(blocks));
+}
+
 export async function generateArticleDraft(input: ArticleGenerationRequest) {
   const configuration = getAiConfiguration();
   if (!configuration.provider || !configuration.ready) {
@@ -356,7 +386,7 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
     slug,
     category: cleanText(generated.category, 80) || input.category,
     excerpt: cleanText(generated.excerpt, 400),
-    body: cleanText(generated.body, 50_000),
+    body: generatedBodyToText(generated.body),
     takeaway: cleanText(generated.takeaway, 500),
     readTime: cleanText(generated.readTime, 40) || '5 menit baca',
     publishedAt: new Date().toISOString().slice(0, 10),

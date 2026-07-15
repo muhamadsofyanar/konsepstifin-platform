@@ -63,6 +63,64 @@ export function blocksToBody(blocks: ArticleBlock[]) {
   ].join('\n\n')).join('\n\n');
 }
 
+function splitReadableParagraphs(value: string) {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (!normalized) return [];
+  if (normalized.length <= 460) return [normalized];
+
+  const sentences = normalized.split(/(?<=[.!?])\s+(?=["“']?[A-ZÀ-ÖØ-Þ0-9])/u).filter(Boolean);
+  if (sentences.length < 2) return [normalized];
+
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+  for (const sentence of sentences) {
+    const nextLength = [...current, sentence].join(' ').length;
+    if (current.length && (current.length >= 3 || nextLength > 520)) {
+      paragraphs.push(current.join(' '));
+      current = [];
+    }
+    current.push(sentence);
+  }
+  if (current.length) paragraphs.push(current.join(' '));
+  return paragraphs;
+}
+
+function splitInlineHeading(value: string) {
+  const punctuation = value.search(/[?!](?=\s+["“']?[A-ZÀ-ÖØ-Þ0-9])/u);
+  if (punctuation >= 4 && punctuation < 150) {
+    return {
+      heading: value.slice(0, punctuation + 1).trim(),
+      remainder: value.slice(punctuation + 1).trim(),
+    };
+  }
+
+  const sentenceStarters = [
+    'Setiap orang ', 'Seringkali ', 'Ketika ', 'Tes STIFIn ', 'Salah satu ',
+    'Dalam praktik ', 'Artikel ini ', 'Banyak orang ', 'Orang tua ', 'Anak ',
+    'Kita ', 'Jika ', 'Sebagai ', 'Konsep STIFIn ', 'Meskipun ', 'Namun ',
+  ];
+  const candidates = sentenceStarters
+    .map((starter) => value.indexOf(starter, 18))
+    .filter((index) => index > 0);
+  const boundary = candidates.length ? Math.min(...candidates) : -1;
+  if (boundary > 0) {
+    return {
+      heading: value.slice(0, boundary).trim(),
+      remainder: value.slice(boundary).trim(),
+    };
+  }
+  return { heading: value.trim(), remainder: '' };
+}
+
+export function normalizeArticleBody(body: string) {
+  const prepared = body
+    .replace(/\r/g, '')
+    .replace(/\s+##\s+/g, '\n\n## ')
+    .replace(/([.!?:])\s+-\s+(?=["“']?[A-ZÀ-ÖØ-Þ0-9])/gu, '$1\n- ')
+    .trim();
+  return blocksToBody(bodyToBlocks(prepared));
+}
+
 export function bodyToBlocks(body: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = [];
   let current: ArticleBlock = { heading: 'Pembahasan', paragraphs: [], bullets: [] };
@@ -70,7 +128,7 @@ export function bodyToBlocks(body: string): ArticleBlock[] {
 
   const flushParagraph = () => {
     const value = paragraph.join(' ').trim();
-    if (value) current.paragraphs.push(value);
+    if (value) current.paragraphs.push(...splitReadableParagraphs(value));
     paragraph = [];
   };
   const flushBlock = () => {
@@ -85,7 +143,9 @@ export function bodyToBlocks(body: string): ArticleBlock[] {
     const line = rawLine.trim();
     if (line.startsWith('## ')) {
       flushBlock();
-      current = { heading: line.slice(3).trim() || 'Pembahasan', paragraphs: [], bullets: [] };
+      const inline = splitInlineHeading(line.slice(3).trim());
+      current = { heading: inline.heading || 'Pembahasan', paragraphs: [], bullets: [] };
+      if (inline.remainder) paragraph.push(inline.remainder);
     } else if (line.startsWith('- ')) {
       flushParagraph();
       current.bullets ??= [];
@@ -191,7 +251,7 @@ function rowToArticle(row: Record<string, unknown>): StoredArticle {
     readTime: String(row.read_time),
     tone: tones.includes(row.tone as ArticleTone) ? row.tone as ArticleTone : 'forest',
     featured: Boolean(row.featured),
-    body: String(row.body),
+    body: normalizeArticleBody(String(row.body)),
     takeaway: String(row.takeaway),
     status: statuses.includes(row.status as ArticleStatus) ? row.status as ArticleStatus : 'draft',
     contentType: contentTypes.includes(row.content_type as ArticleContentType)
@@ -356,7 +416,7 @@ export function validateArticleInput(value: unknown): ArticleInput {
     readTime: text('readTime', 3, 40),
     tone,
     featured: Boolean(data.featured),
-    body: text('body', 80, 50000),
+    body: normalizeArticleBody(text('body', 80, 50000)),
     takeaway: text('takeaway', 15, 500),
     status,
     contentType,
