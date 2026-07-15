@@ -1,12 +1,14 @@
 import type { MetadataRoute } from 'next';
-import { articles } from './edukasi/articles';
+import { getPublishedArticles } from '@/lib/article-store';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://konsepstifin.com';
+  const articles = await getPublishedArticles();
   return [
     { url: baseUrl, lastModified: new Date('2026-07-15'), changeFrequency: 'weekly', priority: 1 },
     { url: `${baseUrl}/edukasi`, lastModified: new Date('2026-07-15'), changeFrequency: 'weekly', priority: 0.8 },
     ...articles.map((article) => ({ url: `${baseUrl}/edukasi/${article.slug}`, lastModified: new Date(article.publishedAt), changeFrequency: 'monthly' as const, priority: 0.7 })),
   ];
 }
-

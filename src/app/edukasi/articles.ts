@@ -20,6 +20,8 @@ export type Article = {
   takeaway: string;
 };
 
+export type ArticlePreview = Pick<Article, 'slug' | 'category' | 'title' | 'excerpt' | 'publishedAt' | 'publishedLabel' | 'readTime' | 'tone' | 'featured'>;
+
 export const articles: Article[] = [
   {
     slug: 'alur-tes-stifin-offline',
@@ -211,4 +213,3 @@ export const articles: Article[] = [
 ];
 
 export const getArticleBySlug = (slug: string) => articles.find((article) => article.slug === slug);
-

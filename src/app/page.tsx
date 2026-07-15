@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { articles } from './edukasi/articles';
+import { articles, type ArticlePreview } from './edukasi/articles';
 import { affiliatePrograms, faqItems, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from './site-config';
 
 type Tab = 'ringkasan' | 'pesanan' | 'pelanggan' | 'promotor' | 'voucher' | 'program' | 'laporan' | 'pengaturan';
@@ -98,7 +98,7 @@ export default function Home() {
 
   if (mode === 'website') {
     return <>
-      <PublicSite onAdmin={() => notify('Portal tim akan diaktifkan setelah login aman tersedia.')} onBook={() => setBookingOpen(true)} notify={notify} />
+      <PublicSite onAdmin={() => { window.location.href = '/admin/login'; }} onBook={() => setBookingOpen(true)} notify={notify} />
       {bookingOpen && <BookingModal onClose={() => setBookingOpen(false)} onSave={(booking) => { saveBookings([booking, ...bookings]); setBookingOpen(false); notify('Permintaan berhasil dikirim'); }} />}
       {toast && <div className="toast">✓ {toast}</div>}
     </>;
@@ -141,6 +141,19 @@ export default function Home() {
 }
 
 function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: () => void; notify: (message: string) => void }) {
+  const [educationArticles, setEducationArticles] = useState<ArticlePreview[]>(articles);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/articles?limit=3', { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Artikel tidak tersedia.')))
+      .then((result: { articles?: ArticlePreview[] }) => {
+        if (result.articles?.length) setEducationArticles(result.articles);
+      })
+      .catch((error: Error) => { if (error.name !== 'AbortError') console.error(error); });
+    return () => controller.abort();
+  }, []);
+
   const checkout = (linkKey: SejoliLinkKey) => {
     const url = sejoliLinks[linkKey];
     if (url.startsWith('https://')) {
@@ -177,7 +190,7 @@ function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: 
 
       <section id="affiliate" className="section affiliate-section"><div className="section-heading"><span>PROGRAM AFFILIATE</span><h2>Dua jalur untuk ikut bertumbuh.</h2><p>Mulai dari merekomendasikan layanan, membangun penghasilan, dan bila sesuai melanjutkan perjalanan menuju promotor resmi.</p></div><div className="affiliate-grid">{affiliatePrograms.map((program,index)=><article className={index===1?'affiliate-card official':'affiliate-card'} key={program.title}><small>{program.eyebrow}</small><h3>{program.title}</h3><p>{program.description}</p><ul>{program.points.map(point=><li key={point}>✓ {point}</li>)}</ul><button onClick={()=>checkout(program.linkKey)}>{program.action} →</button></article>)}</div><div className="affiliate-flow"><span>Bagikan tautan</span><i>→</i><span>Transaksi tervalidasi</span><i>→</i><span>Komisi tercatat</span><i>→</i><span>Tumbuh ke tahap berikutnya</span></div></section>
 
-      <section className="section home-education"><div className="education-section-head"><div><span>PUSAT EDUKASI</span><h2>Wawasan umum untuk bertumbuh lebih sadar.</h2></div><div><p>Artikel praktis tentang pengembangan diri, keluarga, belajar, dan kolaborasi.</p><Link href="/edukasi">Lihat semua artikel →</Link></div></div><div className="home-article-grid">{articles.slice(0,3).map((article,index)=><article key={article.slug}><Link className={`article-cover ${article.tone}`} href={`/edukasi/${article.slug}`}><span>{article.category}</span><b>{String(index+1).padStart(2,'0')}</b><small>{article.readTime}</small></Link><div><span>{article.category}</span><h3><Link href={`/edukasi/${article.slug}`}>{article.title}</Link></h3><p>{article.excerpt}</p><Link href={`/edukasi/${article.slug}`}>Baca artikel →</Link></div></article>)}</div></section>
+      <section className="section home-education"><div className="education-section-head"><div><span>PUSAT EDUKASI</span><h2>Wawasan umum untuk bertumbuh lebih sadar.</h2></div><div><p>Artikel praktis tentang pengembangan diri, keluarga, belajar, dan kolaborasi.</p><Link href="/edukasi">Lihat semua artikel →</Link></div></div><div className="home-article-grid">{educationArticles.slice(0,3).map((article,index)=><article key={article.slug}><Link className={`article-cover ${article.tone}`} href={`/edukasi/${article.slug}`}><span>{article.category}</span><b>{String(index+1).padStart(2,'0')}</b><small>{article.readTime}</small></Link><div><span>{article.category}</span><h3><Link href={`/edukasi/${article.slug}`}>{article.title}</Link></h3><p>{article.excerpt}</p><Link href={`/edukasi/${article.slug}`}>Baca artikel →</Link></div></article>)}</div></section>
 
       <section className="section faq-section"><div className="section-heading"><span>PERTANYAAN UMUM</span><h2>Sebelum Anda memilih.</h2></div><div className="faq-list">{faqItems.map(([question,answer],index)=><details key={question} open={index===0}><summary>{question}<span>＋</span></summary><p>{answer}</p></details>)}</div></section>
 

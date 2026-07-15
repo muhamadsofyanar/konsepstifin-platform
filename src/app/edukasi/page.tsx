@@ -1,14 +1,18 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { articles } from './articles';
+import { getPublishedArticles } from '@/lib/article-store';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Edukasi | Konsep STIFIn',
   description: 'Artikel umum tentang pengembangan diri, komunikasi keluarga, proses belajar, dan kolaborasi yang lebih sadar.',
 };
 
-export default function EducationPage() {
-  const [featured, ...otherArticles] = articles;
+export default async function EducationPage() {
+  const [featured, ...otherArticles] = await getPublishedArticles();
+
+  if (!featured) return <main className="education-main"><section className="education-empty"><span>PUSAT EDUKASI</span><h1>Artikel sedang disiapkan.</h1><p>Tim kami sedang menyiapkan materi edukasi terbaru. Silakan kembali lagi dalam beberapa waktu.</p><Link className="public-cta" href="/">Kembali ke beranda</Link></section></main>;
 
   return <main className="education-main">
     <section className="education-hero">

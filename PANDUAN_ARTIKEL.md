@@ -3,9 +3,18 @@
 Halaman artikel tersedia di `/edukasi`. Setiap artikel memiliki halaman detail
 di `/edukasi/alamat-artikel`.
 
+Jika PostgreSQL dan login admin telah dikonfigurasi, kelola artikel melalui:
+
+```text
+https://konsepstifin.com/admin/login
+```
+
+Ikuti `PANDUAN_DASHBOARD_ARTIKEL.md` untuk setup Coolify.
+
 ## Lokasi penyimpanan artikel
 
-Seluruh artikel sementara disimpan dalam:
+Artikel di bawah ini berfungsi sebagai konten bawaan atau fallback ketika
+database belum tersedia:
 
 ```text
 src/app/edukasi/articles.ts
@@ -40,7 +49,6 @@ Contoh:
 
 Pilihan `tone`: `forest`, `leaf`, `sand`, `mint`, atau `charcoal`.
 
-Setelah artikel ditambahkan, jalankan `npm run lint` dan `npm run build`
-sebelum deployment. Tahap berikutnya dapat menggunakan CMS atau dashboard
-penulis tanpa mengubah alamat artikel yang sudah dipublikasikan.
-
+Jika mengubah artikel bawaan secara manual, jalankan `npm run lint` dan
+`npm run build` sebelum deployment. Untuk pengelolaan harian, gunakan dashboard
+agar artikel dapat disimpan sebagai draf atau diterbitkan tanpa mengubah kode.
