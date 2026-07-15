@@ -227,7 +227,8 @@ async function generateWithGemini(input: ArticleGenerationRequest, model: string
       systemInstruction: { parts: [{ text: prompt.systemInstruction }] },
       contents: [{ role: 'user', parts: [{ text: prompt.userInput }] }],
       generationConfig: {
-        responseFormat: { text: { mimeType: 'application/json', schema: articleSchema } },
+        responseMimeType: 'application/json',
+        responseJsonSchema: articleSchema,
         temperature: 0.7,
         maxOutputTokens: 8192,
       },
