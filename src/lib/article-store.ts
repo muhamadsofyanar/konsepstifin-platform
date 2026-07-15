@@ -33,7 +33,7 @@ const globalForDatabase = globalThis as unknown as {
 
 export const databaseConfigured = () => Boolean(process.env.DATABASE_URL);
 
-function getSql() {
+export function getDatabaseClient() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL belum dikonfigurasi.');
   if (!globalForDatabase.konsepStifinSql) {
     globalForDatabase.konsepStifinSql = postgres(process.env.DATABASE_URL, {
@@ -115,10 +115,10 @@ function fallbackArticles(): StoredArticle[] {
   }));
 }
 
-async function ensureSchema() {
+export async function ensureArticleSchema() {
   if (!globalForDatabase.konsepStifinSchema) {
     globalForDatabase.konsepStifinSchema = (async () => {
-      const sql = getSql();
+      const sql = getDatabaseClient();
       await sql`
         CREATE TABLE IF NOT EXISTS education_articles (
           id BIGSERIAL PRIMARY KEY,
@@ -180,8 +180,8 @@ function rowToArticle(row: Record<string, unknown>): StoredArticle {
 export async function getPublishedArticles(limit?: number): Promise<StoredArticle[]> {
   if (!databaseConfigured()) return fallbackArticles().slice(0, limit);
   try {
-    await ensureSchema();
-    const sql = getSql();
+    await ensureArticleSchema();
+    const sql = getDatabaseClient();
     const rows = limit
       ? await sql`SELECT * FROM education_articles WHERE status = 'published' ORDER BY featured DESC, published_at DESC, id DESC LIMIT ${limit}`
       : await sql`SELECT * FROM education_articles WHERE status = 'published' ORDER BY featured DESC, published_at DESC, id DESC`;
@@ -195,8 +195,8 @@ export async function getPublishedArticles(limit?: number): Promise<StoredArticl
 export async function getPublishedArticleBySlug(slug: string): Promise<StoredArticle | undefined> {
   if (!databaseConfigured()) return fallbackArticles().find((article) => article.slug === slug);
   try {
-    await ensureSchema();
-    const sql = getSql();
+    await ensureArticleSchema();
+    const sql = getDatabaseClient();
     const rows = await sql`SELECT * FROM education_articles WHERE slug = ${slug} AND status = 'published' LIMIT 1`;
     return rows[0] ? rowToArticle(rows[0]) : undefined;
   } catch (error) {
@@ -206,14 +206,14 @@ export async function getPublishedArticleBySlug(slug: string): Promise<StoredArt
 }
 
 export async function getAdminArticles(): Promise<StoredArticle[]> {
-  await ensureSchema();
-  const rows = await getSql()`SELECT * FROM education_articles ORDER BY updated_at DESC, id DESC`;
+  await ensureArticleSchema();
+  const rows = await getDatabaseClient()`SELECT * FROM education_articles ORDER BY updated_at DESC, id DESC`;
   return rows.map((row) => rowToArticle(row));
 }
 
 export async function createArticle(input: ArticleInput): Promise<StoredArticle> {
-  await ensureSchema();
-  const rows = await getSql()`
+  await ensureArticleSchema();
+  const rows = await getDatabaseClient()`
     INSERT INTO education_articles
       (slug, category, title, excerpt, published_at, read_time, tone, featured, body, takeaway, status)
     VALUES
@@ -224,8 +224,8 @@ export async function createArticle(input: ArticleInput): Promise<StoredArticle>
 }
 
 export async function updateArticle(id: number, input: ArticleInput): Promise<StoredArticle | undefined> {
-  await ensureSchema();
-  const rows = await getSql()`
+  await ensureArticleSchema();
+  const rows = await getDatabaseClient()`
     UPDATE education_articles SET
       slug = ${input.slug},
       category = ${input.category},
@@ -246,8 +246,8 @@ export async function updateArticle(id: number, input: ArticleInput): Promise<St
 }
 
 export async function deleteArticle(id: number) {
-  await ensureSchema();
-  const rows = await getSql()`DELETE FROM education_articles WHERE id = ${id} RETURNING id`;
+  await ensureArticleSchema();
+  const rows = await getDatabaseClient()`DELETE FROM education_articles WHERE id = ${id} RETURNING id`;
   return Boolean(rows[0]);
 }
 

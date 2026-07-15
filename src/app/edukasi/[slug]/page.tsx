@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { bodyToBlocks, getPublishedArticleBySlug, getPublishedArticles } from '@/lib/article-store';
+import ArticleEngagement from './article-engagement';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {blocks.map((block) => <section key={block.heading}><h2>{block.heading}</h2>{block.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{block.bullets && <ul>{block.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>}</section>)}
         <aside className="article-takeaway"><span>INTI ARTIKEL</span><p>{article.takeaway}</p></aside>
         <div className="article-disclaimer"><b>Catatan edukasi</b><p>Artikel ini bersifat umum dan tidak dimaksudkan sebagai diagnosis atau pengganti layanan medis, psikologis, pendidikan, maupun profesional lainnya.</p></div>
+        <ArticleEngagement slug={article.slug} title={article.title} />
       </article>
       <aside className="article-side"><div><span>TENTANG EDUKASI</span><p>Kami menyajikan materi sebagai bahan refleksi dan percakapan yang dapat disesuaikan dengan konteks pembaca.</p></div><Link className="public-cta" href="/#produk">Pilih layanan →</Link></aside>
     </div>

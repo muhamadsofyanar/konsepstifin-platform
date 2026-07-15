@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { articles, type ArticlePreview } from './edukasi/articles';
 import { affiliatePrograms, faqItems, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from './site-config';
+import MobileNavigation from './mobile-navigation';
 
 type Tab = 'ringkasan' | 'pesanan' | 'pelanggan' | 'promotor' | 'voucher' | 'program' | 'laporan' | 'pengaturan';
 type BookingStatus = 'Lead Baru' | 'Dihubungi' | 'Terjadwal' | 'Selesai' | 'Batal';
@@ -171,7 +172,7 @@ function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: 
         <Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority />
       </a>
       <nav><a href="#manfaat">Manfaat</a><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Jadi Promotor</a><a href="#affiliate">Affiliate</a><Link href="/edukasi">Edukasi</Link></nav>
-      <div><button className="text-button" onClick={onAdmin}>Masuk tim</button><a className="public-cta" href="#produk">Pilih layanan</a></div>
+      <div><MobileNavigation links={[{ href: '#manfaat', label: 'Manfaat' }, { href: '#produk', label: 'Produk' }, { href: '#proses', label: 'Cara Tes' }, { href: '#promotor', label: 'Jadi Promotor' }, { href: '#affiliate', label: 'Affiliate' }, { href: '/edukasi', label: 'Edukasi' }]} /><button className="text-button" onClick={onAdmin}>Masuk tim</button><a className="public-cta" href="#produk">Pilih layanan</a></div>
     </header>
     <main>
       <section className="hero">

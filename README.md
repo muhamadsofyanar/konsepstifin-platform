@@ -10,11 +10,13 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Dua program affiliate: Affiliate Umum dan Affiliate Promotor Resmi.
 - Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
 - Dashboard artikel dengan login admin, status draf/terbit, serta penyimpanan PostgreSQL.
+- Generator draf artikel AI, komentar bermoderasi, like, share, dan statistik interaksi.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 Panduan mengaktifkan editor dan PostgreSQL tersedia di
 `PANDUAN_DASHBOARD_ARTIKEL.md`.
+Panduan fitur AI dan interaksi tersedia di `PANDUAN_AI_DAN_INTERAKSI.md`.
 
 ## Memasang link checkout SEJOLI
 
