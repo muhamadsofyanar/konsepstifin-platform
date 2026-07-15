@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { affiliatePrograms, faqItems, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from './site-config';
 
 type Tab = 'ringkasan' | 'pesanan' | 'pelanggan' | 'promotor' | 'voucher' | 'program' | 'laporan' | 'pengaturan';
@@ -151,7 +152,9 @@ function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: 
   return <div className="public-site">
     <div className="announcement">Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI</div>
     <header className="public-nav">
-      <a className="public-brand" href="#"><span>K</span><b>Konsep STIFIn<small>Pusat layanan & jaringan</small></b></a>
+      <a className="public-brand logo-brand" href="#" aria-label="STIFIn Konsep - kembali ke beranda">
+        <Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority />
+      </a>
       <nav><a href="#manfaat">Manfaat</a><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Jadi Promotor</a><a href="#affiliate">Affiliate</a></nav>
       <div><button className="text-button" onClick={onAdmin}>Masuk tim</button><a className="public-cta" href="#produk">Pilih layanan</a></div>
     </header>
@@ -176,7 +179,7 @@ function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: 
 
       <section className="final-cta"><div><span>SIAP MEMULAI?</span><h2>Pilih jalur yang sesuai dengan tujuan Anda.</h2><p>Pesan tes untuk diri dan keluarga, ajukan program kelompok, atau mulai perjalanan sebagai affiliate maupun calon promotor.</p></div><div><a className="public-cta big" href="#produk">Pilih layanan tes →</a><a href="#promotor">Lihat jalur promotor</a></div></section>
     </main>
-    <footer><div className="public-brand"><span>K</span><b>Konsep STIFIn</b></div><div className="footer-links"><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Promotor</a><a href="#affiliate">Affiliate</a></div><p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p><small>Identitas cabang resmi dicantumkan pada dokumen dan kegiatan formal sesuai ketentuan. Informasi harga, bonus, komisi, dan persyaratan final mengikuti halaman checkout serta kebijakan resmi yang berlaku.</small></footer>
+    <footer><div className="public-brand logo-brand footer-logo"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} /></div><div className="footer-links"><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Promotor</a><a href="#affiliate">Affiliate</a></div><p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p><small>Identitas cabang resmi dicantumkan pada dokumen dan kegiatan formal sesuai ketentuan. Informasi harga, bonus, komisi, dan persyaratan final mengikuti halaman checkout serta kebijakan resmi yang berlaku.</small></footer>
   </div>;
 }
 
