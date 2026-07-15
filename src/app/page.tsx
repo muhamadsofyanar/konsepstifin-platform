@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { affiliatePrograms, faqItems, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from './site-config';
 
 type Tab = 'ringkasan' | 'pesanan' | 'pelanggan' | 'promotor' | 'voucher' | 'program' | 'laporan' | 'pengaturan';
 type BookingStatus = 'Lead Baru' | 'Dihubungi' | 'Terjadwal' | 'Selesai' | 'Batal';
@@ -71,7 +72,15 @@ export default function Home() {
 
   useEffect(() => {
     const stored = localStorage.getItem('konsepstifin-bookings');
-    if (stored) setBookings(JSON.parse(stored));
+    if (!stored) return;
+    const timer = window.setTimeout(() => {
+      try {
+        setBookings(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem('konsepstifin-bookings');
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const saveBookings = (next: Booking[]) => {
@@ -85,7 +94,11 @@ export default function Home() {
   };
 
   if (mode === 'website') {
-    return <PublicSite onAdmin={() => setMode('dashboard')} onBook={() => setBookingOpen(true)} />;
+    return <>
+      <PublicSite onAdmin={() => notify('Portal tim akan diaktifkan setelah login aman tersedia.')} onBook={() => setBookingOpen(true)} notify={notify} />
+      {bookingOpen && <BookingModal onClose={() => setBookingOpen(false)} onSave={(booking) => { saveBookings([booking, ...bookings]); setBookingOpen(false); notify('Permintaan berhasil dikirim'); }} />}
+      {toast && <div className="toast">✓ {toast}</div>}
+    </>;
   }
 
   return (
@@ -124,17 +137,46 @@ export default function Home() {
   );
 }
 
-function PublicSite({ onAdmin, onBook }: { onAdmin: () => void; onBook: () => void }) {
+function PublicSite({ onAdmin, onBook, notify }: { onAdmin: () => void; onBook: () => void; notify: (message: string) => void }) {
+  const checkout = (linkKey: SejoliLinkKey) => {
+    const url = sejoliLinks[linkKey];
+    if (url.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    notify('Link SEJOLI sedang disiapkan. Silakan isi formulir, tim kami akan membantu.');
+    onBook();
+  };
+
   return <div className="public-site">
-    <header className="public-nav"><a className="public-brand" href="#"><span>K</span><b>Konsep STIFIn</b></a><nav><a href="#manfaat">Manfaat</a><a href="#proses">Cara Tes</a><a href="#layanan">Layanan</a><a href="#promotor">Jadi Promotor</a></nav><div><button className="text-button" onClick={onAdmin}>Masuk tim</button><button className="public-cta" onClick={onBook}>Jadwalkan tes</button></div></header>
+    <div className="announcement">Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI</div>
+    <header className="public-nav">
+      <a className="public-brand" href="#"><span>K</span><b>Konsep STIFIn<small>Pusat layanan & jaringan</small></b></a>
+      <nav><a href="#manfaat">Manfaat</a><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Jadi Promotor</a><a href="#affiliate">Affiliate</a></nav>
+      <div><button className="text-button" onClick={onAdmin}>Masuk tim</button><a className="public-cta" href="#produk">Pilih layanan</a></div>
+    </header>
     <main>
-      <section className="hero"><div className="hero-copy"><div className="eyebrow">TES STIFIn RESMI · OFFLINE</div><h1>Kenali cara kerja terbaik diri Anda.</h1><p>Tes sidik jari yang membantu Anda memahami potensi genetik, pola belajar, komunikasi, dan arah pengembangan diri.</p><div className="hero-actions"><button className="public-cta big" onClick={onBook}>Pilih jadwal tes <span>→</span></button><a href="#proses">Pelajari prosesnya</a></div><div className="trust-row"><span><b>10 menit</b><small>proses pemindaian</small></span><span><b>Offline</b><small>oleh promotor resmi</small></span><span><b>Nasional</b><small>pilih kota terdekat</small></span></div></div><div className="hero-visual"><div className="orb orb-one"/><div className="orb orb-two"/><div className="result-card"><small>Hasil mesin kecerdasan</small><div className="result-type"><span>Si</span><div><b>Sensing introvert</b><small>Rajin · Teliti · Konsisten</small></div></div><div className="result-bars"><i/><i/><i/></div><p>“Pahami kekuatan alami, lalu tumbuh dengan cara yang paling sesuai.”</p></div><div className="floating-card"><span>✓</span><div><b>Hasil langsung</b><small>Disertai penjelasan</small></div></div></div></section>
-      <section className="logo-strip"><span>Dipercaya keluarga, sekolah, komunitas, dan profesional di berbagai kota Indonesia</span><div><b>JAKARTA</b><b>BANDUNG</b><b>SUMEDANG</b><b>SUBANG</b><b>PEKALONGAN</b></div></section>
-      <section id="manfaat" className="section"><div className="section-heading"><span>MENGAPA TES STIFIn?</span><h2>Satu hasil, banyak manfaat praktis.</h2><p>Bukan sekadar mengetahui tipe. Anda mendapat bahasa sederhana untuk memahami diri dan mengambil keputusan sehari-hari.</p></div><div className="benefit-grid">{[['01','Belajar lebih efektif','Temukan pola belajar dan cara menyerap informasi yang lebih nyaman.'],['02','Komunikasi lebih nyambung','Pahami cara menyampaikan pesan kepada pasangan, anak, atau tim.'],['03','Arah pengembangan diri','Fokus pada kekuatan alami dan susun langkah pertumbuhan yang realistis.'],['04','Kolaborasi lebih sehat','Kenali kebutuhan setiap orang agar pembagian peran lebih tepat.']].map(x=><article key={x[0]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p></article>)}</div></section>
-      <section id="proses" className="process-section"><div><span>PROSES TES</span><h2>Sederhana, sekitar 10 menit.</h2><p>Karena menggunakan pemindaian sidik jari, tes dilakukan secara tatap muka oleh promotor resmi.</p><button className="dark-button" onClick={onBook}>Cari jadwal terdekat →</button></div><ol><li><b>01</b><div><h3>Pilih kota & jadwal</h3><p>Tim kami mencocokkan Anda dengan promotor terdekat.</p></div></li><li><b>02</b><div><h3>Pemindaian sidik jari</h3><p>Sepuluh sidik jari dipindai menggunakan alat resmi.</p></div></li><li><b>03</b><div><h3>Terima hasil & penjelasan</h3><p>Dapatkan hasil mesin kecerdasan dan arahan awal.</p></div></li></ol></section>
-      <section id="layanan" className="section services"><div className="section-heading"><span>PILIH LAYANAN</span><h2>Mulai dari kebutuhan Anda.</h2></div><div className="service-grid"><article><small>INDIVIDU</small><h3>Tes STIFIn Personal</h3><div className="price">Mulai <b>Rp550.000</b></div><ul><li>✓ Pemindaian sidik jari</li><li>✓ Hasil mesin kecerdasan</li><li>✓ Penjelasan hasil dasar</li><li>✓ Konsultasi singkat</li></ul><button onClick={onBook}>Pilih paket</button></article><article className="featured"><div className="popular">PALING DIPILIH</div><small>KELUARGA</small><h3>Paket Keluarga</h3><div className="price">Harga khusus <b>Mulai 3 orang</b></div><ul><li>✓ Seluruh manfaat tes personal</li><li>✓ Peta komunikasi keluarga</li><li>✓ Rekomendasi pola asuh/belajar</li><li>✓ Sesi penjelasan keluarga</li></ul><button onClick={onBook}>Konsultasikan paket</button></article><article><small>INSTITUSI</small><h3>Sekolah & Organisasi</h3><div className="price">Kustom <b>Sesuai kebutuhan</b></div><ul><li>✓ Tes kelompok terjadwal</li><li>✓ Rekap hasil peserta</li><li>✓ Sesi edukasi bersama</li><li>✓ Pendampingan program</li></ul><button onClick={onBook}>Hubungi tim</button></article></div><p className="price-note">Harga dapat berbeda berdasarkan lokasi, paket, dan layanan pendampingan. Tim akan mengonfirmasi sebelum pembayaran.</p></section>
-      <section id="promotor" className="promoter-cta"><div><span>TUMBUH BERSAMA</span><h2>Ingin menjadi Promotor STIFIn?</h2><p>Bergabung dengan jaringan lintas kota. Dapatkan informasi WSL, alat tes, ID promotor, komunitas belajar, dan pendampingan aktivasi.</p></div><button onClick={onBook}>Minta informasi promotor →</button></section>
-    </main><footer><div className="public-brand"><span>K</span><b>Konsep STIFIn</b></div><p>Platform edukasi dan layanan tes STIFIn untuk Indonesia.</p><small>Identitas cabang resmi dicantumkan pada dokumen dan kegiatan formal sesuai ketentuan.</small></footer>
+      <section className="hero">
+        <div className="hero-copy"><div className="eyebrow">TES STIFIn RESMI · OFFLINE</div><h1>Kenali diri. Bangun hubungan. Tumbuh lebih terarah.</h1><p>Pilih layanan Tes STIFIn untuk personal, keluarga, atau institusi. Proses tes dilakukan langsung bersama promotor di kota terdekat.</p><div className="hero-actions"><a className="public-cta big" href="#produk">Lihat pilihan layanan <span>→</span></a><a href="#promotor">Saya ingin jadi promotor</a></div><div className="trust-row"><span><b>Offline</b><small>bersama promotor</small></span><span><b>Terjadwal</b><small>sesuai kota peserta</small></span><span><b>Nasional</b><small>jaringan lintas kota</small></span></div></div>
+        <div className="hero-visual"><div className="orb orb-one"/><div className="orb orb-two"/><div className="result-card"><small>Perjalanan peserta</small><div className="result-type"><span>01</span><div><b>Pilih layanan</b><small>Personal · Keluarga · Institusi</small></div></div><div className="journey-mini"><span><i/>Checkout aman di SEJOLI</span><span><i/>Konfirmasi lokasi & jadwal</span><span><i/>Tes offline dan penjelasan</span></div><p>“Satu pintu untuk tes, pembelajaran, dan pertumbuhan jaringan.”</p></div><div className="floating-card"><span>✓</span><div><b>Bonus pembelajaran</b><small>E-book dan video pilihan</small></div></div></div>
+      </section>
+      <section className="logo-strip"><span>Jaringan layanan untuk keluarga, sekolah, komunitas, dan profesional di berbagai kota</span><div><b>JAKARTA</b><b>BANDUNG</b><b>SUMEDANG</b><b>SUBANG</b><b>PEKALONGAN</b></div></section>
+
+      <section id="manfaat" className="section"><div className="section-heading"><span>MENGAPA MEMULAI?</span><h2>Dari hasil, menuju langkah yang lebih praktis.</h2><p>Hasil tes dibahas dengan bahasa yang mudah dipahami agar dapat menjadi bahan refleksi dan pengembangan diri sehari-hari.</p></div><div className="benefit-grid">{[['01','Belajar lebih terarah','Gunakan hasil sebagai bahan mengenali kecenderungan cara menerima dan mengolah informasi.'],['02','Komunikasi lebih sadar','Bangun percakapan yang lebih sesuai dalam keluarga, pasangan, komunitas, atau tim.'],['03','Pengembangan diri','Susun langkah pertumbuhan yang realistis berdasarkan pembahasan hasil bersama promotor.'],['04','Kolaborasi lebih sehat','Kenali perbedaan agar pembagian peran dan cara bekerja sama dapat dibahas lebih terbuka.']].map(x=><article key={x[0]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p></article>)}</div></section>
+
+      <section id="produk" className="section product-section"><div className="section-heading"><span>PRODUK UTAMA</span><h2>Pilih layanan yang paling sesuai.</h2><p>Setiap pemesanan akan diteruskan ke checkout SEJOLI. Setelah pembayaran, tim membantu mencocokkan kota, promotor, dan jadwal.</p></div><div className="product-grid">{publicProducts.map(product=><article className={product.featured?'product-card featured-product':'product-card'} key={product.title}>{product.featured&&<div className="product-ribbon">REKOMENDASI</div>}<small>{product.category}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{product.price}</b><span>{product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map(item=><span key={item}>✓ {item}</span>)}</div><div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map(item=><span key={item}>＋ {item}</span>)}</div><button onClick={()=>checkout(product.linkKey)}>{product.action} →</button></article>)}</div><p className="price-note">Harga dan fasilitas final mengikuti informasi yang tampil pada checkout SEJOLI. Tes ini bukan layanan diagnosis medis atau psikologis.</p></section>
+
+      <section id="proses" className="process-section"><div><span>PROSES TES</span><h2>Mudah dipesan, tetap dilakukan secara tatap muka.</h2><p>Website membantu proses pemilihan layanan dan pembayaran. Pemindaian sidik jari tetap dilakukan secara langsung bersama promotor.</p><a className="dark-button" href="#produk">Pilih layanan →</a></div><ol><li><b>01</b><div><h3>Pilih produk & checkout</h3><p>Pilih layanan lalu selesaikan pemesanan melalui SEJOLI.</p></div></li><li><b>02</b><div><h3>Konfirmasi kota & jadwal</h3><p>Tim mencocokkan peserta dengan promotor dan waktu yang tersedia.</p></div></li><li><b>03</b><div><h3>Pelaksanaan tes offline</h3><p>Pemindaian dilakukan langsung menggunakan alat resmi.</p></div></li><li><b>04</b><div><h3>Terima hasil & fasilitas</h3><p>Dapatkan penjelasan hasil serta bonus sesuai paket yang dipilih.</p></div></li></ol></section>
+
+      <section id="promotor" className="section promoter-section"><div className="section-heading"><span>JALUR PROMOTOR</span><h2>Bertumbuh melalui tahapan yang jelas.</h2><p>Calon promotor tidak langsung membeli alat. Ikuti urutan pembelajaran dan aktivasi sesuai ketentuan yang berlaku.</p></div><div className="promoter-path">{promoterSteps.map(step=><article key={step.number}><div className="step-top"><b>{step.number}</b><span>{step.label}</span></div><h3>{step.title}</h3><p>{step.description}</p><button onClick={()=>checkout(step.linkKey)}>{step.action} →</button></article>)}</div><div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & alat</b><span>Aktivasi sesuai syarat</span></div></div></section>
+
+      <section id="affiliate" className="section affiliate-section"><div className="section-heading"><span>PROGRAM AFFILIATE</span><h2>Dua jalur untuk ikut bertumbuh.</h2><p>Mulai dari merekomendasikan layanan, membangun penghasilan, dan bila sesuai melanjutkan perjalanan menuju promotor resmi.</p></div><div className="affiliate-grid">{affiliatePrograms.map((program,index)=><article className={index===1?'affiliate-card official':'affiliate-card'} key={program.title}><small>{program.eyebrow}</small><h3>{program.title}</h3><p>{program.description}</p><ul>{program.points.map(point=><li key={point}>✓ {point}</li>)}</ul><button onClick={()=>checkout(program.linkKey)}>{program.action} →</button></article>)}</div><div className="affiliate-flow"><span>Bagikan tautan</span><i>→</i><span>Transaksi tervalidasi</span><i>→</i><span>Komisi tercatat</span><i>→</i><span>Tumbuh ke tahap berikutnya</span></div></section>
+
+      <section className="section faq-section"><div className="section-heading"><span>PERTANYAAN UMUM</span><h2>Sebelum Anda memilih.</h2></div><div className="faq-list">{faqItems.map(([question,answer],index)=><details key={question} open={index===0}><summary>{question}<span>＋</span></summary><p>{answer}</p></details>)}</div></section>
+
+      <section className="final-cta"><div><span>SIAP MEMULAI?</span><h2>Pilih jalur yang sesuai dengan tujuan Anda.</h2><p>Pesan tes untuk diri dan keluarga, ajukan program kelompok, atau mulai perjalanan sebagai affiliate maupun calon promotor.</p></div><div><a className="public-cta big" href="#produk">Pilih layanan tes →</a><a href="#promotor">Lihat jalur promotor</a></div></section>
+    </main>
+    <footer><div className="public-brand"><span>K</span><b>Konsep STIFIn</b></div><div className="footer-links"><a href="#produk">Produk</a><a href="#proses">Cara Tes</a><a href="#promotor">Promotor</a><a href="#affiliate">Affiliate</a></div><p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p><small>Identitas cabang resmi dicantumkan pada dokumen dan kegiatan formal sesuai ketentuan. Informasi harga, bonus, komisi, dan persyaratan final mengikuti halaman checkout serta kebijakan resmi yang berlaku.</small></footer>
   </div>;
 }
 
@@ -178,5 +220,5 @@ function TableTools({ query,setQuery,placeholder }: {query:string;setQuery:(x:st
 
 function BookingModal({ onClose, onSave }: { onClose:()=>void; onSave:(b:Booking)=>void }) {
   const submit=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const fd=new FormData(e.currentTarget);onSave({id:Date.now(),name:String(fd.get('name')),phone:String(fd.get('phone')),city:String(fd.get('city')),service:String(fd.get('service')),schedule:String(fd.get('schedule')||'Menunggu konfirmasi'),source:'Website',status:'Lead Baru'});};
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={e=>e.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><div className="modal-head"><span>JADWALKAN TES</span><h2>Mulai kenali potensi diri.</h2><p>Isi data singkat berikut. Tim kami akan menghubungi Anda untuk mencocokkan lokasi dan jadwal promotor.</p></div><form onSubmit={submit}><label>Nama lengkap<input name="name" required placeholder="Nama Anda"/></label><label>Nomor WhatsApp<input name="phone" required placeholder="08xx xxxx xxxx"/></label><div className="form-row"><label>Kota/domisi<input name="city" required placeholder="Contoh: Bandung"/></label><label>Pilihan layanan<select name="service"><option>Tes STIFIn Individu</option><option>Paket Keluarga</option><option>Tes Kelompok/Sekolah</option><option>Informasi Calon Promotor/WSL</option></select></label></div><label>Jadwal yang diharapkan<input name="schedule" placeholder="Contoh: Sabtu pagi"/></label><div className="privacy-note">Tes STIFIn dilakukan offline karena memerlukan pemindaian sidik jari. Jangan kirim data sidik jari melalui formulir ini.</div><button className="public-cta big" type="submit">Kirim permintaan jadwal →</button></form></div></div>;
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={e=>e.stopPropagation()}><button className="modal-close" onClick={onClose}>×</button><div className="modal-head"><span>FORMULIR MINAT</span><h2>Mulai dari kebutuhan Anda.</h2><p>Isi data singkat berikut. Tim kami akan menghubungi Anda untuk membantu memilih layanan, lokasi, atau tahapan yang sesuai.</p></div><form onSubmit={submit}><label>Nama lengkap<input name="name" required placeholder="Nama Anda"/></label><label>Nomor WhatsApp<input name="phone" required placeholder="08xx xxxx xxxx"/></label><div className="form-row"><label>Kota/domisili<input name="city" required placeholder="Contoh: Bandung"/></label><label>Pilihan layanan<select name="service"><option>Tes STIFIn Personal</option><option>Paket Tes Keluarga</option><option>Sekolah & Komunitas</option><option>Preview Calon Promotor</option><option>WSL 1</option><option>WSL 2</option><option>Informasi ID & Alat</option><option>Affiliate Umum</option><option>Affiliate Promotor Resmi</option></select></label></div><label>Jadwal atau kebutuhan tambahan<input name="schedule" placeholder="Contoh: Sabtu pagi / ingin informasi WSL 1"/></label><div className="privacy-note">Tes STIFIn dilakukan offline karena memerlukan pemindaian sidik jari. Jangan kirim data sidik jari, kata sandi, atau informasi rahasia melalui formulir ini.</div><button className="public-cta big" type="submit">Kirim permintaan →</button></form></div></div>;
 }
