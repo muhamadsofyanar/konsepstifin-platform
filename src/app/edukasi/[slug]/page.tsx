@@ -13,7 +13,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${article.title} | Konsep STIFIn`,
     description: article.excerpt,
-    openGraph: { title: article.title, description: article.excerpt, type: 'article', publishedTime: article.publishedAt },
+    alternates: { canonical: `/edukasi/${article.slug}` },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt,
+      type: 'article',
+      publishedTime: article.publishedAt,
+      url: `/edukasi/${article.slug}`,
+      siteName: 'Konsep STIFIn',
+      locale: 'id_ID',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description: article.excerpt,
+    },
   };
 }
 
