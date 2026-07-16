@@ -96,6 +96,18 @@ SEJOLI_AFFILIATE_PARAM=ref
 12. Periksa judul, ringkasan, isi, inti artikel, sumber halaman, tautan, dan catatan AI sebelum
     menerbitkan.
 
+Target panjang versi ini:
+
+- **Ringkas**: sekitar 1.000–1.300 kata;
+- **Sedang**: sekitar 1.500–2.100 kata;
+- **Mendalam**: sekitar 2.300–3.000 kata.
+
+Generator meminta 5–9 bagian, beberapa paragraf per bagian, contoh penerapan,
+batasan, dan langkah praktis. Waktu baca dihitung kembali dari isi yang benar-
+benar diterima, bukan mengikuti angka buatan AI. Hasil tetap perlu diperiksa
+karena penyedia AI dapat menghasilkan tulisan lebih pendek saat batas token
+atau kuotanya hampir tercapai.
+
 Hasil tidak langsung diterbitkan tanpa pilihan admin. Mode terjadwal akan
 menyimpan artikel sebagai **Terjadwal**, bukan langsung tampil.
 

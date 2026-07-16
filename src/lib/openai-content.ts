@@ -55,12 +55,14 @@ const articleSchema = {
     excerpt: { type: 'string' },
     body: {
       type: 'array',
+      minItems: 5,
+      maxItems: 9,
       items: {
         type: 'object',
         properties: {
           heading: { type: 'string' },
-          paragraphs: { type: 'array', items: { type: 'string' } },
-          bullets: { type: 'array', items: { type: 'string' } },
+          paragraphs: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'string' } },
+          bullets: { type: 'array', maxItems: 7, items: { type: 'string' } },
         },
         required: ['heading', 'paragraphs', 'bullets'],
         additionalProperties: false,
@@ -146,7 +148,8 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
 }
 
 function buildArticlePrompt(input: ArticleGenerationRequest) {
-  const wordTargets = { ringkas: '600–800', sedang: '900–1.200', mendalam: '1.400–1.800' };
+  const wordTargets = { ringkas: '1.000–1.300', sedang: '1.500–2.100', mendalam: '2.300–3.000' };
+  const sectionTargets = { ringkas: '5 bagian', sedang: '6–7 bagian', mendalam: '7–9 bagian' };
   const knowledgeInstruction = input.knowledgeContext
     ? `Gunakan potongan Pustaka STIFIn berikut sebagai landasan utama. Nomor halaman hanya untuk jejak pemeriksaan admin. Jangan mengarang isi yang tidak terdapat di dalam potongan. Jangan menyalin panjang secara verbatim.\n\n${input.knowledgeContext}`
     : input.useKnowledge
@@ -173,8 +176,12 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
       'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
       'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
-      'Field body wajib berupa array berisi 3–5 bagian yang runtut. Setiap bagian memiliki heading, paragraphs, dan bullets.',
-      'Setiap isi paragraphs harus berupa paragraf utuh sepanjang 2–4 kalimat. Isi bullets dengan array kosong jika daftar tidak diperlukan.',
+      'Field body wajib berupa array berisi 5–9 bagian yang runtut. Setiap bagian memiliki heading, paragraphs, dan bullets.',
+      'Setiap bagian wajib memiliki 2–4 paragraf. Setiap paragraf berisi satu gagasan utama, 3–5 kalimat, dan tidak boleh digabung dengan heading.',
+      'Gunakan bullets hanya untuk langkah, daftar periksa, atau rangkuman praktis; isi dengan array kosong bila tidak diperlukan.',
+      'Jangan menulis penanda Markdown seperti ##, ###, tanda bintang, atau tanda minus di dalam heading maupun paragraphs karena format sudah dibentuk oleh sistem.',
+      'Bangun alur: pembuka yang dekat dengan situasi pembaca, konteks utama, pembahasan bertahap, contoh penerapan, batasan, langkah praktis, lalu penutup yang memberi arah.',
+      'Gunakan variasi panjang kalimat dan transisi yang alami. Tulis seperti editor manusia Indonesia, bukan seperti brosur atau keluaran mesin.',
       'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, dan kesimpulan yang sekadar mengulang pembuka.',
       'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
     ].join(' '),
@@ -186,6 +193,7 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       `Kata kunci: ${input.keywords || '-'}`,
       `Nada: ${input.tone}`,
       `Panjang target: ${wordTargets[input.length]} kata`,
+      `Struktur target: ${sectionTargets[input.length]}`,
       contentInstruction,
       variationInstruction,
       avoidInstruction,
@@ -260,7 +268,7 @@ async function generateWithGemini(input: ArticleGenerationRequest, model: string
         responseMimeType: 'application/json',
         responseJsonSchema: articleSchema,
         temperature: 0.7,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 12288,
       },
     }),
     signal: AbortSignal.timeout(90_000),
@@ -353,6 +361,11 @@ function generatedBodyToText(value: GeneratedArticle['body']) {
   return normalizeArticleBody(blocksToBody(blocks));
 }
 
+function calculateReadTime(body: string) {
+  const words = body.replace(/^##?\s+/gm, '').replace(/^[-*]\s+/gm, '').trim().split(/\s+/).filter(Boolean).length;
+  return `${Math.max(4, Math.ceil(words / 200))} menit baca`;
+}
+
 export async function generateArticleDraft(input: ArticleGenerationRequest) {
   const configuration = getAiConfiguration();
   if (!configuration.provider || !configuration.ready) {
@@ -381,14 +394,15 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
   const slugSource = generated.slug || generated.title;
   const slug = cleanText(slugSource, 180).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120);
+  const body = generatedBodyToText(generated.body);
   const article: ArticleInput = {
     title: cleanText(generated.title, 180),
     slug,
     category: cleanText(generated.category, 80) || input.category,
     excerpt: cleanText(generated.excerpt, 400),
-    body: generatedBodyToText(generated.body),
+    body,
     takeaway: cleanText(generated.takeaway, 500),
-    readTime: cleanText(generated.readTime, 40) || '5 menit baca',
+    readTime: calculateReadTime(body),
     publishedAt: new Date().toISOString().slice(0, 10),
     tone: 'forest',
     featured: false,

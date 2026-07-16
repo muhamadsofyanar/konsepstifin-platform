@@ -115,8 +115,10 @@ function splitInlineHeading(value: string) {
 export function normalizeArticleBody(body: string) {
   const prepared = body
     .replace(/\r/g, '')
-    .replace(/\s+##\s+/g, '\n\n## ')
+    .replace(/\s+#{2,3}\s+/g, '\n\n## ')
+    .replace(/^###\s+/gm, '## ')
     .replace(/([.!?:])\s+-\s+(?=["“']?[A-ZÀ-ÖØ-Þ0-9])/gu, '$1\n- ')
+    .replace(/\s+\d{1,2}[.)]\s+(?=["“']?[A-ZÀ-ÖØ-Þ])/gu, '\n- ')
     .trim();
   return blocksToBody(bodyToBlocks(prepared));
 }
@@ -141,9 +143,9 @@ export function bodyToBlocks(body: string): ArticleBlock[] {
 
   for (const rawLine of body.replace(/\r/g, '').split('\n')) {
     const line = rawLine.trim();
-    if (line.startsWith('## ')) {
+    if (line.startsWith('## ') || line.startsWith('### ')) {
       flushBlock();
-      const inline = splitInlineHeading(line.slice(3).trim());
+      const inline = splitInlineHeading(line.replace(/^#{2,3}\s+/, '').trim());
       current = { heading: inline.heading || 'Pembahasan', paragraphs: [], bullets: [] };
       if (inline.remainder) paragraph.push(inline.remainder);
     } else if (line.startsWith('- ')) {

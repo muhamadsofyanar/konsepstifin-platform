@@ -118,6 +118,27 @@ export async function ensureKnowledgeSchema() {
       await sql`CREATE INDEX IF NOT EXISTS knowledge_chunks_source_idx ON knowledge_chunks(source_id, page_number)`;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_sources_ai_idx ON knowledge_sources(status, enabled_for_ai, access_level)`;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_chunks_search_idx ON knowledge_chunks USING GIN(to_tsvector('simple', content))`;
+      await sql`
+        UPDATE knowledge_sources
+        SET category = 'Copywriting & Kampanye', access_level = 'internal', risk_level = 'medium',
+            enabled_for_ai = FALSE, updated_at = NOW()
+        WHERE category = 'Dasar STIFIn' AND access_level = 'reference' AND enabled_for_ai = TRUE
+          AND (
+            original_filename ILIKE '%copywriting%' OR original_filename ILIKE '%landing page%'
+            OR original_filename ILIKE '%landing-page%' OR original_filename ILIKE '%funnel%'
+            OR original_filename ILIKE '%headline%' OR original_filename ILIKE '%storytelling%'
+            OR original_filename ILIKE '%personal branding%' OR original_filename ILIKE '%content marketing%'
+            OR original_filename ~* '(^|[ _-])modul([ _.0-9-]|$)'
+          )
+      `;
+      await sql`
+        UPDATE knowledge_sources
+        SET category = 'Copywriting & Kampanye', access_level = 'restricted', risk_level = 'high',
+            enabled_for_ai = FALSE, updated_at = NOW()
+        WHERE original_filename ILIKE '%hipnotik%' OR original_filename ILIKE '%hypnotic%'
+           OR original_filename ILIKE '%membius%' OR original_filename ILIKE '%trance%'
+           OR original_filename ILIKE '%covert%'
+      `;
     })().catch((error) => {
       globalForKnowledge.konsepStifinKnowledgeSchema = undefined;
       throw error;
@@ -169,7 +190,30 @@ export function inferKnowledgeMetadata(filename: string) {
   let riskLevel: KnowledgeRiskLevel = 'low';
   let enabledForAi = true;
 
-  if (name.includes('level 2') || name.includes('level-2')) {
+  const restrictedCopyTerms = ['hipnotik', 'hypnotic', 'membius', 'trance', 'covert'];
+  const campaignTerms = [
+    'copywriting', 'landing page', 'landing-page', 'funnel', 'launch', 'headline',
+    'frasa', 'storytelling', 'affiliate', 'personal branding', 'content marketing',
+    'media promosi', 'iklan', 'campaign', 'kampanye',
+  ];
+  const genericModule = /(^|[\s_-])modul([\s_.-]|\d|$)/i.test(name);
+
+  if (restrictedCopyTerms.some((term) => name.includes(term))) {
+    category = 'Copywriting & Kampanye';
+    accessLevel = 'restricted';
+    riskLevel = 'high';
+    enabledForAi = false;
+  } else if (campaignTerms.some((term) => name.includes(term))) {
+    category = 'Copywriting & Kampanye';
+    accessLevel = 'internal';
+    riskLevel = 'medium';
+    enabledForAi = false;
+  } else if (genericModule) {
+    category = 'Materi Pemasaran';
+    accessLevel = 'internal';
+    riskLevel = 'medium';
+    enabledForAi = false;
+  } else if (name.includes('level 2') || name.includes('level-2')) {
     category = 'Promotor & Lisensi';
     accessLevel = 'restricted';
     riskLevel = 'medium';
@@ -425,7 +469,7 @@ function knowledgeSearchExpression(value: string) {
 export async function findKnowledgeContext({
   query,
   sourceIds = [],
-  limit = 9,
+  limit = 12,
 }: {
   query: string;
   sourceIds?: number[];
@@ -449,7 +493,7 @@ export async function findKnowledgeContext({
       AND to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${expression})
       ${sourceFilter}
     ORDER BY rank DESC, ks.id, kc.page_number
-    LIMIT ${Math.min(15, Math.max(1, limit))}
+    LIMIT ${Math.min(18, Math.max(1, limit))}
   `;
   const results = rows.map((row) => ({
     sourceId: Number(row.source_id),
@@ -477,6 +521,6 @@ export async function findKnowledgeContext({
   }
   const context = results.map((result, index) =>
     `[PUSTAKA ${index + 1}] ${result.title}, halaman ${result.pageNumber}\n${result.content}`,
-  ).join('\n\n').slice(0, 18_000);
+  ).join('\n\n').slice(0, 24_000);
   return { context, references, results };
 }
