@@ -1,14 +1,18 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { LinkProps } from 'next/link';
 import MobileNavigation, { type MobileNavigationLink } from './mobile-navigation';
 
-type PublicPage = 'home' | 'test' | 'education' | 'promoter';
+type PublicPage = 'home' | 'test' | 'education' | 'promoter' | 'affiliate';
 
-const navigation: Array<{ page: PublicPage; href: string; label: string }> = [
+type PublicHref = LinkProps['href'];
+
+const navigation: Array<{ page: PublicPage; href: PublicHref; label: string }> = [
   { page: 'home', href: '/', label: 'Beranda' },
   { page: 'test', href: '/tes-stifin', label: 'Tes STIFIn' },
   { page: 'education', href: '/edukasi', label: 'Edukasi' },
   { page: 'promoter', href: '/jadi-promotor', label: 'Jadi Promotor' },
+  { page: 'affiliate', href: '/affiliate', label: 'Affiliate' },
 ];
 
 export function PublicHeader({
@@ -19,12 +23,11 @@ export function PublicHeader({
 }: {
   active: PublicPage;
   announcement: string;
-  ctaHref?: string;
+  ctaHref?: PublicHref;
   ctaLabel?: string;
 }) {
   const mobileLinks: MobileNavigationLink[] = [
     ...navigation.map((item) => ({ ...item, active: item.page === active })),
-    { href: '/jadi-promotor#affiliate', label: 'Affiliate' },
   ];
 
   return <>
@@ -34,8 +37,7 @@ export function PublicHeader({
         <Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority />
       </Link>
       <nav aria-label="Navigasi utama">
-        {navigation.map((item) => <Link className={item.page === active ? 'active' : ''} href={item.href} key={item.href}>{item.label}</Link>)}
-        <Link href="/jadi-promotor#affiliate">Affiliate</Link>
+        {navigation.map((item) => <Link className={item.page === active ? 'active' : ''} href={item.href} key={item.page}>{item.label}</Link>)}
       </nav>
       <div>
         <MobileNavigation links={mobileLinks} ctaHref={ctaHref} ctaLabel={ctaLabel} />
@@ -54,7 +56,7 @@ export function PublicFooter() {
       <Link href="/tes-stifin">Tes STIFIn</Link>
       <Link href="/edukasi">Edukasi</Link>
       <Link href="/jadi-promotor">Promotor</Link>
-      <Link href="/jadi-promotor#affiliate">Affiliate</Link>
+      <Link href="/affiliate">Affiliate</Link>
     </div>
     <p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p>
     <small>Informasi di website bersifat edukatif. Harga, fasilitas, komisi, dan persyaratan final mengikuti checkout serta kebijakan resmi yang berlaku. Tes STIFIn bukan diagnosis medis atau psikologis.</small>

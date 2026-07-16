@@ -52,6 +52,20 @@ Sistem menolak file non-PDF, file di atas batas ukuran, dan PDF duplikat.
   diperiksa.
 - **Risiko tinggi**: jangan dipakai otomatis tanpa izin dan validasi tambahan.
 
+### Pemisahan materi STIFIn dan materi pemasaran
+
+- Workbook STIFIn digunakan sebagai dasar isi hanya setelah kategori, akses,
+  dan risikonya diperiksa.
+- Modul copywriting, landing page, funnel, headline, dan kampanye otomatis
+  diklasifikasikan sebagai **Internal** serta tidak aktif untuk AI. Materi ini
+  boleh dipakai secara sengaja untuk membantu gaya atau struktur pemasaran,
+  tetapi tidak boleh menjadi sumber klaim tentang ilmu STIFIn.
+- Materi yang memakai istilah manipulatif seperti *membius*, *trance*,
+  *hypnotic*, atau *covert* otomatis menjadi **Terbatas**, risiko tinggi, dan
+  tidak aktif untuk AI.
+- Klasifikasi otomatis adalah pagar awal. Admin tetap wajib membuka pratinjau
+  dan mengoreksi metadata bila nama file tidak cukup jelas.
+
 ## 4. Menggunakan pustaka pada artikel AI
 
 1. Buka `/admin/artikel` lalu **Buat dengan AI**.
@@ -63,8 +77,10 @@ Sistem menolak file non-PDF, file di atas batas ukuran, dan PDF duplikat.
    judul dan nomor halaman untuk pemeriksaan admin.
 
 Generator hanya menerima beberapa potongan yang cocok, bukan seluruh PDF.
-Sumber dan nomor halaman disimpan bersama artikel tetapi tidak otomatis
-ditampilkan kepada pembaca.
+Sumber dan nomor halaman disimpan bersama artikel untuk pemeriksaan admin.
+Daftar rujukan tidak ditampilkan pada halaman artikel publik. Klasifikasi
+**Rujukan artikel**, **Internal**, dan **Terbatas** tetap digunakan untuk
+menentukan sumber mana yang boleh dikirim ke generator AI.
 
 ## 5. Urutan impor 15 workbook awal
 

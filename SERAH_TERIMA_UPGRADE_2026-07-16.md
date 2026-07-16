@@ -87,6 +87,24 @@ percakapan lain.
 - Struktur mengikuti prinsip headline, masalah, solusi, manfaat, CTA, bukti
   kepercayaan, dan FAQ tanpa membuat testimoni atau klaim yang belum terbukti.
 
+### Arsitektur produk, harga, dan affiliate
+
+- Affiliate sudah dipisahkan menjadi landing page mandiri di `/affiliate`.
+- Homepage sekarang mengarahkan pengunjung ke empat jalur berbeda: Tes STIFIn,
+  Promotor, Affiliate, dan Edukasi.
+- Landing page Promotor menampilkan tahapan produk, manfaat setiap tahap, area
+  biaya, dan CTA yang terhubung ke konfigurasi SEJOLI.
+- Landing page Affiliate menampilkan pilihan jalur, manfaat, cara kerja, etika,
+  biaya/ketentuan, dan CTA pendaftaran.
+- Harga Tes STIFIn Personal yang sudah terkonfirmasi tetap `Rp599.000`.
+- Harga jalur promotor ditetapkan pada posisi tengah berdasarkan batas bawah
+  SOP dan contoh harga pasar: WSL 1 `Rp875.000`, WSL 2 `Rp4.250.000`, serta
+  ID + scanner `Rp4.000.000`. Total tiga tahap utama `Rp9.125.000`.
+- Paket Keluarga, Institusi, Preview, dan program affiliate belum memiliki
+  angka final sehingga tidak diisi dengan angka rekaan.
+- Setelah produk selesai dibuat di SEJOLI, masukkan URL masing-masing produk ke
+  `src/app/site-config.ts` pada bagian `sejoliLinks`.
+
 ## Yang tidak boleh dihapus di Coolify
 
 Pertahankan Environment Variables yang sudah ada:
@@ -127,7 +145,7 @@ Database PostgreSQL dan volume `/app/storage` harus dicadangkan terpisah.
 
 ## Pemeriksaan setelah deployment
 
-1. Buka `/`, `/tes-stifin`, `/jadi-promotor`, dan `/edukasi`; pastikan ketiga
+1. Buka `/`, `/tes-stifin`, `/jadi-promotor`, `/affiliate`, dan `/edukasi`; pastikan ketiga
    foto hero tampil dan tidak memotong wajah pada desktop maupun ponsel.
 2. Periksa menu hamburger pada lebar ponsel.
 3. Buka `/admin/pustaka`; pastikan sumber dan jumlah halaman tetap ada.
@@ -141,7 +159,9 @@ Database PostgreSQL dan volume `/app/storage` harus dicadangkan terpisah.
 ## Konfigurasi yang masih perlu dilengkapi pemilik
 
 - Isi URL checkout asli pada `src/app/site-config.ts` bagian `sejoliLinks`.
-- Periksa kembali harga, bonus, komisi, jadwal, dan syarat program.
+- Lengkapi harga pasti Paket Keluarga, Institusi, Preview, Affiliate Umum,
+  serta Affiliate Promotor.
+- Periksa kembali bonus, persentase komisi, jadwal, dan syarat program.
 - Tambahkan notifikasi lead ke WhatsApp/email bila dibutuhkan.
 - Tinjau serta aktifkan PDF satu per satu sesuai izin dan tingkat risiko.
 - Jangan menerbitkan draf AI tanpa pemeriksaan manusia.
