@@ -3,7 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PublicInterestAction from '../public-interest-action';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
-import { faqItems, publicProducts } from '../site-config';
+import { faqItems } from '../site-config';
+import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const metadata: Metadata = {
   title: 'Tes STIFIn Offline — Kenali Mesin Kecerdasan Anda',
@@ -15,9 +16,11 @@ export const metadata: Metadata = {
     url: '/tes-stifin',
   },
 };
+export const dynamic = 'force-dynamic';
 
-export default function TestLandingPage() {
+export default async function TestLandingPage() {
   const testFaq = faqItems.filter((_, index) => [0, 1, 4].includes(index));
+  const publicProducts = await getPublicManagedProducts('test');
 
   return <div className="public-site journey-site test-landing">
     <PublicHeader active="test" announcement="Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI" />
@@ -45,7 +48,7 @@ export default function TestLandingPage() {
         ['04', 'Arah penerapan yang realistis', 'Pilih satu atau dua penyesuaian kecil yang dapat dicoba setelah pembahasan hasil.'],
       ].map((item) => <article key={item[0]}><span>{item[0]}</span><h3>{item[1]}</h3><p>{item[2]}</p></article>)}</div></section>
 
-      <section id="layanan" className="section product-section"><div className="section-heading"><span>PILIHAN LAYANAN</span><h2>Pilih untuk diri sendiri, keluarga, atau kelompok Anda.</h2><p>Tidak yakin paket mana yang paling sesuai? Pilih yang paling mendekati kebutuhan Anda. Tim akan membantu mengonfirmasi kota, jumlah peserta, dan jadwal sebelum pelaksanaan.</p></div><div className="product-grid">{publicProducts.map((product) => <article className={product.featured ? 'product-card featured-product' : 'product-card'} key={product.title}>{product.featured && <div className="product-ribbon">PALING SERING DIPILIH</div>}<small>{product.category}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{product.price}</b><span>{product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map((item) => <span key={item}>✓ {item}</span>)}</div><div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map((item) => <span key={item}>＋ {item}</span>)}</div><PublicInterestAction className="product-action" linkKey={product.linkKey} label={`${product.action} →`} service={product.title} /></article>)}</div><p className="price-note">Harga dan fasilitas final mengikuti informasi pada checkout SEJOLI. Tes STIFIn bukan layanan diagnosis medis atau psikologis.</p></section>
+      <section id="layanan" className="section product-section"><div className="section-heading"><span>PILIHAN LAYANAN</span><h2>Pilih untuk diri sendiri, keluarga, atau kelompok Anda.</h2><p>Tidak yakin paket mana yang paling sesuai? Pilih yang paling mendekati kebutuhan Anda. Tim akan membantu mengonfirmasi kota, jumlah peserta, dan jadwal sebelum pelaksanaan.</p></div><div className="product-grid">{publicProducts.map((product) => <article className={product.featured ? 'product-card featured-product' : 'product-card'} key={product.title}>{product.featured && <div className="product-ribbon">PALING SERING DIPILIH</div>}<small>{product.eyebrow}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{product.price}</b><span>{product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map((item) => <span key={item}>✓ {item}</span>)}</div>{product.bonuses.length > 0 && <div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map((item) => <span key={item}>＋ {item}</span>)}</div>}<PublicInterestAction className="product-action" linkKey={product.productKey} checkoutUrl={product.checkoutUrl} label={`${product.action} →`} service={product.title} /></article>)}</div><p className="price-note">Harga dan fasilitas final mengikuti informasi pada checkout SEJOLI. Tes STIFIn bukan layanan diagnosis medis atau psikologis.</p></section>
 
       <section id="proses" className="process-section"><div><span>PROSES TES</span><h2>Dari pemesanan sampai pembahasan, alurnya dibuat sederhana.</h2><p>Anda memilih layanan secara online. Setelah itu, tim membantu menemukan promotor dan jadwal di kota Anda. Pemindaian sepuluh sidik jari serta pembahasan hasil tetap dilakukan secara tatap muka.</p><Link className="dark-button" href="#layanan">Pilih layanan →</Link></div><ol><li><b>01</b><div><h3>Pilih layanan & checkout</h3><p>Pilih paket yang paling dekat dengan kebutuhan lalu selesaikan pemesanan melalui SEJOLI.</p></div></li><li><b>02</b><div><h3>Atur kota & jadwal</h3><p>Tim menghubungi Anda untuk mencocokkan lokasi, promotor, dan waktu pelaksanaan.</p></div></li><li><b>03</b><div><h3>Ikuti tes offline</h3><p>Promotor melakukan pemindaian sepuluh sidik jari menggunakan perangkat tes.</p></div></li><li><b>04</b><div><h3>Bahas hasilnya</h3><p>Anda menerima hasil dan penjelasan awal agar tahu bagian mana yang dapat mulai diterapkan.</p></div></li></ol></section>
 

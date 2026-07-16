@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getPublishedArticles } from '@/lib/article-store';
 import { PublicFooter, PublicHeader } from './public-site-shell';
-import { affiliatePrograms, promoterSteps, publicProducts } from './site-config';
+import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +38,9 @@ const journeys = [
 
 export default async function Home() {
   const latestArticles = await getPublishedArticles(3);
+  const [publicProducts, promoterSteps, affiliatePrograms] = await Promise.all([
+    getPublicManagedProducts('test'), getPublicManagedProducts('promoter'), getPublicManagedProducts('affiliate'),
+  ]);
 
   return <div className="public-site journey-site">
     <PublicHeader active="home" announcement="Tes STIFIn dilakukan offline bersama promotor · Tersedia untuk peserta di berbagai kota" />

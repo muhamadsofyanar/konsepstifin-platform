@@ -3,13 +3,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PublicInterestAction from '../public-interest-action';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
-import { affiliatePrograms } from '../site-config';
+import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const metadata: Metadata = {
   title: 'Affiliate Konsep STIFIn — Mulai Berbagi, Bangun Penghasilan',
   description: 'Kenali program Affiliate Umum dan Affiliate Promotor, manfaat, cara kerja, pencatatan transaksi, serta jalur pendaftarannya.',
   alternates: { canonical: '/affiliate' },
 };
+export const dynamic = 'force-dynamic';
 
 const benefits = [
   ['01', 'Mulai tanpa menjalankan tes', 'Anda berfokus mengenalkan layanan dan mengarahkan calon peserta ke halaman produk yang tepat.'],
@@ -20,7 +21,8 @@ const benefits = [
   ['06', 'Punya jalur untuk bertumbuh', 'Affiliate dapat menjadi langkah awal sebelum mempelajari jalur promotor lebih jauh.'],
 ];
 
-export default function AffiliateLandingPage() {
+export default async function AffiliateLandingPage() {
+  const affiliatePrograms = await getPublicManagedProducts('affiliate');
   return <div className="public-site journey-site affiliate-landing">
     <PublicHeader active="affiliate" announcement="Program rekomendasi layanan STIFIn · Transaksi dan komisi dicatat melalui SEJOLI" ctaHref="#program" ctaLabel="Lihat program" />
     <main>
@@ -31,7 +33,7 @@ export default function AffiliateLandingPage() {
 
       <section className="section affiliate-benefits"><div className="section-heading"><span>MANFAAT PROGRAM</span><h2>Bukan hanya mendapat tautan. Anda mendapat cara kerja yang lebih terarah.</h2><p>Program ini dirancang untuk membantu affiliate mengedukasi calon peserta, mengarahkan mereka ke produk yang sesuai, dan membangun kepercayaan secara bertahap.</p></div><div className="benefit-grid">{benefits.map((item) => <article key={item[0]}><span>{item[0]}</span><h3>{item[1]}</h3><p>{item[2]}</p></article>)}</div></section>
 
-      <section id="program" className="section affiliate-section standalone-affiliate"><div className="section-heading"><span>PROGRAM & KETENTUAN</span><h2>Pilih jalur yang sesuai dengan posisi Anda sekarang.</h2><p>Biaya, persentase komisi, masa atribusi, dan produk yang dapat dipromosikan akan mengikuti pengaturan final di SEJOLI.</p></div><div className="affiliate-grid">{affiliatePrograms.map((program, index) => <article className={index === 1 ? 'affiliate-card official' : 'affiliate-card'} key={program.title}><small>{program.eyebrow}</small><h3>{program.title}</h3><div className="affiliate-price"><b>{program.price}</b><span>{program.priceNote}</span></div><p>{program.description}</p><ul>{program.points.map((point) => <li key={point}>✓ {point}</li>)}</ul><PublicInterestAction linkKey={program.linkKey} label={`${program.action} →`} service={program.title} /></article>)}</div></section>
+      <section id="program" className="section affiliate-section standalone-affiliate"><div className="section-heading"><span>PROGRAM & KETENTUAN</span><h2>Pilih jalur yang sesuai dengan posisi Anda sekarang.</h2><p>Biaya, persentase komisi, masa atribusi, dan produk yang dapat dipromosikan akan mengikuti pengaturan final di SEJOLI.</p></div><div className="affiliate-grid">{affiliatePrograms.map((program) => <article className={program.featured ? 'affiliate-card official' : 'affiliate-card'} key={program.title}><small>{program.eyebrow}</small><h3>{program.title}</h3><div className="affiliate-price"><b>{program.price}</b><span>{program.priceNote}</span></div><p>{program.description}</p><ul>{program.features.map((point) => <li key={point}>✓ {point}</li>)}</ul><PublicInterestAction linkKey={program.productKey} checkoutUrl={program.checkoutUrl} label={`${program.action} →`} service={program.title} /></article>)}</div></section>
 
       <section id="cara-kerja" className="process-section affiliate-process"><div><span>CARA KERJA</span><h2>Empat langkah dari rekomendasi sampai pencatatan komisi.</h2><p>Affiliate tetap perlu menjelaskan dengan jujur. Jangan menjanjikan hasil tes, diagnosis, penghasilan, atau manfaat yang tidak dapat dibuktikan.</p></div><ol><li><b>01</b><div><h3>Daftar dan aktifkan akun</h3><p>Pilih jalur affiliate lalu lengkapi data yang diperlukan.</p></div></li><li><b>02</b><div><h3>Ambil tautan referral</h3><p>Gunakan tautan pribadi untuk produk atau kampanye yang tersedia.</p></div></li><li><b>03</b><div><h3>Bagikan dengan edukasi</h3><p>Hubungkan produk dengan kebutuhan nyata calon peserta, bukan dengan tekanan.</p></div></li><li><b>04</b><div><h3>Transaksi divalidasi</h3><p>Komisi mengikuti transaksi valid dan ketentuan program yang berlaku.</p></div></li></ol></section>
 

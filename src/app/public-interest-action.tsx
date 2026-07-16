@@ -14,11 +14,13 @@ export default function PublicInterestAction({
   label,
   service,
   className = '',
+  checkoutUrl = '',
 }: {
   linkKey: SejoliLinkKey;
   label: string;
   service: string;
   className?: string;
+  checkoutUrl?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
@@ -26,7 +28,7 @@ export default function PublicInterestAction({
   const [error, setError] = useState('');
 
   function start() {
-    const target = sejoliLinks[linkKey];
+    const target = checkoutUrl || sejoliLinks[linkKey];
     if (/^https:\/\//i.test(target)) {
       window.open(target, '_blank', 'noopener,noreferrer');
       return;
