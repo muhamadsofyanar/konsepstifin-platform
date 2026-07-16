@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getPublishedArticles } from '@/lib/article-store';
 import { PublicFooter, PublicHeader } from './public-site-shell';
+import { affiliatePrograms, promoterSteps, publicProducts } from './site-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,15 @@ export default async function Home() {
           <h2>{item.title}</h2><p>{item.description}</p>
           <Link href={item.href}>{item.action} <span>→</span></Link>
         </article>)}
+      </section>
+
+      <section className="section home-catalog" aria-label="Ringkasan produk dan harga">
+        <div className="section-heading"><span>PRODUK & KISARAN BIAYA</span><h2>Lihat pilihannya dulu, lalu masuk ke halaman yang paling sesuai.</h2><p>Harga berikut membantu Anda menyiapkan langkah. Paket bertanda harga rancangan masih dapat disesuaikan sebelum checkout SEJOLI diaktifkan.</p></div>
+        <div className="journey-grid catalog-overview">
+          <article className="journey-card forest"><header><span>LAYANAN TES</span><b>01</b></header><h2>Personal & Keluarga</h2><p>{publicProducts.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/tes-stifin">Lihat seluruh paket tes <span>→</span></Link></article>
+          <article className="journey-card sand"><header><span>JALUR PROFESI</span><b>02</b></header><h2>Tahapan Promotor</h2><p>{promoterSteps.slice(1).map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/jadi-promotor">Lihat tahapan promotor <span>→</span></Link></article>
+          <article className="journey-card leaf"><header><span>JALUR REKOMENDASI</span><b>03</b></header><h2>Program Affiliate</h2><p>{affiliatePrograms.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/affiliate">Lihat program affiliate <span>→</span></Link></article>
+        </div>
       </section>
 
       <section className="hub-foundation">
