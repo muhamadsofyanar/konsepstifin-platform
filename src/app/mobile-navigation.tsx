@@ -9,17 +9,7 @@ export type MobileNavigationLink = {
   active?: boolean;
 };
 
-type MobileNavigationProps = {
-  links: MobileNavigationLink[];
-  ctaHref?: string;
-  ctaLabel?: string;
-};
-
-export default function MobileNavigation({
-  links,
-  ctaHref = '/tes-stifin#layanan',
-  ctaLabel = 'Pilih layanan',
-}: MobileNavigationProps) {
+export default function MobileNavigation({ links }: { links: MobileNavigationLink[] }) {
   const details = useRef<HTMLDetailsElement>(null);
 
   function closeMenu() {
@@ -32,7 +22,8 @@ export default function MobileNavigation({
       <nav aria-label="Navigasi mobile">
         {links.map((item) => <Link className={item.active ? 'active' : ''} href={item.href} key={`${item.href}-${item.label}`} onClick={closeMenu}>{item.label}<span>→</span></Link>)}
       </nav>
-      <div><Link href="/admin/login" onClick={closeMenu}>Masuk tim</Link><Link className="mobile-menu-cta" href={ctaHref} onClick={closeMenu}>{ctaLabel}</Link></div>
+      <div><Link href="/admin/login" onClick={closeMenu}>Masuk tim</Link><Link className="mobile-menu-cta" href="/#produk" onClick={closeMenu}>Pilih layanan</Link></div>
     </div>
   </details>;
 }
+

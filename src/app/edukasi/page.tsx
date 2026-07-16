@@ -33,6 +33,6 @@ export default async function EducationPage() {
       </article>)}</div>
     </section>
 
-    <section className="education-cta"><div><span>INGIN MEMULAI DARI LAYANAN?</span><h2>Pilih layanan sesuai kebutuhan Anda.</h2><p>Formulir minat tetap tersedia untuk membantu pencocokan produk, kota, promotor, dan jadwal.</p></div><Link className="public-cta big" href="/tes-stifin#layanan">Lihat pilihan layanan →</Link></section>
+    <section className="education-cta"><div><span>INGIN MEMULAI DARI LAYANAN?</span><h2>Pilih layanan sesuai kebutuhan Anda.</h2><p>Formulir minat tetap tersedia untuk membantu pencocokan produk, kota, promotor, dan jadwal.</p></div><Link className="public-cta big" href="/#produk">Lihat pilihan layanan →</Link></section>
   </main>;
 }

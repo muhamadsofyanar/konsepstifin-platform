@@ -1,5 +1,4 @@
-import { blocksToBody, normalizeArticleBody, type ArticleContentType, type ArticleInput } from '@/lib/article-store';
-import type { ArticleBlock } from '@/app/edukasi/articles';
+import type { ArticleContentType, ArticleInput } from '@/lib/article-store';
 import { findKnowledgeContext } from '@/lib/knowledge-store';
 
 export type ArticleGenerationRequest = {
@@ -28,7 +27,7 @@ type GeneratedArticle = {
   slug: string;
   category: string;
   excerpt: string;
-  body: string | Array<{ heading: string; paragraphs: string[]; bullets: string[] }>;
+  body: string;
   takeaway: string;
   readTime: string;
   editorialNotes: string;
@@ -53,21 +52,7 @@ const articleSchema = {
     slug: { type: 'string' },
     category: { type: 'string' },
     excerpt: { type: 'string' },
-    body: {
-      type: 'array',
-      minItems: 5,
-      maxItems: 9,
-      items: {
-        type: 'object',
-        properties: {
-          heading: { type: 'string' },
-          paragraphs: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'string' } },
-          bullets: { type: 'array', maxItems: 7, items: { type: 'string' } },
-        },
-        required: ['heading', 'paragraphs', 'bullets'],
-        additionalProperties: false,
-      },
-    },
+    body: { type: 'string' },
     takeaway: { type: 'string' },
     readTime: { type: 'string' },
     editorialNotes: { type: 'string' },
@@ -148,10 +133,9 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
 }
 
 function buildArticlePrompt(input: ArticleGenerationRequest) {
-  const wordTargets = { ringkas: '1.000–1.300', sedang: '1.500–2.100', mendalam: '2.300–3.000' };
-  const sectionTargets = { ringkas: '5 bagian', sedang: '6–7 bagian', mendalam: '7–9 bagian' };
+  const wordTargets = { ringkas: '600–800', sedang: '900–1.200', mendalam: '1.400–1.800' };
   const knowledgeInstruction = input.knowledgeContext
-    ? `Gunakan potongan Pustaka STIFIn berikut sebagai landasan utama, bukan sekadar pelengkap. Temukan konsep STIFIn yang benar-benar menjelaskan topik, lalu terjemahkan menjadi contoh yang dekat dengan pembaca. Jika potongan memuat Mesin Kecerdasan, Drive Kecerdasan, Personaliti Genetik, atau karakter Sensing, Thinking, Intuiting, Feeling, dan Insting, gunakan istilah tersebut secara tepat sesuai konteks sumber. Nomor halaman hanya untuk jejak pemeriksaan admin dan tidak boleh ditulis dalam artikel. Jangan mengarang isi yang tidak terdapat di dalam potongan, jangan membuat daftar sumber di dalam artikel, dan jangan menyalin panjang secara verbatim.\n\n${input.knowledgeContext}`
+    ? `Gunakan potongan Pustaka STIFIn berikut sebagai landasan utama. Nomor halaman hanya untuk jejak pemeriksaan admin. Jangan mengarang isi yang tidak terdapat di dalam potongan. Jangan menyalin panjang secara verbatim.\n\n${input.knowledgeContext}`
     : input.useKnowledge
       ? 'Tidak ditemukan potongan Pustaka STIFIn yang relevan. Jangan membuat klaim khusus tentang STIFIn yang tidak diberikan oleh admin.'
       : 'Pustaka STIFIn tidak dipakai pada permintaan ini.';
@@ -173,22 +157,12 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
   return {
     systemInstruction: [
       'Anda adalah editor senior berbahasa Indonesia untuk pusat edukasi umum Konsep STIFIn.',
-      'Tulis artikel yang terasa lahir dari pemahaman materi STIFIn, bukan artikel pengembangan diri generik yang hanya ditempeli nama STIFIn.',
-      'Mulai dari situasi nyata yang dialami pembaca, lalu jelaskan mengapa situasi itu dapat dipahami melalui konsep STIFIn yang terdapat di Pustaka.',
-      'Dalam dua bagian pertama, sebutkan lensa STIFIn yang akan dipakai. Dalam sedikitnya tiga bagian, hubungkan konsep itu dengan topik, contoh perilaku, dan langkah penerapan.',
-      'Istilah STIFIn harus dijelaskan dengan bahasa sehari-hari. Jangan menumpuk jargon dan jangan membuat daftar lima Mesin Kecerdasan bila tidak membantu topik.',
       'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
       'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
       'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
-      'Field body wajib berupa array berisi 5–9 bagian yang runtut. Setiap bagian memiliki heading, paragraphs, dan bullets.',
-      'Setiap bagian wajib memiliki 2–4 paragraf. Setiap paragraf berisi satu gagasan utama, 3–5 kalimat, dan tidak boleh digabung dengan heading.',
-      'Gunakan bullets hanya untuk langkah, daftar periksa, atau rangkuman praktis; isi dengan array kosong bila tidak diperlukan.',
-      'Jangan menulis penanda Markdown seperti ##, ###, tanda bintang, atau tanda minus di dalam heading maupun paragraphs karena format sudah dibentuk oleh sistem.',
-      'Bangun alur: pembuka yang dekat dengan situasi pembaca, konteks utama, pembahasan bertahap, contoh penerapan, batasan, langkah praktis, lalu penutup yang memberi arah.',
-      'Gunakan variasi panjang kalimat dan transisi yang alami. Tulis seperti editor manusia Indonesia, bukan seperti brosur atau keluaran mesin.',
-      'Gunakan sapaan dan pilihan kata yang wajar bagi pembaca Indonesia. Hindari kalimat abstrak seperti “setiap individu unik” bila tidak segera diikuti penjelasan STIFIn yang konkret.',
-      'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, paragraf seragam, dan kesimpulan yang sekadar mengulang pembuka.',
-      'Jangan menampilkan nama workbook, nomor halaman, kode PUSTAKA, atau bagian daftar rujukan di body karena jejak sumber hanya untuk editor.',
+      'Buat pembuka 2–3 kalimat, lalu 3–5 subjudul yang runtut. Setiap paragraf berisi 2–4 kalimat dan dipisahkan satu baris kosong.',
+      'Isi body memakai format: subjudul diawali ## dan daftar diawali -. Gunakan daftar hanya jika benar-benar membantu, bukan untuk seluruh isi.',
+      'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, dan kesimpulan yang sekadar mengulang pembuka.',
       'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
     ].join(' '),
     userInput: [
@@ -199,7 +173,6 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       `Kata kunci: ${input.keywords || '-'}`,
       `Nada: ${input.tone}`,
       `Panjang target: ${wordTargets[input.length]} kata`,
-      `Struktur target: ${sectionTargets[input.length]}`,
       contentInstruction,
       variationInstruction,
       avoidInstruction,
@@ -274,7 +247,7 @@ async function generateWithGemini(input: ArticleGenerationRequest, model: string
         responseMimeType: 'application/json',
         responseJsonSchema: articleSchema,
         temperature: 0.7,
-        maxOutputTokens: 12288,
+        maxOutputTokens: 8192,
       },
     }),
     signal: AbortSignal.timeout(90_000),
@@ -350,28 +323,6 @@ function parseGeneratedArticle(raw: string) {
   }
 }
 
-function generatedBodyToText(value: GeneratedArticle['body']) {
-  if (!Array.isArray(value)) return normalizeArticleBody(cleanText(value, 50_000));
-  const blocks: ArticleBlock[] = value.flatMap((section) => {
-    if (!section || typeof section !== 'object') return [];
-    const heading = cleanText(section.heading, 160) || 'Pembahasan';
-    const paragraphs = Array.isArray(section.paragraphs)
-      ? section.paragraphs.map((paragraph) => cleanText(paragraph, 3000)).filter(Boolean).slice(0, 12)
-      : [];
-    const bullets = Array.isArray(section.bullets)
-      ? section.bullets.map((bullet) => cleanText(bullet, 600)).filter(Boolean).slice(0, 12)
-      : [];
-    if (!paragraphs.length && !bullets.length) return [];
-    return [{ heading, paragraphs, bullets: bullets.length ? bullets : undefined }];
-  });
-  return normalizeArticleBody(blocksToBody(blocks));
-}
-
-function calculateReadTime(body: string) {
-  const words = body.replace(/^##?\s+/gm, '').replace(/^[-*]\s+/gm, '').trim().split(/\s+/).filter(Boolean).length;
-  return `${Math.max(4, Math.ceil(words / 200))} menit baca`;
-}
-
 export async function generateArticleDraft(input: ArticleGenerationRequest) {
   const configuration = getAiConfiguration();
   if (!configuration.provider || !configuration.ready) {
@@ -386,15 +337,8 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
         query: `${input.topic} ${input.category} ${input.keywords}`,
         sourceIds: input.knowledgeSourceIds,
       });
-      if (!result.context.trim()) {
-        throw new AiProviderError(
-          'Belum ada materi Pustaka STIFIn yang cocok untuk topik ini. Pilih workbook secara manual atau aktifkan sumber yang relevan sebelum membuat artikel.',
-          422,
-        );
-      }
       knowledge = { context: result.context, references: result.references };
     } catch (error) {
-      if (error instanceof AiProviderError) throw error;
       console.error('Pustaka STIFIn tidak dapat dicari.', error);
       throw new AiProviderError('Pustaka STIFIn tidak dapat dibaca. Periksa database lalu coba kembali.', 503);
     }
@@ -407,15 +351,14 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
   const slugSource = generated.slug || generated.title;
   const slug = cleanText(slugSource, 180).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120);
-  const body = generatedBodyToText(generated.body);
   const article: ArticleInput = {
     title: cleanText(generated.title, 180),
     slug,
     category: cleanText(generated.category, 80) || input.category,
     excerpt: cleanText(generated.excerpt, 400),
-    body,
+    body: cleanText(generated.body, 50_000),
     takeaway: cleanText(generated.takeaway, 500),
-    readTime: calculateReadTime(body),
+    readTime: cleanText(generated.readTime, 40) || '5 menit baca',
     publishedAt: new Date().toISOString().slice(0, 10),
     tone: 'forest',
     featured: false,

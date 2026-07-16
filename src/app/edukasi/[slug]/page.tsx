@@ -55,7 +55,7 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
         <div className="article-disclaimer"><b>Catatan edukasi</b><p>Artikel ini bersifat umum dan tidak dimaksudkan sebagai diagnosis atau pengganti layanan medis, psikologis, pendidikan, maupun profesional lainnya.</p></div>
         <ArticleEngagement slug={article.slug} title={article.title} />
       </article>
-      <aside className="article-side"><div><span>TENTANG EDUKASI</span><p>Kami menyajikan materi sebagai bahan refleksi dan percakapan yang dapat disesuaikan dengan konteks pembaca.</p></div><Link className="public-cta" href="/tes-stifin#layanan">Pilih layanan →</Link></aside>
+      <aside className="article-side"><div><span>TENTANG EDUKASI</span><p>Kami menyajikan materi sebagai bahan refleksi dan percakapan yang dapat disesuaikan dengan konteks pembaca.</p></div><Link className="public-cta" href="/#produk">Pilih layanan →</Link></aside>
     </div>
 
     <section className="related-articles"><div className="education-section-head"><div><span>BACA SELANJUTNYA</span><h2>Artikel terkait.</h2></div><Link href="/edukasi">Lihat semua artikel →</Link></div><div className="related-grid">{related.map((item) => <Link href={`/edukasi/${item.slug}`} key={item.slug}><span>{item.category}</span><h3>{item.title}</h3><small>{item.readTime} →</small></Link>)}</div></section>

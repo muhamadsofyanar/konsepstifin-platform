@@ -118,27 +118,6 @@ export async function ensureKnowledgeSchema() {
       await sql`CREATE INDEX IF NOT EXISTS knowledge_chunks_source_idx ON knowledge_chunks(source_id, page_number)`;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_sources_ai_idx ON knowledge_sources(status, enabled_for_ai, access_level)`;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_chunks_search_idx ON knowledge_chunks USING GIN(to_tsvector('simple', content))`;
-      await sql`
-        UPDATE knowledge_sources
-        SET category = 'Copywriting & Kampanye', access_level = 'internal', risk_level = 'medium',
-            enabled_for_ai = FALSE, updated_at = NOW()
-        WHERE category = 'Dasar STIFIn' AND access_level = 'reference' AND enabled_for_ai = TRUE
-          AND (
-            original_filename ILIKE '%copywriting%' OR original_filename ILIKE '%landing page%'
-            OR original_filename ILIKE '%landing-page%' OR original_filename ILIKE '%funnel%'
-            OR original_filename ILIKE '%headline%' OR original_filename ILIKE '%storytelling%'
-            OR original_filename ILIKE '%personal branding%' OR original_filename ILIKE '%content marketing%'
-            OR original_filename ~* '(^|[ _-])modul([ _.0-9-]|$)'
-          )
-      `;
-      await sql`
-        UPDATE knowledge_sources
-        SET category = 'Copywriting & Kampanye', access_level = 'restricted', risk_level = 'high',
-            enabled_for_ai = FALSE, updated_at = NOW()
-        WHERE original_filename ILIKE '%hipnotik%' OR original_filename ILIKE '%hypnotic%'
-           OR original_filename ILIKE '%membius%' OR original_filename ILIKE '%trance%'
-           OR original_filename ILIKE '%covert%'
-      `;
     })().catch((error) => {
       globalForKnowledge.konsepStifinKnowledgeSchema = undefined;
       throw error;
@@ -190,30 +169,7 @@ export function inferKnowledgeMetadata(filename: string) {
   let riskLevel: KnowledgeRiskLevel = 'low';
   let enabledForAi = true;
 
-  const restrictedCopyTerms = ['hipnotik', 'hypnotic', 'membius', 'trance', 'covert'];
-  const campaignTerms = [
-    'copywriting', 'landing page', 'landing-page', 'funnel', 'launch', 'headline',
-    'frasa', 'storytelling', 'affiliate', 'personal branding', 'content marketing',
-    'media promosi', 'iklan', 'campaign', 'kampanye',
-  ];
-  const genericModule = /(^|[\s_-])modul([\s_.-]|\d|$)/i.test(name);
-
-  if (restrictedCopyTerms.some((term) => name.includes(term))) {
-    category = 'Copywriting & Kampanye';
-    accessLevel = 'restricted';
-    riskLevel = 'high';
-    enabledForAi = false;
-  } else if (campaignTerms.some((term) => name.includes(term))) {
-    category = 'Copywriting & Kampanye';
-    accessLevel = 'internal';
-    riskLevel = 'medium';
-    enabledForAi = false;
-  } else if (genericModule) {
-    category = 'Materi Pemasaran';
-    accessLevel = 'internal';
-    riskLevel = 'medium';
-    enabledForAi = false;
-  } else if (name.includes('level 2') || name.includes('level-2')) {
+  if (name.includes('level 2') || name.includes('level-2')) {
     category = 'Promotor & Lisensi';
     accessLevel = 'restricted';
     riskLevel = 'medium';
@@ -469,7 +425,7 @@ function knowledgeSearchExpression(value: string) {
 export async function findKnowledgeContext({
   query,
   sourceIds = [],
-  limit = 12,
+  limit = 9,
 }: {
   query: string;
   sourceIds?: number[];
@@ -479,41 +435,21 @@ export async function findKnowledgeContext({
   const sql = getDatabaseClient();
   const expression = knowledgeSearchExpression(query);
   if (!expression) return { context: '', references: [] as KnowledgeReference[], results: [] as KnowledgeSearchResult[] };
-  const foundationExpression = knowledgeSearchExpression(
-    'STIFIn Mesin Kecerdasan Drive Kecerdasan Personaliti Genetik Sensing Thinking Intuiting Feeling Insting',
-  );
   const selectedIds = [...new Set(sourceIds.filter((id) => Number.isInteger(id) && id > 0))].slice(0, 30);
   const sourceFilter = selectedIds.length
     ? sql`AND ks.id IN ${sql(selectedIds)}`
     : sql`AND ks.access_level <> 'restricted'`;
   const rows = await sql`
-    WITH scored AS (
-      SELECT kc.content, kc.page_number, ks.id AS source_id, ks.title, ks.category, ks.access_level,
-             ts_rank_cd(to_tsvector('simple', kc.content), websearch_to_tsquery('simple', ${expression})) AS topic_rank,
-             ts_rank_cd(to_tsvector('simple', kc.content), websearch_to_tsquery('simple', ${foundationExpression})) AS foundation_rank
-      FROM knowledge_chunks kc
-      JOIN knowledge_sources ks ON ks.id = kc.source_id
-      WHERE ks.status = 'ready'
-        AND ks.enabled_for_ai = TRUE
-        AND (
-          to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${expression})
-          OR to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${foundationExpression})
-        )
-        ${sourceFilter}
-    ), ranked AS (
-      SELECT *,
-             ROW_NUMBER() OVER (
-               PARTITION BY source_id
-               ORDER BY (topic_rank * 2.25 + foundation_rank * 1.35) DESC, page_number
-             ) AS source_position
-      FROM scored
-    )
-    SELECT content, page_number, source_id, title, category, access_level,
-           (topic_rank * 2.25 + foundation_rank * 1.35) AS rank
-    FROM ranked
-    WHERE source_position <= 3
-    ORDER BY rank DESC, source_id, page_number
-    LIMIT ${Math.min(18, Math.max(1, limit))}
+    SELECT kc.content, kc.page_number, ks.id AS source_id, ks.title, ks.category, ks.access_level,
+           ts_rank_cd(to_tsvector('simple', kc.content), websearch_to_tsquery('simple', ${expression})) AS rank
+    FROM knowledge_chunks kc
+    JOIN knowledge_sources ks ON ks.id = kc.source_id
+    WHERE ks.status = 'ready'
+      AND ks.enabled_for_ai = TRUE
+      AND to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${expression})
+      ${sourceFilter}
+    ORDER BY rank DESC, ks.id, kc.page_number
+    LIMIT ${Math.min(15, Math.max(1, limit))}
   `;
   const results = rows.map((row) => ({
     sourceId: Number(row.source_id),
@@ -540,7 +476,7 @@ export async function findKnowledgeContext({
     }
   }
   const context = results.map((result, index) =>
-    `[PUSTAKA ${index + 1}] ${result.title}, kategori ${result.category}, halaman ${result.pageNumber}\n${result.content}`,
-  ).join('\n\n').slice(0, 24_000);
+    `[PUSTAKA ${index + 1}] ${result.title}, halaman ${result.pageNumber}\n${result.content}`,
+  ).join('\n\n').slice(0, 18_000);
   return { context, references, results };
 }

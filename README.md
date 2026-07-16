@@ -4,9 +4,7 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
 ## Isi versi ini
 
-- Beranda utama sebagai pintu masuk ke tiga perjalanan yang terpisah.
-- Landing page khusus `/tes-stifin` untuk layanan personal, keluarga, sekolah, dan komunitas.
-- Landing page khusus `/jadi-promotor` untuk Preview, WSL, aktivasi, dan affiliate.
+- Website utama untuk layanan personal, keluarga, sekolah, dan komunitas.
 - Bonus produk berupa e-book, video, atau fasilitas lain yang mudah disesuaikan.
 - Jalur calon promotor: Preview, WSL 1, WSL 2, lalu ID dan alat sesuai persyaratan.
 - Dua program affiliate: Affiliate Umum dan Affiliate Promotor Resmi.
@@ -14,9 +12,6 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Dashboard artikel dengan login admin, status draf/terjadwal/terbit, serta penyimpanan PostgreSQL.
 - Generator Gemini/OpenAI untuk 1, 3, atau 5 artikel sekaligus dengan kategori yang dapat diklik.
 - Pustaka STIFIn privat untuk mengunggah PDF, mengekstrak teks per halaman, dan memberi sumber pada artikel AI.
-- Pemisahan otomatis antara rujukan STIFIn, materi internal, materi terbatas, dan modul copywriting/kampanye.
-- Artikel AI lebih panjang dan terstruktur, dengan waktu baca yang dihitung dari isi nyata.
-- Jejak rujukan dan halaman disimpan untuk pemeriksaan admin, tetapi tidak ditampilkan pada halaman artikel publik.
 - Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
 - Komentar bermoderasi, like, share, klik produk, dan statistik interaksi.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
@@ -47,8 +42,7 @@ export const sejoliLinks = {
 ```
 
 Jika sebuah link belum diisi, tombol tidak akan rusak. Website otomatis
-membuka formulir minat dan menyimpan permintaan ke PostgreSQL pada tabel
-`public_interest_leads`.
+membuka formulir minat agar calon pelanggan tetap dapat dihubungi.
 
 ## Menjalankan secara lokal
 
@@ -76,5 +70,3 @@ Gunakan Environment Variables di Coolify untuk seluruh informasi rahasia.
 - Periksa kembali harga, bonus, komisi affiliate, dan persyaratan program.
 - Pastikan setiap produk SEJOLI sudah aktif sebelum link ditempel.
 - Uji seluruh tombol checkout pada desktop dan ponsel.
-- Periksa kembali klasifikasi setiap PDF di **Pustaka STIFIn**, terutama materi
-  copywriting, kesehatan, finansial, politik, dan materi lisensi.
