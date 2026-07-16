@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import PublicInterestAction from '../public-interest-action';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
@@ -22,8 +23,11 @@ export default function TestLandingPage() {
     <PublicHeader active="test" announcement="Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI" />
     <main>
       <section className="hero test-hero">
-        <div className="hero-copy"><div className="eyebrow">TES STIFIn RESMI · OFFLINE</div><h1>Sudah mencoba banyak cara, tetapi masih belum menemukan yang paling pas untuk diri sendiri?</h1><p>Tes STIFIn membantu Anda mengenali Mesin Kecerdasan dominan melalui pemindaian sepuluh sidik jari. Hasilnya dibahas langsung bersama promotor agar tidak berhenti sebagai lembar hasil.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Lihat pilihan layanan <span>→</span></Link><Link href="#proses">Bagaimana proses tesnya?</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>sesuai kota peserta</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
-        <div className="hero-visual"><div className="orb orb-one"/><div className="orb orb-two"/><div className="result-card"><small>PERJALANAN PESERTA</small><div className="result-type"><span>01</span><div><b>Pilih layanan</b><small>Personal · Keluarga · Institusi</small></div></div><div className="journey-mini"><span><i/>Checkout aman di SEJOLI</span><span><i/>Konfirmasi lokasi & jadwal</span><span><i/>Tes offline dan penjelasan</span></div><p>“Satu alur yang jelas dari pemesanan hingga pembahasan.”</p></div><div className="floating-card"><span>✓</span><div><b>Bonus pembelajaran</b><small>Sesuai paket pilihan</small></div></div></div>
+        <div className="hero-copy"><div className="eyebrow">TES STIFIn RESMI · OFFLINE</div><h1>Bukan Anda yang kurang mampu. Bisa jadi, caranya yang belum pas.</h1><p>Kenali Mesin Kecerdasan dominan Anda melalui pemindaian sepuluh sidik jari, lalu bahas hasilnya langsung bersama promotor.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Lihat pilihan layanan <span>→</span></Link><Link href="#proses">Bagaimana proses tesnya?</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>sesuai kota peserta</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
+        <figure className="journey-hero-media test-hero-media">
+          <Image src="/images/hero-tes-v2.webp" alt="Peserta menerima penjelasan hasil secara langsung dari promotor" width={1536} height={1024} sizes="(max-width: 900px) 90vw, 45vw" preload />
+          <figcaption className="media-story-card test-story-card"><small>TIDAK BERHENTI DI HASIL</small><b>Dibahas bersama promotor</b><span>Offline · Personal · Lebih mudah dipahami</span></figcaption>
+        </figure>
       </section>
 
       <section className="test-reassurance"><span>PERSONAL</span><span>KELUARGA</span><span>SEKOLAH</span><span>KOMUNITAS</span><span>INSTITUSI</span></section>

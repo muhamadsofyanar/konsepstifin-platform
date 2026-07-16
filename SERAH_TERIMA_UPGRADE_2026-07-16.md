@@ -23,6 +23,11 @@ percakapan lain.
 - Navigasi desktop dan ponsel telah disatukan serta diperbaiki.
 - Setiap landing page memiliki metadata dan gambar Open Graph sendiri.
 - Sitemap memuat ketiga halaman utama baru.
+- Hero beranda, Tes STIFIn, dan promotor memakai foto editorial berbeda agar
+  halaman tidak lagi didominasi teks.
+- Copy bagian hero dipadatkan agar manfaat, visual, dan CTA dapat dipahami
+  dalam satu pandangan, termasuk pada layar ponsel.
+- Aset hero tersimpan di `public/images` dalam format WebP yang ringan.
 
 ### Formulir minat
 
@@ -109,7 +114,8 @@ Database PostgreSQL dan volume `/app/storage` harus dicadangkan terpisah.
 
 ## Pemeriksaan setelah deployment
 
-1. Buka `/`, `/tes-stifin`, `/jadi-promotor`, dan `/edukasi`.
+1. Buka `/`, `/tes-stifin`, `/jadi-promotor`, dan `/edukasi`; pastikan ketiga
+   foto hero tampil dan tidak memotong wajah pada desktop maupun ponsel.
 2. Periksa menu hamburger pada lebar ponsel.
 3. Buka `/admin/pustaka`; pastikan sumber dan jumlah halaman tetap ada.
 4. Periksa klasifikasi modul copywriting dan materi berisiko.

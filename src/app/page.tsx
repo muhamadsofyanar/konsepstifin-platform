@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getPublishedArticles } from '@/lib/article-store';
 import { PublicFooter, PublicHeader } from './public-site-shell';
@@ -37,17 +38,15 @@ export default async function Home() {
     <main>
       <section className="hub-hero">
         <div className="hub-hero-copy">
-          <span className="eyebrow">MULAI DARI DIRI SENDIRI</span>
-          <h1>Kenapa cara belajar, bekerja, dan berkomunikasi setiap orang bisa <em>begitu berbeda?</em></h1>
-          <p>STIFIn membantu Anda mengenali Mesin Kecerdasan dominan melalui pemindaian sepuluh sidik jari. Bukan untuk memberi label, tetapi untuk memberi peta awal agar Anda lebih paham cara alami diri sendiri.</p>
+          <span className="eyebrow">MULAI DARI DIRI</span>
+          <h1>Lebih mudah memahami orang lain, setelah kita <em>mengenali diri sendiri.</em></h1>
+          <p>Tes STIFIn membantu melihat kecenderungan cara berpikir, belajar, dan bergerak. Hasilnya dibahas bersama promotor agar lebih mudah diterapkan dalam keseharian.</p>
           <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div>
         </div>
-        <div className="hub-hero-visual" aria-label="Tiga perjalanan di Konsep STIFIn">
-          <div className="hub-orbit hub-orbit-one"/><div className="hub-orbit hub-orbit-two"/>
-          <article className="hub-visual-card"><small>KENALI CARA ALAMI ANDA</small><b>01</b><h2>Tes & pembahasan</h2><p>Offline · Terjadwal · Didampingi</p></article>
-          <article className="hub-mini-card first"><b>02</b><span>Belajar menerapkan hasil</span></article>
-          <article className="hub-mini-card second"><b>03</b><span>Bertumbuh bersama jaringan</span></article>
-        </div>
+        <figure className="journey-hero-media home-hero-media">
+          <Image src="/images/hero-home-v2.webp" alt="Keluarga Indonesia berbincang dan saling mendengarkan" width={1536} height={1024} sizes="(max-width: 1050px) 90vw, 45vw" preload />
+          <figcaption className="media-story-card"><small>PERJALANAN ANDA</small><b>Kenali diri</b><span>Pahami perbedaan · Tumbuh bersama</span></figcaption>
+        </figure>
       </section>
 
       <section className="hub-purpose">
