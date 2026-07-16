@@ -40,13 +40,19 @@ export default async function Home() {
         <div className="hub-hero-copy">
           <span className="eyebrow">MULAI DARI DIRI</span>
           <h1>Lebih mudah memahami orang lain, setelah kita <em>mengenali diri sendiri.</em></h1>
-          <p>Tes STIFIn membantu melihat kecenderungan cara berpikir, belajar, dan bergerak. Hasilnya dibahas bersama promotor agar lebih mudah diterapkan dalam keseharian.</p>
+          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn membantu Anda mengenali pola alaminya, lalu membahas hasil tersebut bersama promotor.</p>
           <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
-          <Image src="/images/hero-home-v2.webp" alt="Keluarga Indonesia berbincang dan saling mendengarkan" width={1536} height={1024} sizes="(max-width: 1050px) 90vw, 45vw" preload />
+          <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
           <figcaption className="media-story-card"><small>PERJALANAN ANDA</small><b>Kenali diri</b><span>Pahami perbedaan · Tumbuh bersama</span></figcaption>
         </figure>
+      </section>
+
+      <section className="life-situations" aria-label="Situasi yang sering dialami">
+        <article><small>DI RUMAH</small><p>“Sudah dijelaskan berkali-kali, kenapa cara menangkapnya tetap berbeda?”</p><span>Pahami cara belajar dan berkomunikasi.</span></article>
+        <article><small>DALAM DIRI</small><p>“Saya bisa banyak hal, tetapi mana yang paling alami untuk saya?”</p><span>Kenali pola kerja yang terasa lebih mengalir.</span></article>
+        <article><small>DI TEMPAT KERJA</small><p>“Mengapa satu cara memotivasi tidak cocok untuk semua orang?”</p><span>Lihat perbedaan sebagai petunjuk, bukan hambatan.</span></article>
       </section>
 
       <section className="hub-purpose">

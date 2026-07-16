@@ -23,14 +23,20 @@ export default function TestLandingPage() {
     <PublicHeader active="test" announcement="Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI" />
     <main>
       <section className="hero test-hero">
-        <div className="hero-copy"><div className="eyebrow">TES STIFIn RESMI · OFFLINE</div><h1>Bukan Anda yang kurang mampu. Bisa jadi, caranya yang belum pas.</h1><p>Kenali Mesin Kecerdasan dominan Anda melalui pemindaian sepuluh sidik jari, lalu bahas hasilnya langsung bersama promotor.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Lihat pilihan layanan <span>→</span></Link><Link href="#proses">Bagaimana proses tesnya?</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>sesuai kota peserta</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
+        <div className="hero-copy"><div className="eyebrow">TES STIFIn RESMI · OFFLINE</div><h1>Bukan Anda yang kurang mampu. Bisa jadi, caranya yang belum pas.</h1><p>Daripada terus menebak-nebak, kenali Mesin Kecerdasan dominan Anda melalui pemindaian sepuluh sidik jari dan pembahasan langsung bersama promotor.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Lihat pilihan layanan <span>→</span></Link><Link href="#proses">Bagaimana proses tesnya?</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>sesuai kota peserta</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
         <figure className="journey-hero-media test-hero-media">
-          <Image src="/images/hero-tes-v2.webp" alt="Peserta menerima penjelasan hasil secara langsung dari promotor" width={1536} height={1024} sizes="(max-width: 900px) 90vw, 45vw" preload />
+          <Image src="/images/hero-tes-v3.webp" alt="Peserta Muslim menerima penjelasan langsung dari promotor perempuan" width={1586} height={992} sizes="(max-width: 900px) 90vw, 45vw" preload />
           <figcaption className="media-story-card test-story-card"><small>TIDAK BERHENTI DI HASIL</small><b>Dibahas bersama promotor</b><span>Offline · Personal · Lebih mudah dipahami</span></figcaption>
         </figure>
       </section>
 
       <section className="test-reassurance"><span>PERSONAL</span><span>KELUARGA</span><span>SEKOLAH</span><span>KOMUNITAS</span><span>INSTITUSI</span></section>
+
+      <section className="test-problem-story">
+        <div><span>MUNGKIN INI TERASA DEKAT</span><h2>Kita sering menuntut hasil, sebelum memahami cara alaminya.</h2></div>
+        <div className="problem-story-grid"><article><b>01</b><p>Anak dianggap tidak fokus, padahal mungkin cara belajarnya berbeda.</p></article><article><b>02</b><p>Pasangan dianggap sulit memahami, padahal cara mengolah informasinya tidak sama.</p></article><article><b>03</b><p>Diri sendiri terus dipaksa mengikuti cara orang lain hingga cepat lelah.</p></article></div>
+        <p className="story-bridge">Tes bukan jawaban untuk semua hal. Namun hasilnya dapat menjadi awal percakapan yang lebih jernih—tentang cara belajar, bekerja, dan saling memahami.</p>
+      </section>
 
       <section className="section test-benefits"><div className="section-heading"><span>YANG AKAN ANDA PAHAMI</span><h2>Bukan hanya mendapat hasil. Anda pulang dengan bahasa yang lebih mudah untuk memahami diri.</h2><p>Promotor membantu menjelaskan arti hasil dan menghubungkannya dengan situasi yang sedang Anda hadapi—dalam belajar, bekerja, berkomunikasi, maupun bertumbuh.</p></div><div className="benefit-grid">{[
         ['01', 'Mesin Kecerdasan dominan', 'Kenali kecenderungan Sensing, Thinking, Intuiting, Feeling, atau Insting yang terdeteksi melalui tes.'],

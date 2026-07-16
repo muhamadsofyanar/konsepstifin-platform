@@ -23,11 +23,16 @@ export default function PromoterLandingPage() {
     <PublicHeader active="promoter" announcement="Dari memahami diri, mendampingi orang lain, hingga membangun layanan STIFIn" ctaHref="#tahapan" ctaLabel="Lihat tahapan" />
     <main>
       <section className="promoter-hero">
-        <div><span className="eyebrow">JALUR PROMOTOR STIFIn</span><h1>Ingin membantu orang memahami dirinya—sekaligus membangun profesi?</h1><p>Mulai dengan mengenal perannya. Belajar, melayani, lalu bertumbuh bersama jaringan melalui tahapan yang jelas.</p><div className="hub-actions"><Link className="public-cta big" href="#tahapan">Saya ingin tahu tahapannya →</Link><Link href="#affiliate">Belum siap? Mulai dari affiliate</Link></div></div>
+        <div><span className="eyebrow">JALUR PROMOTOR STIFIn</span><h1>Manfaat yang Anda rasakan, bisa menjadi jalan untuk membantu orang lain.</h1><p>Menjadi promotor bukan sekadar memiliki alat. Anda belajar memahami ilmunya, melayani peserta dengan baik, dan membangun profesi melalui tahapan yang jelas.</p><div className="hub-actions"><Link className="public-cta big" href="#tahapan">Saya ingin tahu tahapannya →</Link><Link href="#affiliate">Belum siap? Mulai dari affiliate</Link></div></div>
         <figure className="journey-hero-media promoter-hero-media">
-          <Image src="/images/hero-promotor-v2.webp" alt="Fasilitator Indonesia memandu kelompok belajar kecil" width={1536} height={1024} sizes="(max-width: 1050px) 90vw, 42vw" preload />
+          <Image src="/images/hero-promotor-v3.webp" alt="Fasilitator Muslim Indonesia memandu kelompok belajar kecil" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 42vw" preload />
           <figcaption className="media-story-card promoter-story-card"><small>PETA PERJALANAN</small><b>Preview → WSL 1 → WSL 2</b><span>Lanjutkan ke ID & alat saat sudah siap</span></figcaption>
         </figure>
+      </section>
+
+      <section className="promoter-fit">
+        <div><span>APAKAH JALUR INI UNTUK ANDA?</span><h2>Cocok untuk orang yang senang belajar, melayani, dan membangun kepercayaan.</h2></div>
+        <div className="promoter-fit-grid"><article><b>01</b><h3>Senang menjelaskan</h3><p>Anda menikmati proses membuat hal yang rumit menjadi lebih mudah dipahami.</p></article><article><b>02</b><h3>Mau terus belajar</h3><p>Anda siap memperdalam materi, berlatih, dan mengikuti arahan yang berlaku.</p></article><article><b>03</b><h3>Nyaman membangun relasi</h3><p>Anda bersedia mendengar kebutuhan orang dan menindaklanjutinya dengan tertib.</p></article><article><b>04</b><h3>Menjaga amanah</h3><p>Anda memahami bahwa data, hasil tes, dan kepercayaan peserta harus dijaga.</p></article></div>
       </section>
 
       <section className="promoter-role"><div><span>SEBENARNYA, APA YANG DIKERJAKAN PROMOTOR?</span><h2>Bukan sekadar mengoperasikan alat tes. Promotor menemani orang memahami hasilnya.</h2></div><div className="role-grid"><article><b>01</b><h3>Menjalankan tes dengan benar</h3><p>Melakukan pemindaian secara langsung dan menjaga proses sesuai perangkat, alur, serta ketentuan yang berlaku.</p></article><article><b>02</b><h3>Membuat hasil lebih mudah dipahami</h3><p>Menjelaskan Mesin Kecerdasan peserta dengan bahasa yang dekat, tanpa memberi label atau membuat janji berlebihan.</p></article><article><b>03</b><h3>Menumbuhkan layanan dan jaringan</h3><p>Menjaga komunikasi, jadwal, tindak lanjut, serta hubungan baik agar manfaat STIFIn menjangkau lebih banyak orang.</p></article></div></section>

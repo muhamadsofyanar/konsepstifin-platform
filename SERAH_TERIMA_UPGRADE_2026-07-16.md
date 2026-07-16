@@ -74,6 +74,19 @@ percakapan lain.
 - Saat aplikasi terbaru membaca skema Pustaka, data lama yang jelas salah
   diklasifikasikan sebagai rujukan umum akan diamankan secara otomatis.
 
+### Revisi hero dan variasi landing page
+
+- Ketiga hero memakai visual yang lebih sopan: perempuan berhijab dan
+  berpakaian longgar berlengan panjang, serta laki-laki berpakaian rapi dan
+  tertutup.
+- Homepage mendapat kartu situasi nyata sebelum penjelasan layanan.
+- Landing page Tes STIFIn mendapat alur masalah, refleksi, lalu solusi sebelum
+  manfaat dan pilihan layanan.
+- Landing page Promotor mendapat bagian kecocokan calon promotor sebelum peran
+  dan tahapan resminya.
+- Struktur mengikuti prinsip headline, masalah, solusi, manfaat, CTA, bukti
+  kepercayaan, dan FAQ tanpa membuat testimoni atau klaim yang belum terbukti.
+
 ## Yang tidak boleh dihapus di Coolify
 
 Pertahankan Environment Variables yang sudah ada:
