@@ -22,6 +22,7 @@ export type ManagedProduct = {
 };
 
 const globalProducts = globalThis as unknown as { konsepStifinProductSchema?: Promise<void> };
+const PRODUCT_CATALOG_REVISION = 'catalog-2026-07-sejoli-v1';
 
 const seeds: Omit<ManagedProduct, 'id'>[] = [
   ...publicProducts.map((item, index) => ({ productKey: item.linkKey, groupName: 'test' as const, eyebrow: item.category, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.features, bonuses: item.bonuses, action: item.action, checkoutUrl: '', active: true, featured: Boolean(item.featured), sortOrder: index + 1 })),
@@ -52,10 +53,25 @@ export async function ensureProductSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`;
+      await sql`CREATE TABLE IF NOT EXISTS public_product_migrations (
+        revision TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`;
       for (const item of seeds) {
         await sql`INSERT INTO public_products (product_key, group_name, eyebrow, title, description, price, price_note, features, bonuses, action, checkout_url, active, featured, sort_order)
           VALUES (${item.productKey}, ${item.groupName}, ${item.eyebrow}, ${item.title}, ${item.description}, ${item.price}, ${item.priceNote}, ${sql.json(item.features)}, ${sql.json(item.bonuses)}, ${item.action}, '', ${item.active}, ${item.featured}, ${item.sortOrder})
           ON CONFLICT (product_key) DO NOTHING`;
+      }
+      const applied = await sql`SELECT revision FROM public_product_migrations WHERE revision = ${PRODUCT_CATALOG_REVISION}`;
+      if (!applied[0]) {
+        for (const item of seeds) {
+          await sql`UPDATE public_products SET
+            group_name=${item.groupName}, eyebrow=${item.eyebrow}, title=${item.title}, description=${item.description},
+            price=${item.price}, price_note=${item.priceNote}, features=${sql.json(item.features)}, bonuses=${sql.json(item.bonuses)},
+            action=${item.action}, active=${item.active}, featured=${item.featured}, sort_order=${item.sortOrder}, updated_at=NOW()
+            WHERE product_key=${item.productKey}`;
+        }
+        await sql`INSERT INTO public_product_migrations (revision) VALUES (${PRODUCT_CATALOG_REVISION})`;
       }
     })().catch((error) => { globalProducts.konsepStifinProductSchema = undefined; throw error; });
   }
