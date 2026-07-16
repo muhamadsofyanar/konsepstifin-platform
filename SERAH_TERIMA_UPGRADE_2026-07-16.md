@@ -41,8 +41,21 @@ percakapan lain.
 - Waktu baca dihitung dari jumlah kata yang benar-benar diterima.
 - Pencarian Pustaka menggunakan konteks lebih luas dan tetap menyimpan halaman
   rujukan.
-- Sumber berstatus **Rujukan artikel** dapat tampil kepada pembaca. Sumber
-  **Internal** dan **Terbatas** tetap hanya terlihat oleh admin.
+- Pencarian menyeimbangkan konteks topik dengan fondasi STIFIn serta membatasi
+  jumlah potongan dari setiap dokumen agar satu workbook tidak mendominasi.
+- Prompt mewajibkan hubungan yang konkret antara konsep STIFIn, contoh
+  perilaku, dan langkah penerapan; artikel generik tidak lagi menjadi pola yang
+  diminta sistem.
+- Nama workbook dan nomor halaman tetap tersimpan untuk pemeriksaan admin,
+  tetapi daftar rujukan tidak ditampilkan pada artikel publik.
+
+### Copy halaman publik
+
+- Copy beranda, landing Tes STIFIn, dan landing promotor ditulis ulang dengan
+  struktur persona, masalah-solusi, manfaat, proses, dan CTA yang jujur.
+- Bahasa dibuat lebih percakapan dan berpusat pada kebutuhan pengunjung.
+- Materi copywriting dipakai untuk struktur komunikasi, bukan untuk klaim
+  palsu, kelangkaan buatan, atau teknik manipulatif.
 
 ### Pustaka dan keamanan materi
 

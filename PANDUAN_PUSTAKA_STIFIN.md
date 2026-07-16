@@ -77,9 +77,10 @@ Sistem menolak file non-PDF, file di atas batas ukuran, dan PDF duplikat.
    judul dan nomor halaman untuk pemeriksaan admin.
 
 Generator hanya menerima beberapa potongan yang cocok, bukan seluruh PDF.
-Sumber dan nomor halaman disimpan bersama artikel. Hanya sumber berstatus
-**Rujukan artikel** yang ditampilkan kepada pembaca; sumber **Internal** dan
-**Terbatas** hanya terlihat oleh admin.
+Sumber dan nomor halaman disimpan bersama artikel untuk pemeriksaan admin.
+Daftar rujukan tidak ditampilkan pada halaman artikel publik. Klasifikasi
+**Rujukan artikel**, **Internal**, dan **Terbatas** tetap digunakan untuk
+menentukan sumber mana yang boleh dikirim ke generator AI.
 
 ## 5. Urutan impor 15 workbook awal
 

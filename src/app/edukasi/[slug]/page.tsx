@@ -43,7 +43,6 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
   const referralCode = typeof referralCandidate === 'string' && /^[a-zA-Z0-9_-]{2,80}$/.test(referralCandidate) ? referralCandidate : '';
   const affiliateParameter = /^[a-zA-Z0-9_-]{1,40}$/.test(process.env.SEJOLI_AFFILIATE_PARAM ?? '')
     ? String(process.env.SEJOLI_AFFILIATE_PARAM) : 'ref';
-  const publicSources = article.sourceReferences.filter((source) => source.accessLevel === 'reference');
 
   return <main className="article-main">
     <section className="article-heading"><Link href="/edukasi">← Kembali ke pusat edukasi</Link><div><span>{article.category}</span><span>{article.readTime}</span><time dateTime={article.publishedAt}>{article.publishedLabel}</time></div><h1>{article.title}</h1><p>{article.excerpt}</p></section>
@@ -53,7 +52,6 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
         {blocks.map((block) => <section key={block.heading}><h2>{block.heading}</h2>{block.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{block.bullets && <ul>{block.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>}</section>)}
         <aside className="article-takeaway"><span>INTI ARTIKEL</span><p>{article.takeaway}</p></aside>
         {article.contentType !== 'education' && article.productName && article.productUrl && <ArticleProductCta slug={article.slug} contentType={article.contentType} productName={article.productName} productUrl={article.productUrl} ctaLabel={article.ctaLabel} referralCode={referralCode} affiliateParameter={affiliateParameter} />}
-        {publicSources.length > 0 && <aside className="article-public-sources"><span>RUJUKAN MATERI</span><h2>Sumber yang digunakan untuk menyiapkan artikel</h2><ul>{publicSources.map((source) => <li key={`${source.sourceId}-${source.pageNumber}`}><b>{source.title}</b><small>{source.category} · halaman {source.pageNumber}</small></li>)}</ul><p>Rujukan ditampilkan untuk transparansi. Artikel telah diparafrasekan dan tetap memerlukan penilaian sesuai konteks pembaca.</p></aside>}
         <div className="article-disclaimer"><b>Catatan edukasi</b><p>Artikel ini bersifat umum dan tidak dimaksudkan sebagai diagnosis atau pengganti layanan medis, psikologis, pendidikan, maupun profesional lainnya.</p></div>
         <ArticleEngagement slug={article.slug} title={article.title} />
       </article>

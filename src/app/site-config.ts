@@ -36,7 +36,7 @@ export const publicProducts: PublicProduct[] = [
   {
     category: 'PERSONAL',
     title: 'Tes STIFIn Personal',
-    description: 'Untuk individu yang ingin mengenali hasil tes dan mendapatkan penjelasan awal yang mudah diterapkan.',
+    description: 'Untuk Anda yang ingin memahami cara alami diri sendiri dan mendapat penjelasan hasil secara langsung.',
     price: 'Rp599.000',
     priceNote: 'per peserta',
     features: [
@@ -53,7 +53,7 @@ export const publicProducts: PublicProduct[] = [
   {
     category: 'KELUARGA',
     title: 'Paket Tes Keluarga',
-    description: 'Untuk pasangan, orang tua, dan anak yang ingin memiliki bahasa komunikasi yang lebih mudah dipahami bersama.',
+    description: 'Untuk pasangan, orang tua, dan anak yang ingin memahami mengapa cara berpikir dan berkomunikasi di rumah bisa berbeda.',
     price: 'Harga paket',
     priceNote: 'tersedia di checkout',
     features: [
@@ -69,7 +69,7 @@ export const publicProducts: PublicProduct[] = [
   {
     category: 'INSTITUSI',
     title: 'Sekolah & Komunitas',
-    description: 'Program terjadwal untuk sekolah, lembaga, komunitas, atau tim dengan kebutuhan dan jumlah peserta khusus.',
+    description: 'Untuk sekolah, lembaga, komunitas, atau tim yang ingin menjalankan tes bersama dengan jadwal dan pendampingan yang terkoordinasi.',
     price: 'Penawaran khusus',
     priceNote: 'sesuai jumlah peserta',
     features: [
@@ -89,7 +89,7 @@ export const promoterSteps = [
     number: '01',
     label: 'KENALI PROFESINYA',
     title: 'Preview Promotor',
-    description: 'Pahami peran, peluang, tanggung jawab, dan tahapan menjadi Promotor STIFIn sebelum mendaftar.',
+    description: 'Dengarkan gambaran peran, peluang, tanggung jawab, biaya, dan perjalanan belajar sebelum Anda memutuskan.',
     linkKey: 'previewPromotor' as SejoliLinkKey,
     action: 'Ikuti preview',
   },
@@ -97,7 +97,7 @@ export const promoterSteps = [
     number: '02',
     label: 'FONDASI',
     title: 'WSL 1',
-    description: 'Ikuti workshop lisensi tahap pertama sebagai fondasi pengetahuan dan proses menuju promotor.',
+    description: 'Bangun pemahaman dasar yang diperlukan untuk melanjutkan perjalanan sebagai calon promotor.',
     linkKey: 'wsl1' as SejoliLinkKey,
     action: 'Lihat jadwal WSL 1',
   },
@@ -105,7 +105,7 @@ export const promoterSteps = [
     number: '03',
     label: 'PENDALAMAN',
     title: 'WSL 2',
-    description: 'Lanjutkan pendalaman dan praktik sesuai tahapan resmi yang berlaku sebelum aktivasi.',
+    description: 'Perdalam materi dan praktik sesuai tahapan resmi sebelum masuk ke proses aktivasi.',
     linkKey: 'wsl2' as SejoliLinkKey,
     action: 'Lihat jadwal WSL 2',
   },
@@ -113,7 +113,7 @@ export const promoterSteps = [
     number: '04',
     label: 'AKTIVASI',
     title: 'ID & Alat Tes',
-    description: 'Pembelian ID dan alat dilakukan setelah peserta memenuhi tahapan serta ketentuan resmi.',
+    description: 'Setelah tahapan terpenuhi, lanjutkan proses ID dan alat tes sesuai ketentuan yang berlaku.',
     linkKey: 'idDanAlat' as SejoliLinkKey,
     action: 'Informasi ID & alat',
   },
@@ -123,7 +123,7 @@ export const affiliatePrograms = [
   {
     eyebrow: 'JALUR TERBUKA',
     title: 'Affiliate Umum',
-    description: 'Cocok untuk masyarakat yang ingin mulai merekomendasikan layanan tanpa harus menjadi promotor resmi terlebih dahulu.',
+    description: 'Untuk Anda yang ingin mulai merekomendasikan layanan sambil belajar membangun komunikasi dan jaringan.',
     points: ['Mendapat tautan referral pribadi', 'Komisi berdasarkan transaksi valid', 'Materi promosi siap pakai', 'Peluang bertumbuh menuju jalur promotor'],
     linkKey: 'affiliateUmum' as SejoliLinkKey,
     action: 'Daftar affiliate umum',
@@ -131,7 +131,7 @@ export const affiliatePrograms = [
   {
     eyebrow: 'KHUSUS JARINGAN',
     title: 'Affiliate Promotor Resmi',
-    description: 'Cocok untuk promotor aktif yang ingin memperluas pemasaran sekaligus menjaga pencatatan penjualan dalam jaringannya.',
+    description: 'Untuk promotor aktif yang ingin memperluas jangkauan dan merapikan pencatatan transaksi dari jaringannya.',
     points: ['Tautan referral khusus promotor', 'Pelacakan transaksi lebih rapi', 'Materi kampanye dan produk', 'Dukungan aktivitas jaringan'],
     linkKey: 'affiliatePromotor' as SejoliLinkKey,
     action: 'Aktifkan affiliate promotor',

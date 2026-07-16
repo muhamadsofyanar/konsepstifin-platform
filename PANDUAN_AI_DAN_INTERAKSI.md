@@ -108,6 +108,17 @@ benar diterima, bukan mengikuti angka buatan AI. Hasil tetap perlu diperiksa
 karena penyedia AI dapat menghasilkan tulisan lebih pendek saat batas token
 atau kuotanya hampir tercapai.
 
+Pencarian Pustaka mengambil dua jenis konteks: materi yang paling dekat dengan
+topik dan materi fondasi STIFIn seperti Mesin Kecerdasan, Drive Kecerdasan,
+Personaliti Genetik, Sensing, Thinking, Intuiting, Feeling, dan Insting. Hasil
+pencarian dibatasi per dokumen agar satu workbook tidak menguasai seluruh draf.
+Prompt juga meminta hubungan yang nyata antara konsep, contoh perilaku, dan
+langkah penerapan. Jika tulisan masih terasa generik, jangan diterbitkan; periksa
+sumber yang aktif atau pilih workbook secara manual lalu buat ulang draf.
+
+Nama workbook dan nomor halaman hanya tersedia untuk admin. Website publik
+tidak menampilkan bagian daftar rujukan kepada pembaca.
+
 Hasil tidak langsung diterbitkan tanpa pilihan admin. Mode terjadwal akan
 menyimpan artikel sebagai **Terjadwal**, bukan langsung tampil.
 

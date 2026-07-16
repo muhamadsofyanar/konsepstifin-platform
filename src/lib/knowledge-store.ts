@@ -479,20 +479,40 @@ export async function findKnowledgeContext({
   const sql = getDatabaseClient();
   const expression = knowledgeSearchExpression(query);
   if (!expression) return { context: '', references: [] as KnowledgeReference[], results: [] as KnowledgeSearchResult[] };
+  const foundationExpression = knowledgeSearchExpression(
+    'STIFIn Mesin Kecerdasan Drive Kecerdasan Personaliti Genetik Sensing Thinking Intuiting Feeling Insting',
+  );
   const selectedIds = [...new Set(sourceIds.filter((id) => Number.isInteger(id) && id > 0))].slice(0, 30);
   const sourceFilter = selectedIds.length
     ? sql`AND ks.id IN ${sql(selectedIds)}`
     : sql`AND ks.access_level <> 'restricted'`;
   const rows = await sql`
-    SELECT kc.content, kc.page_number, ks.id AS source_id, ks.title, ks.category, ks.access_level,
-           ts_rank_cd(to_tsvector('simple', kc.content), websearch_to_tsquery('simple', ${expression})) AS rank
-    FROM knowledge_chunks kc
-    JOIN knowledge_sources ks ON ks.id = kc.source_id
-    WHERE ks.status = 'ready'
-      AND ks.enabled_for_ai = TRUE
-      AND to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${expression})
-      ${sourceFilter}
-    ORDER BY rank DESC, ks.id, kc.page_number
+    WITH scored AS (
+      SELECT kc.content, kc.page_number, ks.id AS source_id, ks.title, ks.category, ks.access_level,
+             ts_rank_cd(to_tsvector('simple', kc.content), websearch_to_tsquery('simple', ${expression})) AS topic_rank,
+             ts_rank_cd(to_tsvector('simple', kc.content), websearch_to_tsquery('simple', ${foundationExpression})) AS foundation_rank
+      FROM knowledge_chunks kc
+      JOIN knowledge_sources ks ON ks.id = kc.source_id
+      WHERE ks.status = 'ready'
+        AND ks.enabled_for_ai = TRUE
+        AND (
+          to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${expression})
+          OR to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${foundationExpression})
+        )
+        ${sourceFilter}
+    ), ranked AS (
+      SELECT *,
+             ROW_NUMBER() OVER (
+               PARTITION BY source_id
+               ORDER BY (topic_rank * 2.25 + foundation_rank * 1.35) DESC, page_number
+             ) AS source_position
+      FROM scored
+    )
+    SELECT content, page_number, source_id, title, category, access_level,
+           (topic_rank * 2.25 + foundation_rank * 1.35) AS rank
+    FROM ranked
+    WHERE source_position <= 3
+    ORDER BY rank DESC, source_id, page_number
     LIMIT ${Math.min(18, Math.max(1, limit))}
   `;
   const results = rows.map((row) => ({
@@ -520,7 +540,7 @@ export async function findKnowledgeContext({
     }
   }
   const context = results.map((result, index) =>
-    `[PUSTAKA ${index + 1}] ${result.title}, halaman ${result.pageNumber}\n${result.content}`,
+    `[PUSTAKA ${index + 1}] ${result.title}, kategori ${result.category}, halaman ${result.pageNumber}\n${result.content}`,
   ).join('\n\n').slice(0, 24_000);
   return { context, references, results };
 }

@@ -151,7 +151,7 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
   const wordTargets = { ringkas: '1.000–1.300', sedang: '1.500–2.100', mendalam: '2.300–3.000' };
   const sectionTargets = { ringkas: '5 bagian', sedang: '6–7 bagian', mendalam: '7–9 bagian' };
   const knowledgeInstruction = input.knowledgeContext
-    ? `Gunakan potongan Pustaka STIFIn berikut sebagai landasan utama. Nomor halaman hanya untuk jejak pemeriksaan admin. Jangan mengarang isi yang tidak terdapat di dalam potongan. Jangan menyalin panjang secara verbatim.\n\n${input.knowledgeContext}`
+    ? `Gunakan potongan Pustaka STIFIn berikut sebagai landasan utama, bukan sekadar pelengkap. Temukan konsep STIFIn yang benar-benar menjelaskan topik, lalu terjemahkan menjadi contoh yang dekat dengan pembaca. Jika potongan memuat Mesin Kecerdasan, Drive Kecerdasan, Personaliti Genetik, atau karakter Sensing, Thinking, Intuiting, Feeling, dan Insting, gunakan istilah tersebut secara tepat sesuai konteks sumber. Nomor halaman hanya untuk jejak pemeriksaan admin dan tidak boleh ditulis dalam artikel. Jangan mengarang isi yang tidak terdapat di dalam potongan, jangan membuat daftar sumber di dalam artikel, dan jangan menyalin panjang secara verbatim.\n\n${input.knowledgeContext}`
     : input.useKnowledge
       ? 'Tidak ditemukan potongan Pustaka STIFIn yang relevan. Jangan membuat klaim khusus tentang STIFIn yang tidak diberikan oleh admin.'
       : 'Pustaka STIFIn tidak dipakai pada permintaan ini.';
@@ -173,6 +173,10 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
   return {
     systemInstruction: [
       'Anda adalah editor senior berbahasa Indonesia untuk pusat edukasi umum Konsep STIFIn.',
+      'Tulis artikel yang terasa lahir dari pemahaman materi STIFIn, bukan artikel pengembangan diri generik yang hanya ditempeli nama STIFIn.',
+      'Mulai dari situasi nyata yang dialami pembaca, lalu jelaskan mengapa situasi itu dapat dipahami melalui konsep STIFIn yang terdapat di Pustaka.',
+      'Dalam dua bagian pertama, sebutkan lensa STIFIn yang akan dipakai. Dalam sedikitnya tiga bagian, hubungkan konsep itu dengan topik, contoh perilaku, dan langkah penerapan.',
+      'Istilah STIFIn harus dijelaskan dengan bahasa sehari-hari. Jangan menumpuk jargon dan jangan membuat daftar lima Mesin Kecerdasan bila tidak membantu topik.',
       'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
       'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
       'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
@@ -182,7 +186,9 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       'Jangan menulis penanda Markdown seperti ##, ###, tanda bintang, atau tanda minus di dalam heading maupun paragraphs karena format sudah dibentuk oleh sistem.',
       'Bangun alur: pembuka yang dekat dengan situasi pembaca, konteks utama, pembahasan bertahap, contoh penerapan, batasan, langkah praktis, lalu penutup yang memberi arah.',
       'Gunakan variasi panjang kalimat dan transisi yang alami. Tulis seperti editor manusia Indonesia, bukan seperti brosur atau keluaran mesin.',
-      'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, dan kesimpulan yang sekadar mengulang pembuka.',
+      'Gunakan sapaan dan pilihan kata yang wajar bagi pembaca Indonesia. Hindari kalimat abstrak seperti “setiap individu unik” bila tidak segera diikuti penjelasan STIFIn yang konkret.',
+      'Hindari pembuka klise, pengulangan definisi, kalimat terlalu panjang, nada menggurui, paragraf seragam, dan kesimpulan yang sekadar mengulang pembuka.',
+      'Jangan menampilkan nama workbook, nomor halaman, kode PUSTAKA, atau bagian daftar rujukan di body karena jejak sumber hanya untuk editor.',
       'Slug hanya huruf kecil, angka, dan tanda hubung. Hasil selalu draf yang perlu ditinjau manusia.',
     ].join(' '),
     userInput: [
@@ -380,8 +386,15 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
         query: `${input.topic} ${input.category} ${input.keywords}`,
         sourceIds: input.knowledgeSourceIds,
       });
+      if (!result.context.trim()) {
+        throw new AiProviderError(
+          'Belum ada materi Pustaka STIFIn yang cocok untuk topik ini. Pilih workbook secara manual atau aktifkan sumber yang relevan sebelum membuat artikel.',
+          422,
+        );
+      }
       knowledge = { context: result.context, references: result.references };
     } catch (error) {
+      if (error instanceof AiProviderError) throw error;
       console.error('Pustaka STIFIn tidak dapat dicari.', error);
       throw new AiProviderError('Pustaka STIFIn tidak dapat dibaca. Periksa database lalu coba kembali.', 503);
     }

@@ -16,7 +16,7 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Pustaka STIFIn privat untuk mengunggah PDF, mengekstrak teks per halaman, dan memberi sumber pada artikel AI.
 - Pemisahan otomatis antara rujukan STIFIn, materi internal, materi terbatas, dan modul copywriting/kampanye.
 - Artikel AI lebih panjang dan terstruktur, dengan waktu baca yang dihitung dari isi nyata.
-- Rujukan berstatus publik dapat ditampilkan pada artikel; materi internal dan terbatas tetap disembunyikan.
+- Jejak rujukan dan halaman disimpan untuk pemeriksaan admin, tetapi tidak ditampilkan pada halaman artikel publik.
 - Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
 - Komentar bermoderasi, like, share, klik produk, dan statistik interaksi.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
