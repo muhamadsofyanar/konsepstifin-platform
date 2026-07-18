@@ -33,7 +33,7 @@ export default function MobileNavigation({
       <nav aria-label="Navigasi mobile">
         {links.map((item) => <Link className={item.active ? 'active' : ''} href={item.href} key={item.label} onClick={closeMenu}>{item.label}<span>→</span></Link>)}
       </nav>
-      <div><Link href="/admin/login" onClick={closeMenu}>Masuk tim</Link><Link className="mobile-menu-cta" href={ctaHref} onClick={closeMenu}>{ctaLabel}</Link></div>
+      <div><Link href="/admin/login" onClick={closeMenu}>Admin</Link><Link className="mobile-menu-cta" href={ctaHref} onClick={closeMenu}>{ctaLabel}</Link></div>
     </div>
   </details>;
 }

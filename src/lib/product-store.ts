@@ -1,5 +1,5 @@
 import { databaseConfigured, getDatabaseClient } from '@/lib/article-store';
-import { affiliatePrograms, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from '@/app/site-config';
+import { affiliatePrograms, isOfficialSejoliUrl, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from '@/app/site-config';
 
 export type ProductGroup = 'test' | 'promoter' | 'affiliate';
 export type ManagedProduct = {
@@ -107,7 +107,9 @@ export async function updateManagedProduct(id: number, input: Partial<ManagedPro
   const price = String(input.price ?? '').trim();
   if (!title || !price) throw new Error('Nama produk dan harga wajib diisi.');
   const checkoutUrl = String(input.checkoutUrl ?? '').trim();
-  if (checkoutUrl && !/^https:\/\//i.test(checkoutUrl)) throw new Error('URL checkout harus menggunakan https://');
+  if (!isOfficialSejoliUrl(checkoutUrl)) {
+    throw new Error('URL checkout wajib menggunakan https://app.konsepstifin.com/.');
+  }
   const sql = getDatabaseClient();
   const rows = await sql`UPDATE public_products SET
     eyebrow=${String(input.eyebrow ?? '').trim()}, title=${title}, description=${String(input.description ?? '').trim()},

@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { sejoliLinks, type SejoliLinkKey } from './site-config';
+import { isOfficialSejoliUrl, sejoliLinks, type SejoliLinkKey } from './site-config';
 
 const services = [
   'Tes STIFIn Personal', 'Paket Tes Keluarga', 'Sekolah & Komunitas',
@@ -30,7 +30,7 @@ export default function PublicInterestAction({
 
   function start() {
     const target = checkoutUrl || sejoliLinks[linkKey];
-    if (/^https:\/\//i.test(target)) {
+    if (target && isOfficialSejoliUrl(target)) {
       window.open(target, '_blank', 'noopener,noreferrer');
       return;
     }

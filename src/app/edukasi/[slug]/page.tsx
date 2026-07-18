@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { bodyToBlocks, getPublishedArticleBySlug, getPublishedArticles } from '@/lib/article-store';
 import ArticleEngagement from './article-engagement';
 import ArticleProductCta from './article-product-cta';
+import JsonLd from '../../json-ld';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +44,36 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
   const referralCode = typeof referralCandidate === 'string' && /^[a-zA-Z0-9_-]{2,80}$/.test(referralCandidate) ? referralCandidate : '';
   const affiliateParameter = /^[a-zA-Z0-9_-]{1,40}$/.test(process.env.SEJOLI_AFFILIATE_PARAM ?? '')
     ? String(process.env.SEJOLI_AFFILIATE_PARAM) : 'ref';
+  const articleUrl = `https://konsepstifin.com/edukasi/${article.slug}`;
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${articleUrl}#article`,
+        headline: article.title,
+        description: article.excerpt,
+        datePublished: article.publishedAt,
+        dateModified: article.updatedAt || article.publishedAt,
+        inLanguage: 'id-ID',
+        mainEntityOfPage: articleUrl,
+        image: `${articleUrl}/opengraph-image`,
+        author: { '@id': 'https://konsepstifin.com/#organization' },
+        publisher: { '@id': 'https://konsepstifin.com/#organization' },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://konsepstifin.com/' },
+          { '@type': 'ListItem', position: 2, name: 'Edukasi', item: 'https://konsepstifin.com/edukasi' },
+          { '@type': 'ListItem', position: 3, name: article.title, item: articleUrl },
+        ],
+      },
+    ],
+  };
 
   return <main className="article-main">
+    <JsonLd data={articleSchema} />
     <section className="article-heading"><Link href="/edukasi">← Kembali ke pusat edukasi</Link><div><span>{article.category}</span><span>{article.readTime}</span><time dateTime={article.publishedAt}>{article.publishedLabel}</time></div><h1>{article.title}</h1><p>{article.excerpt}</p></section>
     <div className={`article-hero-cover article-cover ${article.tone}`}><span>{article.category}</span><b>WAWASAN<br/>UNTUK<br/>BERTUMBUH</b><small>KONSEP STIFIn · EDUKASI</small></div>
     <div className="article-layout">

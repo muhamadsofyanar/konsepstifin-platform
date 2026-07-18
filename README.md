@@ -83,7 +83,12 @@ Aplikasi berjalan pada `http://localhost:3000`.
 Repository ini sudah dilengkapi `Dockerfile` untuk deployment melalui Coolify.
 Port aplikasi: `3000`.
 
-Domain staging: `https://tes.konsepstifin.com`.
+Domain produksi: `https://konsepstifin.com`.
+
+Website publik, edukasi, SEO, katalog, dan landing page berada di domain utama.
+Checkout SEJOLI, member area, serta affiliate berada di
+`https://app.konsepstifin.com`. Subdomain `tes.konsepstifin.com` tidak lagi
+digunakan.
 
 ## Keamanan
 

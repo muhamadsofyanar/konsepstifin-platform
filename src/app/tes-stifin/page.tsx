@@ -6,6 +6,7 @@ import { PublicFooter, PublicHeader } from '../public-site-shell';
 import { faqItems } from '../site-config';
 import { getPublicManagedProducts } from '@/lib/product-store';
 import ActivityGallery from '../activity-gallery';
+import JsonLd from '../json-ld';
 
 export const metadata: Metadata = {
   title: 'Tes STIFIn Offline — Kenali Mesin Kecerdasan Anda',
@@ -22,8 +23,33 @@ export const dynamic = 'force-dynamic';
 export default async function TestLandingPage() {
   const testFaq = faqItems.filter((_, index) => [0, 1, 4].includes(index));
   const publicProducts = await getPublicManagedProducts('test');
+  const rupiahValue = (value: string) => value.toLowerCase().includes('gratis') ? '0' : value.replace(/\D/g, '');
+  const servicesSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Pilihan layanan Tes STIFIn',
+    itemListElement: publicProducts.map((product, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Service',
+        name: product.title,
+        description: product.description,
+        provider: { '@id': 'https://konsepstifin.com/#organization' },
+        areaServed: { '@type': 'Country', name: 'Indonesia' },
+        offers: {
+          '@type': 'Offer',
+          price: rupiahValue(product.price),
+          priceCurrency: 'IDR',
+          url: product.checkoutUrl || 'https://konsepstifin.com/tes-stifin#layanan',
+          availability: 'https://schema.org/InStock',
+        },
+      },
+    })),
+  };
 
   return <div className="public-site journey-site test-landing">
+    <JsonLd data={servicesSchema} />
     <PublicHeader active="test" announcement="Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI" />
     <main>
       <section className="hero test-hero">

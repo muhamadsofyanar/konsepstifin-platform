@@ -2,6 +2,7 @@
 
 import { MouseEvent, useEffect, useMemo } from 'react';
 import type { ArticleContentType } from '@/lib/article-store';
+import { isOfficialSejoliUrl } from '@/app/site-config';
 
 const STORAGE_KEY = 'konsepstifin_affiliate_ref';
 const REFERRAL_TTL = 30 * 24 * 60 * 60 * 1000;
@@ -45,11 +46,12 @@ export default function ArticleProductCta({
   const targetUrlFor = useMemo(() => (referral: string) => {
     try {
       const target = new URL(productUrl);
+      if (!isOfficialSejoliUrl(target.toString())) return 'https://app.konsepstifin.com/';
       const parameter = /^[a-zA-Z0-9_-]{1,40}$/.test(affiliateParameter) ? affiliateParameter : 'ref';
       if (contentType === 'affiliate' && referral) target.searchParams.set(parameter, referral);
       return target.toString();
     } catch {
-      return productUrl;
+      return 'https://app.konsepstifin.com/';
     }
   }, [affiliateParameter, contentType, productUrl]);
 
@@ -77,7 +79,7 @@ export default function ArticleProductCta({
   return <aside className="article-product-cta">
     <span>{contentType === 'affiliate' ? 'REKOMENDASI AFFILIATE' : 'LAYANAN TERKAIT'}</span>
     <h2>{productName}</h2>
-    <p>Pelajari detail layanan, manfaat, serta ketentuannya pada halaman resmi sebelum melakukan pemesanan.</p>
+    <p>Pelajari detail layanan, manfaat, serta ketentuannya di app.konsepstifin.com sebelum melakukan pemesanan.</p>
     {contentType === 'affiliate' && <small>Tautan ini dapat memuat kode affiliate. Kami mungkin menerima komisi tanpa menambah harga yang Anda bayarkan.</small>}
     <a href={targetUrlFor(cleanReferral(referralCode))} target="_blank" rel={contentType === 'affiliate' ? 'sponsored noopener noreferrer' : 'noopener noreferrer'} onClick={recordClick}>{ctaLabel || 'Lihat produk'} →</a>
   </aside>;

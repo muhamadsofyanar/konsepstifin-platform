@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PublicInterestAction from '../public-interest-action';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
+import JsonLd from '../json-ld';
+import { platformLinks } from '../site-config';
 import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const metadata: Metadata = {
@@ -23,11 +25,29 @@ const benefits = [
 
 export default async function AffiliateLandingPage() {
   const affiliatePrograms = await getPublicManagedProducts('affiliate');
+  const affiliateSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': 'https://konsepstifin.com/affiliate#service',
+    name: 'Program Affiliate Konsep STIFIn',
+    description: 'Program rekomendasi layanan STIFIn dengan pendaftaran, tautan referral, transaksi, dan pencatatan komisi melalui SEJOLI.',
+    url: 'https://konsepstifin.com/affiliate',
+    provider: { '@id': 'https://konsepstifin.com/#organization' },
+    areaServed: { '@type': 'Country', name: 'Indonesia' },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'IDR',
+      url: platformLinks.affiliateRegistration,
+      availability: 'https://schema.org/InStock',
+    },
+  };
   return <div className="public-site journey-site affiliate-landing">
-    <PublicHeader active="affiliate" announcement="Program rekomendasi layanan STIFIn · Transaksi dan komisi dicatat melalui SEJOLI" ctaHref="#program" ctaLabel="Lihat program" />
+    <JsonLd data={affiliateSchema} />
+    <PublicHeader active="affiliate" announcement="Program rekomendasi layanan STIFIn · Pendaftaran, transaksi, dan komisi melalui app.konsepstifin.com" ctaHref={platformLinks.affiliateRegistration} ctaLabel="Daftar Affiliate" />
     <main>
       <section className="affiliate-hero">
-        <div><span className="eyebrow">PROGRAM AFFILIATE KONSEP STIFIn</span><h1>Mulai dari berbagi manfaat. Biarkan sistem membantu mencatat hasilnya.</h1><p>Rekomendasikan layanan yang memang relevan, gunakan tautan referral pribadi, lalu pantau transaksi valid melalui sistem SEJOLI.</p><div className="hub-actions"><Link className="public-cta big" href="#program">Pilih jalur affiliate →</Link><Link href="#cara-kerja">Lihat cara kerjanya</Link></div></div>
+        <div><span className="eyebrow">PROGRAM AFFILIATE KONSEP STIFIn</span><h1>Mulai dari berbagi manfaat. Biarkan sistem membantu mencatat hasilnya.</h1><p>Rekomendasikan layanan yang memang relevan, gunakan tautan referral pribadi, lalu pantau transaksi valid melalui sistem SEJOLI.</p><div className="hub-actions"><Link className="public-cta big" href="#program">Pilih jalur affiliate →</Link><a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Sudah terdaftar? Masuk Affiliate ↗</a></div></div>
         <figure className="journey-hero-media affiliate-hero-media"><Image src="/images/hero-promotor-v3.webp" alt="Komunitas Muslim Indonesia belajar membangun komunikasi dan jaringan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload /><figcaption className="media-story-card"><small>ALUR SEDERHANA</small><b>Bagikan → Transaksi → Komisi</b><span>Edukasi yang baik lebih penting daripada sekadar menyebar tautan</span></figcaption></figure>
       </section>
 
@@ -39,7 +59,7 @@ export default async function AffiliateLandingPage() {
 
       <section className="affiliate-ethics"><div><span>PROMOSI YANG MENJAGA KEPERCAYAAN</span><h2>Lebih baik relevan daripada ramai.</h2></div><ul><li>Gunakan informasi harga dan fasilitas yang sama dengan halaman produk.</li><li>Nyatakan hubungan affiliate dengan terbuka saat membagikan rekomendasi.</li><li>Jangan menjadikan hasil STIFIn sebagai diagnosis atau jaminan masa depan.</li><li>Jaga data calon peserta dan jangan meminta data sidik jari secara online.</li></ul></section>
 
-      <section className="final-cta"><div><span>MULAI DARI JALUR YANG PALING RINGAN</span><h2>Kenali programnya, pahami aturannya, lalu mulai berbagi dengan cara yang baik.</h2><p>Setelah produk SEJOLI aktif, tombol pada halaman ini akan langsung mengarah ke pendaftaran atau checkout yang sesuai.</p></div><div><PublicInterestAction className="public-cta big" linkKey="affiliateUmum" label="Minat Affiliate Umum →" service="Affiliate Umum" /><Link href="/jadi-promotor">Bandingkan dengan jalur promotor</Link></div></section>
+      <section className="final-cta"><div><span>MULAI DARI JALUR YANG PALING RINGAN</span><h2>Kenali programnya, pahami aturannya, lalu mulai berbagi dengan cara yang baik.</h2><p>Pendaftaran, tautan referral, transaksi, dan komisi dikelola melalui app.konsepstifin.com.</p></div><div><PublicInterestAction className="public-cta big" linkKey="affiliateUmum" label="Daftar Affiliate Umum →" service="Affiliate Umum" /><a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Masuk dashboard affiliate ↗</a><Link href="/jadi-promotor">Bandingkan dengan jalur promotor</Link></div></section>
     </main>
     <PublicFooter />
   </div>;

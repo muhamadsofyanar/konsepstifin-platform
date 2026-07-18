@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { LinkProps } from 'next/link';
 import MobileNavigation, { type MobileNavigationLink } from './mobile-navigation';
+import { platformLinks } from './site-config';
 
 type PublicPage = 'home' | 'test' | 'education' | 'promoter' | 'affiliate';
 
@@ -41,7 +42,7 @@ export function PublicHeader({
       </nav>
       <div>
         <MobileNavigation links={mobileLinks} ctaHref={ctaHref} ctaLabel={ctaLabel} />
-        <Link className="text-button" href="/admin/login">Masuk tim</Link>
+        <Link className="text-button" href="/admin/login">Admin</Link>
         <Link className="public-cta" href={ctaHref}>{ctaLabel}</Link>
       </div>
     </header>
@@ -57,8 +58,9 @@ export function PublicFooter() {
       <Link href="/edukasi">Edukasi</Link>
       <Link href="/jadi-promotor">Promotor</Link>
       <Link href="/affiliate">Affiliate</Link>
+      <a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Masuk Affiliate ↗</a>
     </div>
     <p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p>
-    <small>Informasi di website bersifat edukatif. Harga, fasilitas, komisi, dan persyaratan final mengikuti checkout serta kebijakan resmi yang berlaku. Tes STIFIn bukan diagnosis medis atau psikologis.</small>
+    <small>Informasi di website bersifat edukatif. Checkout, akun member, dan affiliate dikelola melalui app.konsepstifin.com. Harga, fasilitas, komisi, dan persyaratan final mengikuti SEJOLI. Tes STIFIn bukan diagnosis medis atau psikologis.</small>
   </footer>;
 }

@@ -1,10 +1,21 @@
 /**
- * PUSAT PENGATURAN LINK SEJOLI
+ * PEMBAGIAN PLATFORM
  *
- * Tempel URL checkout/landing page SEJOLI di antara tanda petik.
- * Selama URL masih kosong, tombol akan membuka formulir minat agar calon
- * pelanggan tidak menemukan tautan rusak.
+ * konsepstifin.com     = website publik, edukasi, SEO, dan landing page.
+ * app.konsepstifin.com = checkout SEJOLI, member area, dan affiliate.
+ *
+ * Semua URL transaksi disimpan di file ini agar tidak tersebar di komponen.
+ * Selama URL produk masih kosong, tombol akan membuka formulir minat agar
+ * calon pelanggan tidak menemukan tautan rusak.
  */
+export const platformLinks = {
+  publicWebsite: 'https://konsepstifin.com/',
+  sejoliApp: 'https://app.konsepstifin.com/',
+  affiliateRegistration: 'https://app.konsepstifin.com/product/program-affiliate-konsep-stifin/',
+  affiliateDashboard: 'https://app.konsepstifin.com/member-area/home/lead-affiliasi/',
+  memberArea: 'https://app.konsepstifin.com/member-area/',
+} as const;
+
 export const sejoliLinks = {
   tesPersonal: 'https://app.konsepstifin.com/product/tes-stifin-personal/',
   tesPasangan: 'https://app.konsepstifin.com/product/tes-stifin-pasangan/',
@@ -19,6 +30,16 @@ export const sejoliLinks = {
   affiliateUmum: 'https://app.konsepstifin.com/product/program-affiliate-konsep-stifin/',
   affiliatePromotor: 'https://app.konsepstifin.com/product/program-affiliate-konsep-stifin/',
 } as const;
+
+export function isOfficialSejoliUrl(value: string) {
+  if (!value) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'app.konsepstifin.com';
+  } catch {
+    return false;
+  }
+}
 
 export type SejoliLinkKey = keyof typeof sejoliLinks;
 

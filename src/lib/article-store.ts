@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { articles, type ArticleBlock, type ArticleTone } from '@/app/edukasi/articles';
+import { isOfficialSejoliUrl } from '@/app/site-config';
 import type { KnowledgeReference } from '@/lib/knowledge-store';
 
 export type ArticleStatus = 'draft' | 'scheduled' | 'published';
@@ -403,7 +404,9 @@ export function validateArticleInput(value: unknown): ArticleInput {
     } catch {
       throw new Error('Alamat produk SEJOLI tidak valid.');
     }
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Alamat produk harus menggunakan http atau https.');
+    if (!isOfficialSejoliUrl(parsedUrl.toString())) {
+      throw new Error('Alamat produk wajib menggunakan https://app.konsepstifin.com/.');
+    }
     productUrl = parsedUrl.toString();
   }
   if (contentType !== 'education' && (!productName || !productUrl)) {

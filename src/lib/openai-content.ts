@@ -1,6 +1,7 @@
 import { blocksToBody, normalizeArticleBody, type ArticleContentType, type ArticleInput } from '@/lib/article-store';
 import type { ArticleBlock } from '@/app/edukasi/articles';
 import { findKnowledgeContext } from '@/lib/knowledge-store';
+import { isOfficialSejoliUrl } from '@/app/site-config';
 
 export type ArticleGenerationRequest = {
   topic: string;
@@ -139,6 +140,9 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
   if (objective.length < 8) throw new Error('Tujuan artikel minimal 8 karakter.');
   if (contentType !== 'education' && (!productName || !productUrl)) {
     throw new Error('Nama dan alamat produk wajib diisi untuk artikel produk atau affiliate.');
+  }
+  if (productUrl && !isOfficialSejoliUrl(productUrl)) {
+    throw new Error('Alamat produk wajib menggunakan https://app.konsepstifin.com/.');
   }
   return {
     topic, audience, objective, category, keywords, sourceNotes, length, tone,
