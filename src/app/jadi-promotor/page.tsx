@@ -18,12 +18,28 @@ export const metadata: Metadata = {
 };
 export const dynamic = 'force-dynamic';
 
+const rupiah = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+});
+
+function priceNumber(price: string) {
+  return Number(price.replace(/\D/g, '') || 0);
+}
+
 export default async function PromoterLandingPage() {
   const promoterFaq = faqItems.filter((_, index) => [2, 3].includes(index));
   const promoterSteps = await getPublicManagedProducts('promoter');
-  const mainInvestment = promoterSteps
+  const individualInvestment = promoterSteps
     .filter((item) => ['wsl1', 'wsl2', 'idDanAlat'].includes(item.productKey))
-    .reduce((total, item) => total + Number(item.price.replace(/\D/g, '') || 0), 0);
+    .reduce((total, item) => total + priceNumber(item.price), 0);
+  const packageProduct = promoterSteps.find((item) => item.productKey === 'paketPromotor');
+  const packageInvestment = packageProduct ? priceNumber(packageProduct.price) : 0;
+  const mainInvestment = packageInvestment || individualInvestment;
+  const packageSavings = packageInvestment > 0
+    ? Math.max(0, individualInvestment - packageInvestment)
+    : 0;
 
   return <div className="public-site journey-site promoter-landing">
     <PublicHeader active="promoter" announcement="Dari memahami diri, mendampingi orang lain, hingga membangun layanan STIFIn" ctaHref="#tahapan" ctaLabel="Lihat tahapan" />
@@ -43,7 +59,7 @@ export default async function PromoterLandingPage() {
 
       <section className="promoter-role"><div><span>SEBENARNYA, APA YANG DIKERJAKAN PROMOTOR?</span><h2>Bukan sekadar mengoperasikan alat tes. Promotor menemani orang memahami hasilnya.</h2></div><div className="role-grid"><article><b>01</b><h3>Menjalankan tes dengan benar</h3><p>Melakukan pemindaian secara langsung dan menjaga proses sesuai perangkat, alur, serta ketentuan yang berlaku.</p></article><article><b>02</b><h3>Membuat hasil lebih mudah dipahami</h3><p>Menjelaskan Mesin Kecerdasan peserta dengan bahasa yang dekat, tanpa memberi label atau membuat janji berlebihan.</p></article><article><b>03</b><h3>Menumbuhkan layanan dan jaringan</h3><p>Menjaga komunikasi, jadwal, tindak lanjut, serta hubungan baik agar manfaat STIFIn menjangkau lebih banyak orang.</p></article></div></section>
 
-      <section id="tahapan" className="section promoter-section"><div className="section-heading"><span>PROGRAM, MANFAAT & BIAYA</span><h2>Mulai dari mengenal profesinya, bukan langsung membeli alat.</h2><p>Harga ditempatkan di setiap tahap agar Anda dapat menyiapkan perjalanan dengan tenang. Posisi harga dipilih di tengah: tidak menekan nilai pelatihan, tetapi tetap lebih terjangkau dibanding sejumlah penawaran pasar.</p></div><div className="promoter-path">{promoterSteps.map((step, index) => <article key={step.productKey}><div className="step-top"><b>{String(index + 1).padStart(2, '0')}</b><span>{step.eyebrow}</span></div><h3>{step.title}</h3><div className="promoter-price"><b>{step.price}</b><small>{step.priceNote}</small></div><p>{step.description}</p><ul>{step.features.map((benefit) => <li key={benefit}>✓ {benefit}</li>)}</ul><PublicInterestAction linkKey={step.productKey} checkoutUrl={step.checkoutUrl} label={`${step.action} →`} service={step.productKey === 'previewPromotor' ? 'Preview Calon Promotor' : step.productKey === 'idDanAlat' ? 'Informasi ID & Alat' : step.title} /></article>)}</div><div className="promoter-investment"><div><span>INVESTASI TAHAP UTAMA</span><strong>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(mainInvestment)}</strong><small>WSL 1 + WSL 2 + ID & scanner. Tes Personal prasyarat dan biaya lain di luar rincian ini.</small></div><p>Pembelian dilakukan bertahap mengikuti kelulusan dan persyaratan, sehingga Anda tidak harus membayar seluruhnya pada hari pertama.</p></div><div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & scanner</b><span>Aktivasi sesuai syarat</span></div></div></section>
+      <section id="tahapan" className="section promoter-section"><div className="section-heading"><span>PROGRAM, MANFAAT & BIAYA</span><h2>Mulai dari mengenal profesinya, bukan langsung membeli alat.</h2><p>Harga ditempatkan di setiap tahap agar Anda dapat menyiapkan perjalanan dengan tenang. Posisi harga dipilih di tengah: tidak menekan nilai pelatihan, tetapi tetap lebih terjangkau dibanding sejumlah penawaran pasar.</p></div><div className="promoter-path">{promoterSteps.map((step, index) => <article key={step.productKey}><div className="step-top"><b>{String(index + 1).padStart(2, '0')}</b><span>{step.eyebrow}</span></div><h3>{step.title}</h3><div className="promoter-price"><b>{step.price}</b><small>{step.priceNote}</small></div><p>{step.description}</p><ul>{step.features.map((benefit) => <li key={benefit}>✓ {benefit}</li>)}</ul><PublicInterestAction linkKey={step.productKey} checkoutUrl={step.checkoutUrl} label={`${step.action} →`} service={step.productKey === 'previewPromotor' ? 'Preview Calon Promotor' : step.productKey === 'idDanAlat' ? 'Informasi ID & Alat' : step.title} /></article>)}</div><div className="promoter-investment"><div><span>{packageProduct ? 'PAKET LENGKAP PALING HEMAT' : 'INVESTASI TAHAP UTAMA'}</span><strong>{rupiah.format(mainInvestment)}</strong><small>{packageProduct ? 'WSL 1 + WSL 2 + ID aplikasi & scanner dalam Paket Lengkap SEJOLI.' : 'WSL 1 + WSL 2 + ID & scanner. Tes Personal prasyarat dan biaya lain di luar rincian ini.'}</small></div><div className="promoter-investment-detail">{packageProduct && individualInvestment > packageInvestment && <div className="investment-saving"><small>Jika dibeli terpisah</small><s>{rupiah.format(individualInvestment)}</s><b>Hemat {rupiah.format(packageSavings)}</b></div>}<p>Pemenuhan tahapan tetap mengikuti kelulusan dan persyaratan yang berlaku. Tes Personal serta biaya lain di luar rincian ini.</p>{packageProduct && <PublicInterestAction className="investment-checkout" linkKey="paketPromotor" checkoutUrl={packageProduct.checkoutUrl} label="Pilih Paket Lengkap →" service={packageProduct.title} />}</div></div><div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & scanner</b><span>Aktivasi sesuai syarat</span></div></div></section>
 
       <section className="promoter-expectation"><div><span>SUPAYA EKSPEKTASINYA SAMA</span><h2>Peluangnya nyata, tetapi tetap perlu belajar dan bergerak.</h2><p>Promotor dapat membangun layanan, relasi, dan aktivitas profesional melalui jaringan STIFIn. Namun hasilnya tidak datang otomatis. Kesiapan, kualitas pelayanan, konsistensi, wilayah, serta ketentuan resmi ikut menentukan perjalanan setiap orang.</p></div><ul><li>Pahami biaya, fasilitas, dan peran sebelum mendaftar.</li><li>Tanyakan jadwal, proses belajar, syarat, serta aktivasi.</li><li>Bangun kepercayaan melalui pelayanan dan komunikasi yang jujur.</li><li>Jaga privasi peserta dan gunakan data secara bertanggung jawab.</li></ul></section>
 
