@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getPublishedArticles } from '@/lib/article-store';
 import { PublicFooter, PublicHeader } from './public-site-shell';
 import { getPublicManagedProducts } from '@/lib/product-store';
+import ActivityGallery from './activity-gallery';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,13 +79,15 @@ export default async function Home() {
       </section>
 
       <section className="section home-catalog" aria-label="Ringkasan produk dan harga">
-        <div className="section-heading"><span>PRODUK & KISARAN BIAYA</span><h2>Lihat pilihannya dulu, lalu masuk ke halaman yang paling sesuai.</h2><p>Harga berikut membantu Anda menyiapkan langkah. Paket bertanda harga rancangan masih dapat disesuaikan sebelum checkout SEJOLI diaktifkan.</p></div>
+        <div className="section-heading"><span>PRODUK & HARGA SEJOLI</span><h2>Lihat pilihannya dulu, lalu masuk ke halaman yang paling sesuai.</h2><p>Harga yang ditampilkan mengikuti angka pada kartu produk SEJOLI. Harga dan ketentuan final tetap terlihat kembali sebelum pembayaran.</p></div>
         <div className="journey-grid catalog-overview">
           <article className="journey-card forest"><header><span>LAYANAN TES</span><b>01</b></header><h2>Personal & Keluarga</h2><p>{publicProducts.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/tes-stifin">Lihat seluruh paket tes <span>→</span></Link></article>
           <article className="journey-card sand"><header><span>JALUR PROFESI</span><b>02</b></header><h2>Tahapan Promotor</h2><p>{promoterSteps.slice(1).map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/jadi-promotor">Lihat tahapan promotor <span>→</span></Link></article>
           <article className="journey-card leaf"><header><span>JALUR REKOMENDASI</span><b>03</b></header><h2>Program Affiliate</h2><p>{affiliatePrograms.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/affiliate">Lihat program affiliate <span>→</span></Link></article>
         </div>
       </section>
+
+      <ActivityGallery />
 
       <section className="hub-foundation">
         <div className="hub-foundation-copy"><span>SETELAH TAHU HASILNYA</span><h2>Tes memberi nama pada pola. Pemahaman membuatnya berguna.</h2><p>Hasil STIFIn adalah awal percakapan tentang cara Anda menyerap informasi, mengambil keputusan, bergerak, dan bertumbuh. Nilainya terasa ketika hasil dibahas dengan baik lalu diterapkan sesuai situasi nyata—bukan ketika dipakai untuk membatasi diri.</p><Link href="/edukasi">Lihat cara menerapkannya →</Link></div>

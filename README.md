@@ -20,6 +20,9 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
 - Komentar bermoderasi, like, share, klik produk, dan statistik interaksi.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
+- Harga katalog publik mengikuti harga yang tampil pada kartu produk SEJOLI.
+- Enam foto dokumentasi kegiatan nyata tampil di beranda dan halaman Tes STIFIn.
+- Tombol produk aktif membuka checkout SEJOLI; formulir minat dipisahkan sebagai bantuan memilih layanan.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 Panduan mengaktifkan editor dan PostgreSQL tersedia di
@@ -27,16 +30,17 @@ Panduan mengaktifkan editor dan PostgreSQL tersedia di
 Panduan fitur AI dan interaksi tersedia di `PANDUAN_AI_DAN_INTERAKSI.md`.
 Panduan Pustaka STIFIn tersedia di `PANDUAN_PUSTAKA_STIFIN.md`.
 
-## Memasang link checkout SEJOLI
+## Mengelola link checkout SEJOLI
 
-Semua link checkout dipusatkan dalam satu file:
+Link bawaan checkout dipusatkan dalam satu file:
 
 ```text
 src/app/site-config.ts
 ```
 
-Buka file tersebut, lalu isi bagian `sejoliLinks` dengan URL lengkap dari
-landing page atau checkout produk SEJOLI. Contoh:
+Buka file tersebut untuk mengubah URL bawaan produk. Setelah aplikasi memakai
+PostgreSQL, nama, harga, deskripsi, status, urutan, dan URL checkout juga dapat
+dikelola tanpa redeploy melalui `/admin/produk`.
 
 ```ts
 export const sejoliLinks = {
@@ -46,9 +50,24 @@ export const sejoliLinks = {
 };
 ```
 
-Jika sebuah link belum diisi, tombol tidak akan rusak. Website otomatis
+Nilai dari `/admin/produk` menjadi prioritas. Jika URL database kosong, website
+memakai `sejoliLinks`. Jika keduanya belum diisi, tombol tidak akan rusak dan
+website otomatis
 membuka formulir minat dan menyimpan permintaan ke PostgreSQL pada tabel
 `public_interest_leads`.
+
+Saat upgrade versi 0.1.2 pertama kali dijalankan, migrasi katalog satu kali akan
+menyamakan harga dan link database dengan kartu produk SEJOLI yang disepakati.
+Sesudah itu, perubahan berikutnya tetap dapat dilakukan melalui `/admin/produk`.
+
+## Dokumentasi kegiatan nyata
+
+Foto web berada di `public/images/dokumentasi`. Daftar foto, caption, dan teks
+alternatif dipusatkan di `src/app/activity-gallery.tsx`. Salinan web sudah
+dioptimalkan ke WebP dan metadata kamera telah dibuang.
+
+Sebelum publikasi, pastikan izin penggunaan wajah setiap peserta sudah sesuai
+dengan persetujuan dokumentasi yang dimiliki tim.
 
 ## Menjalankan secara lokal
 

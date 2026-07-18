@@ -1,5 +1,5 @@
 import { databaseConfigured, getDatabaseClient } from '@/lib/article-store';
-import { affiliatePrograms, promoterSteps, publicProducts, type SejoliLinkKey } from '@/app/site-config';
+import { affiliatePrograms, promoterSteps, publicProducts, sejoliLinks, type SejoliLinkKey } from '@/app/site-config';
 
 export type ProductGroup = 'test' | 'promoter' | 'affiliate';
 export type ManagedProduct = {
@@ -22,12 +22,12 @@ export type ManagedProduct = {
 };
 
 const globalProducts = globalThis as unknown as { konsepStifinProductSchema?: Promise<void> };
-const PRODUCT_CATALOG_REVISION = 'catalog-2026-07-sejoli-v1';
+const PRODUCT_CATALOG_REVISION = 'catalog-2026-07-sejoli-v3-card-prices';
 
 const seeds: Omit<ManagedProduct, 'id'>[] = [
-  ...publicProducts.map((item, index) => ({ productKey: item.linkKey, groupName: 'test' as const, eyebrow: item.category, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.features, bonuses: item.bonuses, action: item.action, checkoutUrl: '', active: true, featured: Boolean(item.featured), sortOrder: index + 1 })),
-  ...promoterSteps.map((item, index) => ({ productKey: item.linkKey, groupName: 'promoter' as const, eyebrow: item.label, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.benefits, bonuses: [], action: item.action, checkoutUrl: '', active: true, featured: false, sortOrder: index + 1 })),
-  ...affiliatePrograms.map((item, index) => ({ productKey: item.linkKey, groupName: 'affiliate' as const, eyebrow: item.eyebrow, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.points, bonuses: [], action: item.action, checkoutUrl: '', active: true, featured: index === 1, sortOrder: index + 1 })),
+  ...publicProducts.map((item, index) => ({ productKey: item.linkKey, groupName: 'test' as const, eyebrow: item.category, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.features, bonuses: item.bonuses, action: item.action, checkoutUrl: sejoliLinks[item.linkKey], active: true, featured: Boolean(item.featured), sortOrder: index + 1 })),
+  ...promoterSteps.map((item, index) => ({ productKey: item.linkKey, groupName: 'promoter' as const, eyebrow: item.label, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.benefits, bonuses: [], action: item.action, checkoutUrl: sejoliLinks[item.linkKey], active: true, featured: false, sortOrder: index + 1 })),
+  ...affiliatePrograms.map((item, index) => ({ productKey: item.linkKey, groupName: 'affiliate' as const, eyebrow: item.eyebrow, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.points, bonuses: [], action: item.action, checkoutUrl: sejoliLinks[item.linkKey], active: true, featured: index === 1, sortOrder: index + 1 })),
 ];
 
 export async function ensureProductSchema() {
@@ -59,7 +59,7 @@ export async function ensureProductSchema() {
       )`;
       for (const item of seeds) {
         await sql`INSERT INTO public_products (product_key, group_name, eyebrow, title, description, price, price_note, features, bonuses, action, checkout_url, active, featured, sort_order)
-          VALUES (${item.productKey}, ${item.groupName}, ${item.eyebrow}, ${item.title}, ${item.description}, ${item.price}, ${item.priceNote}, ${sql.json(item.features)}, ${sql.json(item.bonuses)}, ${item.action}, '', ${item.active}, ${item.featured}, ${item.sortOrder})
+          VALUES (${item.productKey}, ${item.groupName}, ${item.eyebrow}, ${item.title}, ${item.description}, ${item.price}, ${item.priceNote}, ${sql.json(item.features)}, ${sql.json(item.bonuses)}, ${item.action}, ${item.checkoutUrl}, ${item.active}, ${item.featured}, ${item.sortOrder})
           ON CONFLICT (product_key) DO NOTHING`;
       }
       const applied = await sql`SELECT revision FROM public_product_migrations WHERE revision = ${PRODUCT_CATALOG_REVISION}`;
@@ -68,7 +68,7 @@ export async function ensureProductSchema() {
           await sql`UPDATE public_products SET
             group_name=${item.groupName}, eyebrow=${item.eyebrow}, title=${item.title}, description=${item.description},
             price=${item.price}, price_note=${item.priceNote}, features=${sql.json(item.features)}, bonuses=${sql.json(item.bonuses)},
-            action=${item.action}, active=${item.active}, featured=${item.featured}, sort_order=${item.sortOrder}, updated_at=NOW()
+            action=${item.action}, checkout_url=${item.checkoutUrl}, active=${item.active}, featured=${item.featured}, sort_order=${item.sortOrder}, updated_at=NOW()
             WHERE product_key=${item.productKey}`;
         }
         await sql`INSERT INTO public_product_migrations (revision) VALUES (${PRODUCT_CATALOG_REVISION})`;

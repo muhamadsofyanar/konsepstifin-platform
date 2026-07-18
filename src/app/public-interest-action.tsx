@@ -5,6 +5,7 @@ import { sejoliLinks, type SejoliLinkKey } from './site-config';
 
 const services = [
   'Tes STIFIn Personal', 'Paket Tes Keluarga', 'Sekolah & Komunitas',
+  'Bantuan memilih layanan STIFIn',
   'Preview Calon Promotor', 'WSL 1', 'WSL 2', 'Informasi ID & Alat',
   'Affiliate Umum', 'Affiliate Promotor Resmi',
 ];
@@ -62,6 +63,8 @@ export default function PublicInterestAction({
     setState('sent');
   }
 
+  const serviceOptions = services.includes(service) ? services : [service, ...services];
+
   return <>
     <button className={className} type="button" onClick={start}>{label}</button>
     {open && <div className="modal-backdrop" onMouseDown={() => setOpen(false)}>
@@ -70,11 +73,11 @@ export default function PublicInterestAction({
         {state === 'sent' ? <div className="interest-success">
           <span>✓</span><h2 id="interest-title">Permintaan sudah tersimpan.</h2><p>Tim dapat melihat data Anda dan akan menindaklanjuti pilihan layanan ini. Jangan mengirim sidik jari, kata sandi, atau data rahasia melalui formulir.</p><button className="public-cta" type="button" onClick={() => setOpen(false)}>Selesai</button>
         </div> : <>
-          <div className="modal-head"><span>FORMULIR MINAT</span><h2 id="interest-title">Mulai dari kebutuhan Anda.</h2><p>Checkout SEJOLI untuk pilihan ini sedang disiapkan. Isi data singkat agar tim dapat membantu memilih kota, jadwal, atau tahapan.</p></div>
+          <div className="modal-head"><span>FORMULIR MINAT</span><h2 id="interest-title">Mulai dari kebutuhan Anda.</h2><p>Isi data singkat agar tim dapat membantu memilih layanan, kota, jadwal, atau tahapan yang sesuai. Tombol pada kartu produk yang sudah aktif tetap membuka checkout SEJOLI secara langsung.</p></div>
           <form onSubmit={submit}>
             <label>Nama lengkap<input name="name" required minLength={3} placeholder="Nama Anda" /></label>
             <label>Nomor WhatsApp<input name="phone" required inputMode="tel" placeholder="08xx xxxx xxxx" /></label>
-            <div className="form-row"><label>Kota/domisili<input name="city" required placeholder="Contoh: Bandung" /></label><label>Pilihan layanan<select name="service" defaultValue={service}>{services.map((item) => <option key={item}>{item}</option>)}</select></label></div>
+            <div className="form-row"><label>Kota/domisili<input name="city" required placeholder="Contoh: Bandung" /></label><label>Pilihan layanan<select name="service" defaultValue={service}>{serviceOptions.map((item) => <option key={item}>{item}</option>)}</select></label></div>
             <label>Jadwal atau kebutuhan tambahan<textarea name="notes" rows={3} placeholder="Contoh: Sabtu pagi / ingin informasi WSL 1" /></label>
             <label className="interest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
             <div className="privacy-note">Tes STIFIn dilakukan offline. Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
