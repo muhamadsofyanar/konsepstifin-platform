@@ -155,6 +155,7 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
   const [showAi, setShowAi] = useState(false);
   const [aiForm, setAiForm] = useState(emptyAiForm);
   const [generating, setGenerating] = useState(false);
+  const [optimizingCurrent, setOptimizingCurrent] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');
   const [editorialNotes, setEditorialNotes] = useState('');
   const [engagement, setEngagement] = useState<EngagementData>(emptyEngagement);
@@ -356,6 +357,71 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
     }
   }
 
+  async function optimizeCurrentWithAi() {
+    if (!editingId || !databaseReady || !aiReady) {
+      setError('Pilih artikel tersimpan dan pastikan AI serta database sudah aktif.');
+      return;
+    }
+    if (!window.confirm('Buat pratinjau optimasi isi artikel ini? Hasil akan masuk ke form dan belum tersimpan sampai Anda menekan tombol Simpan.')) return;
+    setOptimizingCurrent(true);
+    setError('');
+    setMessage('');
+    setEditorialNotes('');
+    try {
+      const response = await fetch('/api/admin/ai/article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: form.title,
+          audience: 'Pembaca Konsep STIFIn yang mencari jawaban edukatif, praktis, dan bertanggung jawab',
+          objective: 'Memperdalam artikel lama, memperjelas struktur jawaban, dan mempertahankan makna serta fakta yang sudah ada',
+          category: form.category,
+          keywords: form.secondaryKeywords.join(', '),
+          sourceNotes: `ARTIKEL LAMA YANG HARUS MENJADI DASAR. Jangan menambah klaim, pengalaman, angka, atau sumber yang tidak tersedia:\n\n${form.body.slice(0, 5400)}`,
+          primaryKeyword: form.primaryKeyword || form.title,
+          searchIntent: form.searchIntent,
+          topicCluster: form.topicCluster || form.category,
+          contentRole: form.contentRole,
+          experienceEvidence: form.experienceEvidence,
+          length: form.body.split(/\s+/).length >= 900 ? 'mendalam' : 'sedang',
+          tone: 'profesional',
+          contentType: form.contentType,
+          productName: form.productName,
+          productUrl: form.productUrl,
+          ctaLabel: form.ctaLabel,
+          variationNumber: 1,
+          variationTotal: 1,
+          avoidTitles: articles.filter((article) => article.slug !== form.slug).map((article) => article.title).slice(0, 20),
+          useKnowledge: form.sourceReferences.length > 0,
+          knowledgeSourceIds: [...new Set(form.sourceReferences.map((source) => source.sourceId))],
+        }),
+      });
+      if (response.status === 401) {
+        router.replace('/admin/login');
+        return;
+      }
+      const generated = await response.json();
+      if (!response.ok) throw new Error(generated.message || 'Optimasi AI gagal dibuat.');
+      setForm((current) => ({
+        ...current,
+        excerpt: generated.article.excerpt || current.excerpt,
+        body: generated.article.body || current.body,
+        takeaway: generated.article.takeaway || current.takeaway,
+        readTime: generated.article.readTime || current.readTime,
+        secondaryKeywords: generated.article.secondaryKeywords?.length
+          ? generated.article.secondaryKeywords : current.secondaryKeywords,
+        sourceReferences: Array.isArray(generated.sources) && generated.sources.length
+          ? generated.sources : current.sourceReferences,
+      }));
+      setEditorialNotes(generated.editorialNotes || 'Periksa kembali fakta, struktur, dan nada sebelum menyimpan.');
+      setMessage('Pratinjau optimasi AI sudah dimasukkan ke form. Periksa perubahan lalu klik Simpan jika disetujui.');
+    } catch (optimizationError) {
+      setError(optimizationError instanceof Error ? optimizationError.message : 'Optimasi AI gagal dibuat.');
+    } finally {
+      setOptimizingCurrent(false);
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -476,7 +542,7 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
 
           <form className="article-editor-form" onSubmit={submit}><div className="article-editor-head"><div><span>{editingId ? 'EDIT ARTIKEL' : 'ARTIKEL BARU'}</span><h2>{editingId ? 'Perbarui konten' : 'Tulis konten edukasi'}</h2></div><div className="editor-status"><button type="button" className={form.status === 'draft' ? 'active' : ''} onClick={() => update('status','draft')}>Draf</button><button type="button" className={form.status === 'scheduled' ? 'active scheduled' : ''} onClick={() => setForm((current) => ({ ...current, status: 'scheduled', scheduledAt: current.scheduledAt || wibIsoFromLocal(defaultScheduleStart()) }))}>Jadwalkan</button><button type="button" className={form.status === 'published' ? 'active published' : ''} onClick={() => update('status','published')}>Terbitkan</button></div></div>
             <div className="editor-grid"><label className="wide">Judul artikel<input value={form.title} onChange={(event) => { const title = event.target.value; update('title', title); if (!editingId) update('slug', slugify(title)); }} placeholder="Contoh: Cara Membangun Komunikasi yang Lebih Sadar" required /></label><label>Slug/alamat artikel<input value={form.slug} onChange={(event) => update('slug', slugify(event.target.value))} placeholder="alamat-artikel" required /></label><label>Kategori<select value={form.category} onChange={(event) => update('category', event.target.value)}>{categoryOptions.map((category) => <option key={category}>{category}</option>)}</select></label><label>Jenis artikel<select value={form.contentType} onChange={(event) => update('contentType', event.target.value as ArticleContentType)}>{(Object.keys(contentTypeLabels) as ArticleContentType[]).map((type) => <option key={type} value={type}>{contentTypeLabels[type]}</option>)}</select></label><label>Tanggal terbit<input type="date" value={form.publishedAt} onChange={(event) => update('publishedAt', event.target.value)} required /></label>{form.status === 'scheduled' && <label className="schedule-editor-field">Jadwal terbit (WIB)<input type="datetime-local" value={wibLocalFromIso(form.scheduledAt)} min={defaultScheduleStart()} onChange={(event) => { const scheduledAt = wibIsoFromLocal(event.target.value); setForm((current) => ({ ...current, scheduledAt, publishedAt: wibDateFromIso(scheduledAt) })); }} required /></label>}<label>Durasi baca<input value={form.readTime} onChange={(event) => update('readTime', event.target.value)} placeholder="5 menit baca" required /></label><label>Warna sampul<select value={form.tone} onChange={(event) => update('tone', event.target.value as ArticleInput['tone'])}><option value="forest">Hijau utama</option><option value="mint">Hijau muda</option><option value="leaf">Hijau daun</option><option value="sand">Cokelat hangat</option><option value="charcoal">Hijau gelap</option></select></label><label className="checkbox-label"><input type="checkbox" checked={form.featured} onChange={(event) => update('featured', event.target.checked)} /> Jadikan artikel pilihan</label>{form.contentType !== 'education' && <div className="editor-product-fields wide"><b>Produk SEJOLI</b><label>Nama produk<input value={form.productName} onChange={(event) => update('productName', event.target.value)} required /></label><label>URL produk/checkout<input type="url" value={form.productUrl} onChange={(event) => update('productUrl', event.target.value)} required /></label><label>Teks tombol<input value={form.ctaLabel} onChange={(event) => update('ctaLabel', event.target.value)} /></label>{form.contentType === 'affiliate' && <p>Artikel publik akan menampilkan keterangan bahwa tautan ini bersifat affiliate.</p>}</div>}<label className="wide">Ringkasan<textarea rows={3} value={form.excerpt} onChange={(event) => update('excerpt', event.target.value)} placeholder="Ringkasan singkat yang tampil pada kartu artikel." required /></label><label className="wide body-field">Isi artikel<textarea rows={18} value={form.body} onChange={(event) => update('body', event.target.value)} required /><small>Gunakan <code>## Judul bagian</code> untuk subjudul dan <code>- Poin</code> untuk daftar.</small></label><label className="wide">Inti artikel<textarea rows={3} value={form.takeaway} onChange={(event) => update('takeaway', event.target.value)} placeholder="Satu kesimpulan utama untuk pembaca." required /></label>{form.sourceReferences.length > 0 && <section className="editor-source-references wide"><header><b>Sumber pustaka yang dipakai</b><small>Hanya terlihat oleh admin.</small></header><div>{form.sourceReferences.map((source) => <a key={`${source.sourceId}-${source.pageNumber}`} href={`/api/admin/knowledge/${source.sourceId}/file`} target="_blank" rel="noreferrer"><span>{source.title}</span><small>Halaman {source.pageNumber} · {source.category}</small></a>)}</div></section>}</div>
-            <section className="content-intelligence-editor"><header><div><span>CONTENT INTELLIGENCE</span><h3>Intent, bukti, reviewer, dan hubungan artikel</h3></div><Link href="/admin/intelligence">Buka audit lengkap →</Link></header><div className="intelligence-editor-grid"><label>Keyword utama<input value={form.primaryKeyword} onChange={(event) => update('primaryKeyword', event.target.value)} placeholder="Contoh: tes STIFIn untuk keluarga" /></label><label>Keyword sekunder<input value={form.secondaryKeywords.join(', ')} onChange={(event) => update('secondaryKeywords', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="komunikasi keluarga, mesin kecerdasan" /></label><label>Search intent<select value={form.searchIntent} onChange={(event) => update('searchIntent', event.target.value as SearchIntent)}><option value="informational">Informasional</option><option value="commercial">Pertimbangan layanan</option><option value="transactional">Transaksional</option><option value="navigational">Navigasional</option></select></label><label>Cluster topik<input value={form.topicCluster} onChange={(event) => update('topicCluster', event.target.value)} placeholder="Contoh: STIFIn untuk Keluarga" /></label><label>Peran konten<select value={form.contentRole} onChange={(event) => update('contentRole', event.target.value as ContentRole)}><option value="pillar">Pilar utama</option><option value="cluster">Artikel cluster</option><option value="supporting">Artikel pendukung</option></select></label><label>Tanggal review<input type="date" value={form.reviewedAt} onChange={(event) => update('reviewedAt', event.target.value)} /></label><label>Nama reviewer<input value={form.reviewerName} onChange={(event) => update('reviewerName', event.target.value)} placeholder="Nama pemeriksa manusia" /></label><label>Peran reviewer<input value={form.reviewerRole} onChange={(event) => update('reviewerRole', event.target.value)} placeholder="Contoh: Promotor STIFIn / Editor" /></label><label className="wide">Bukti atau pengalaman nyata<textarea rows={4} value={form.experienceEvidence} onChange={(event) => update('experienceEvidence', event.target.value)} placeholder="Tuliskan konteks kegiatan, lokasi, tanggal, atau pengalaman yang benar-benar terjadi. Hindari identitas dan data pribadi peserta." /></label><fieldset className="wide related-article-picker"><legend>Internal link terkait <small>pilih 2–6 artikel</small></legend><div>{articles.filter((article) => article.slug !== form.slug && article.status === 'published').map((article) => { const selected = form.relatedSlugs.includes(article.slug); return <label key={article.slug}><input type="checkbox" checked={selected} onChange={() => update('relatedSlugs', selected ? form.relatedSlugs.filter((slug) => slug !== article.slug) : [...form.relatedSlugs, article.slug].slice(0, 6))} /><span><b>{article.title}</b><small>{article.topicCluster || article.category}</small></span></label>; })}</div></fieldset></div></section>
+            <section className="content-intelligence-editor"><header><div><span>CONTENT INTELLIGENCE</span><h3>Intent, bukti, reviewer, dan hubungan artikel</h3></div><div className="content-intelligence-actions">{editingId && <button type="button" onClick={optimizeCurrentWithAi} disabled={optimizingCurrent || !aiReady || !databaseReady}>{optimizingCurrent ? 'Mengoptimalkan…' : '✨ Optimalkan isi dengan AI'}</button>}<Link href="/admin/intelligence">Buka audit lengkap →</Link></div></header><div className="intelligence-editor-grid"><label>Keyword utama<input value={form.primaryKeyword} onChange={(event) => update('primaryKeyword', event.target.value)} placeholder="Contoh: tes STIFIn untuk keluarga" /></label><label>Keyword sekunder<input value={form.secondaryKeywords.join(', ')} onChange={(event) => update('secondaryKeywords', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="komunikasi keluarga, mesin kecerdasan" /></label><label>Search intent<select value={form.searchIntent} onChange={(event) => update('searchIntent', event.target.value as SearchIntent)}><option value="informational">Informasional</option><option value="commercial">Pertimbangan layanan</option><option value="transactional">Transaksional</option><option value="navigational">Navigasional</option></select></label><label>Cluster topik<input value={form.topicCluster} onChange={(event) => update('topicCluster', event.target.value)} placeholder="Contoh: STIFIn untuk Keluarga" /></label><label>Peran konten<select value={form.contentRole} onChange={(event) => update('contentRole', event.target.value as ContentRole)}><option value="pillar">Pilar utama</option><option value="cluster">Artikel cluster</option><option value="supporting">Artikel pendukung</option></select></label><label>Tanggal review<input type="date" value={form.reviewedAt} onChange={(event) => update('reviewedAt', event.target.value)} /></label><label>Nama reviewer<input value={form.reviewerName} onChange={(event) => update('reviewerName', event.target.value)} placeholder="Nama pemeriksa manusia" /></label><label>Peran reviewer<input value={form.reviewerRole} onChange={(event) => update('reviewerRole', event.target.value)} placeholder="Contoh: Promotor STIFIn / Editor" /></label><label className="wide">Bukti atau pengalaman nyata<textarea rows={4} value={form.experienceEvidence} onChange={(event) => update('experienceEvidence', event.target.value)} placeholder="Tuliskan konteks kegiatan, lokasi, tanggal, atau pengalaman yang benar-benar terjadi. Hindari identitas dan data pribadi peserta." /></label><fieldset className="wide related-article-picker"><legend>Internal link terkait <small>pilih 2–6 artikel</small></legend><div>{articles.filter((article) => article.slug !== form.slug && article.status === 'published').map((article) => { const selected = form.relatedSlugs.includes(article.slug); return <label key={article.slug}><input type="checkbox" checked={selected} onChange={() => update('relatedSlugs', selected ? form.relatedSlugs.filter((slug) => slug !== article.slug) : [...form.relatedSlugs, article.slug].slice(0, 6))} /><span><b>{article.title}</b><small>{article.topicCluster || article.category}</small></span></label>; })}</div></fieldset></div></section>
             <div className="article-editor-actions"><button type="button" onClick={startNew}>Bersihkan form</button>{editingId && form.status === 'published' && <Link href={`/edukasi/${form.slug}`} target="_blank">Lihat artikel ↗</Link>}<button className="save" type="submit" disabled={saving || !databaseReady}>{saving ? 'Menyimpan…' : form.status === 'published' ? 'Simpan & terbitkan →' : form.status === 'scheduled' ? 'Simpan jadwal →' : 'Simpan draf →'}</button></div>
           </form>
         </div>

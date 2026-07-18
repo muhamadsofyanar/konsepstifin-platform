@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { isAdminAuthenticated } from '@/lib/admin-auth';
 import { databaseConfigured, getAdminArticles } from '@/lib/article-store';
 import { buildContentIntelligence } from '@/lib/content-intelligence';
+import IntelligenceActions from './intelligence-actions';
 
 export const metadata = { title: 'Content Intelligence | Konsep STIFIn' };
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,8 @@ export default async function ContentIntelligencePage() {
 
       {!databaseReady && <section className="admin-setup-warning"><b>Database belum dihubungkan</b><p>Tambahkan <code>DATABASE_URL</code> agar dashboard dapat membaca dan mengaudit artikel.</p></section>}
 
+      <IntelligenceActions articleCount={articles.length} databaseReady={databaseReady} />
+
       <section className="intelligence-metrics"><article><small>Total konten</small><b>{intelligence.metrics.total}</b><span>{intelligence.metrics.published} sudah terbit</span></article><article><small>Konten kuat</small><b>{intelligence.metrics.strong}</b><span>skor minimal 80</span></article><article><small>Prioritas perbaikan</small><b>{intelligence.metrics.needsReview}</b><span>skor di bawah 60</span></article><article><small>Belum dipetakan</small><b>{intelligence.metrics.unmapped}</b><span>keyword atau cluster kosong</span></article><article className={intelligence.metrics.conflicts ? 'warning' : ''}><small>Potensi kanibalisasi</small><b>{intelligence.metrics.conflicts}</b><span>pasangan konten perlu diperiksa</span></article></section>
 
       <div className="intelligence-layout">
@@ -37,4 +40,3 @@ export default async function ContentIntelligencePage() {
     </main>
   </div>;
 }
-
