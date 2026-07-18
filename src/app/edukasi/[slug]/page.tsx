@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { bodyToBlocks, getPublishedArticleBySlug, getPublishedArticles } from '@/lib/article-store';
+import { bodyToBlocks, getPublishedArticleBySlug, getPublishedArticles, type StoredArticle } from '@/lib/article-store';
 import ArticleEngagement from './article-engagement';
 import ArticleProductCta from './article-product-cta';
 import JsonLd from '../../json-ld';
@@ -38,7 +38,13 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
   const query = await searchParams;
   const article = await getPublishedArticleBySlug(slug);
   if (!article) notFound();
-  const related = (await getPublishedArticles(4)).filter((item) => item.slug !== article.slug).slice(0, 3);
+  const allPublished = await getPublishedArticles();
+  const selectedRelated = article.relatedSlugs
+    .map((relatedSlug) => allPublished.find((item) => item.slug === relatedSlug))
+    .filter((item): item is StoredArticle => Boolean(item && item.slug !== article.slug));
+  const related = [...selectedRelated, ...allPublished.filter((item) => item.slug !== article.slug
+    && !selectedRelated.some((selected) => selected.slug === item.slug))].slice(0, 3);
+  const publicSources = article.sourceReferences.filter((source) => source.accessLevel === 'reference');
   const blocks = bodyToBlocks(article.body);
   const referralCandidate = [query.ref, query.affiliate, query.aff].find((value) => typeof value === 'string');
   const referralCode = typeof referralCandidate === 'string' && /^[a-zA-Z0-9_-]{2,80}$/.test(referralCandidate) ? referralCandidate : '';
@@ -53,6 +59,8 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
         '@id': `${articleUrl}#article`,
         headline: article.title,
         description: article.excerpt,
+        keywords: [article.primaryKeyword, ...article.secondaryKeywords].filter(Boolean).join(', '),
+        articleSection: article.topicCluster || article.category,
         datePublished: article.publishedAt,
         dateModified: article.updatedAt || article.publishedAt,
         inLanguage: 'id-ID',
@@ -60,6 +68,11 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
         image: `${articleUrl}/opengraph-image`,
         author: { '@id': 'https://konsepstifin.com/#organization' },
         publisher: { '@id': 'https://konsepstifin.com/#organization' },
+        ...(article.reviewerName ? { reviewedBy: {
+          '@type': 'Person',
+          name: article.reviewerName,
+          jobTitle: article.reviewerRole || undefined,
+        } } : {}),
       },
       {
         '@type': 'BreadcrumbList',
@@ -79,7 +92,9 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
     <div className="article-layout">
       <article className="article-body">
         {blocks.map((block) => <section key={block.heading}><h2>{block.heading}</h2>{block.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{block.bullets && <ul>{block.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>}</section>)}
+        {article.experienceEvidence && <aside className="article-experience-evidence"><span>BUKTI & KONTEKS PENGALAMAN</span><p>{article.experienceEvidence}</p></aside>}
         <aside className="article-takeaway"><span>INTI ARTIKEL</span><p>{article.takeaway}</p></aside>
+        {(article.reviewerName || article.sourceReferences.length > 0) && <section className="article-trust-panel"><header><span>PEMERIKSAAN KONTEN</span><h2>Ditulis dengan jejak sumber dan tinjauan manusia.</h2></header>{article.reviewerName && <div className="article-reviewer"><b>{article.reviewerName}</b><span>{article.reviewerRole || 'Reviewer konten'}{article.reviewedAt ? ` · Ditinjau ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${article.reviewedAt}T00:00:00Z`))}` : ''}</span></div>}{publicSources.length > 0 ? <ul>{publicSources.map((source) => <li key={`${source.sourceId}-${source.pageNumber}`}><b>{source.title}</b><span>Halaman {source.pageNumber} · {source.category}</span></li>)}</ul> : article.sourceReferences.length > 0 && <p>Materi artikel diperiksa menggunakan Pustaka STIFIn internal. Dokumen terbatas tidak dipublikasikan melalui website.</p>}</section>}
         {article.contentType !== 'education' && article.productName && article.productUrl && <ArticleProductCta slug={article.slug} contentType={article.contentType} productName={article.productName} productUrl={article.productUrl} ctaLabel={article.ctaLabel} referralCode={referralCode} affiliateParameter={affiliateParameter} />}
         <div className="article-disclaimer"><b>Catatan edukasi</b><p>Artikel ini bersifat umum dan tidak dimaksudkan sebagai diagnosis atau pengganti layanan medis, psikologis, pendidikan, maupun profesional lainnya.</p></div>
         <ArticleEngagement slug={article.slug} title={article.title} />

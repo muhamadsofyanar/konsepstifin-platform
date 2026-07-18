@@ -1,4 +1,4 @@
-import { blocksToBody, normalizeArticleBody, type ArticleContentType, type ArticleInput } from '@/lib/article-store';
+import { blocksToBody, normalizeArticleBody, type ArticleContentType, type ArticleInput, type ContentRole, type SearchIntent } from '@/lib/article-store';
 import type { ArticleBlock } from '@/app/edukasi/articles';
 import { findKnowledgeContext } from '@/lib/knowledge-store';
 import { isOfficialSejoliUrl } from '@/app/site-config';
@@ -10,6 +10,11 @@ export type ArticleGenerationRequest = {
   category: string;
   keywords: string;
   sourceNotes: string;
+  primaryKeyword: string;
+  searchIntent: SearchIntent;
+  topicCluster: string;
+  contentRole: ContentRole;
+  experienceEvidence: string;
   length: 'ringkas' | 'sedang' | 'mendalam';
   tone: 'hangat' | 'praktis' | 'profesional';
   contentType: ArticleContentType;
@@ -47,6 +52,8 @@ export class AiProviderError extends Error {
 const allowedLengths = ['ringkas', 'sedang', 'mendalam'] as const;
 const allowedTones = ['hangat', 'praktis', 'profesional'] as const;
 const allowedContentTypes: ArticleContentType[] = ['education', 'product', 'affiliate'];
+const allowedSearchIntents: SearchIntent[] = ['informational', 'commercial', 'transactional', 'navigational'];
+const allowedContentRoles: ContentRole[] = ['pillar', 'cluster', 'supporting'];
 const articleSchema = {
   type: 'object',
   properties: {
@@ -117,6 +124,13 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
   const category = cleanText(data.category, 80) || 'Pengembangan Diri';
   const keywords = cleanText(data.keywords, 300);
   const sourceNotes = cleanText(data.sourceNotes, 6000);
+  const primaryKeyword = cleanText(data.primaryKeyword, 160) || topic;
+  const searchIntent = allowedSearchIntents.includes(data.searchIntent as SearchIntent)
+    ? data.searchIntent as SearchIntent : 'informational';
+  const topicCluster = cleanText(data.topicCluster, 120) || category;
+  const contentRole = allowedContentRoles.includes(data.contentRole as ContentRole)
+    ? data.contentRole as ContentRole : 'supporting';
+  const experienceEvidence = cleanText(data.experienceEvidence, 4000);
   const length = allowedLengths.includes(data.length as typeof allowedLengths[number])
     ? data.length as ArticleGenerationRequest['length'] : 'sedang';
   const tone = allowedTones.includes(data.tone as typeof allowedTones[number])
@@ -145,7 +159,8 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
     throw new Error('Alamat produk wajib menggunakan https://app.konsepstifin.com/.');
   }
   return {
-    topic, audience, objective, category, keywords, sourceNotes, length, tone,
+    topic, audience, objective, category, keywords, sourceNotes, primaryKeyword, searchIntent,
+    topicCluster, contentRole, experienceEvidence, length, tone,
     contentType, productName, productUrl, ctaLabel, variationNumber, variationTotal, avoidTitles,
     useKnowledge, knowledgeSourceIds,
   };
@@ -201,6 +216,10 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       `Tujuan: ${input.objective}`,
       `Kategori: ${input.category}`,
       `Kata kunci: ${input.keywords || '-'}`,
+      `Keyword utama: ${input.primaryKeyword}`,
+      `Search intent: ${input.searchIntent}`,
+      `Cluster topik: ${input.topicCluster}`,
+      `Peran konten: ${input.contentRole}`,
       `Nada: ${input.tone}`,
       `Panjang target: ${wordTargets[input.length]} kata`,
       `Struktur target: ${sectionTargets[input.length]}`,
@@ -209,6 +228,9 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       avoidInstruction,
       knowledgeInstruction,
       sourceInstruction,
+      input.experienceEvidence
+        ? `Bukti/pengalaman nyata dari admin: ${input.experienceEvidence}\nGunakan hanya sebagai konteks yang benar-benar diberikan. Jangan menambah nama, angka, tempat, tanggal, atau hasil yang tidak tertulis.`
+        : 'Tidak ada bukti pengalaman nyata yang diberikan. Jangan berpura-pura memiliki pengalaman pribadi atau studi kasus.',
       'Pada editorialNotes, tuliskan singkat bagian faktual yang tetap perlu dicek admin sebelum diterbitkan.',
     ].join('\n'),
   };
@@ -430,6 +452,16 @@ export async function generateArticleDraft(input: ArticleGenerationRequest) {
     ctaLabel: input.ctaLabel,
     scheduledAt: '',
     sourceReferences: knowledge.references,
+    primaryKeyword: input.primaryKeyword,
+    secondaryKeywords: input.keywords.split(',').map((keyword) => keyword.trim()).filter(Boolean).slice(0, 20),
+    searchIntent: input.searchIntent,
+    topicCluster: input.topicCluster,
+    contentRole: input.contentRole,
+    experienceEvidence: input.experienceEvidence,
+    reviewerName: '',
+    reviewerRole: '',
+    reviewedAt: '',
+    relatedSlugs: [],
   };
   if (!article.title || !article.slug || !article.excerpt || !article.body) {
     throw new AiProviderError('Hasil AI belum lengkap. Silakan coba lagi.', 502);

@@ -5,6 +5,8 @@ import type { KnowledgeReference } from '@/lib/knowledge-store';
 
 export type ArticleStatus = 'draft' | 'scheduled' | 'published';
 export type ArticleContentType = 'education' | 'product' | 'affiliate';
+export type SearchIntent = 'informational' | 'commercial' | 'transactional' | 'navigational';
+export type ContentRole = 'pillar' | 'cluster' | 'supporting';
 
 export type StoredArticle = {
   id: number | string;
@@ -26,6 +28,16 @@ export type StoredArticle = {
   ctaLabel: string;
   scheduledAt: string;
   sourceReferences: KnowledgeReference[];
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  searchIntent: SearchIntent;
+  topicCluster: string;
+  contentRole: ContentRole;
+  experienceEvidence: string;
+  reviewerName: string;
+  reviewerRole: string;
+  reviewedAt: string;
+  relatedSlugs: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -35,6 +47,8 @@ export type ArticleInput = Omit<StoredArticle, 'id' | 'publishedLabel' | 'create
 const tones: ArticleTone[] = ['forest', 'leaf', 'sand', 'mint', 'charcoal'];
 const statuses: ArticleStatus[] = ['draft', 'scheduled', 'published'];
 const contentTypes: ArticleContentType[] = ['education', 'product', 'affiliate'];
+const searchIntents: SearchIntent[] = ['informational', 'commercial', 'transactional', 'navigational'];
+const contentRoles: ContentRole[] = ['pillar', 'cluster', 'supporting'];
 
 const globalForDatabase = globalThis as unknown as {
   konsepStifinSql?: ReturnType<typeof postgres>;
@@ -169,6 +183,11 @@ function formatDateLabel(date: string) {
     .format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+function textArray(value: unknown, limit: number, maxLength: number) {
+  const items = Array.isArray(value) ? value : String(value ?? '').split(/[\n,]/);
+  return [...new Set(items.map((item) => String(item).trim().slice(0, maxLength)).filter(Boolean))].slice(0, limit);
+}
+
 function fallbackArticles(): StoredArticle[] {
   return articles.map((article, index) => ({
     id: `seed-${index + 1}`,
@@ -190,6 +209,16 @@ function fallbackArticles(): StoredArticle[] {
     ctaLabel: 'Pilih layanan',
     scheduledAt: '',
     sourceReferences: [],
+    primaryKeyword: article.title.toLowerCase(),
+    secondaryKeywords: [],
+    searchIntent: 'informational',
+    topicCluster: article.category,
+    contentRole: 'supporting',
+    experienceEvidence: '',
+    reviewerName: '',
+    reviewerRole: '',
+    reviewedAt: '',
+    relatedSlugs: [],
   }));
 }
 
@@ -221,7 +250,19 @@ export async function ensureArticleSchema() {
       await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS cta_label TEXT NOT NULL DEFAULT 'Pilih layanan'`;
       await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ`;
       await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS source_references JSONB NOT NULL DEFAULT '[]'::jsonb`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS primary_keyword TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS secondary_keywords JSONB NOT NULL DEFAULT '[]'::jsonb`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS search_intent TEXT NOT NULL DEFAULT 'informational'`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS topic_cluster TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS content_role TEXT NOT NULL DEFAULT 'supporting'`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS experience_evidence TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS reviewer_name TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS reviewer_role TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS reviewed_at DATE`;
+      await sql`ALTER TABLE education_articles ADD COLUMN IF NOT EXISTS related_slugs JSONB NOT NULL DEFAULT '[]'::jsonb`;
       await sql`CREATE INDEX IF NOT EXISTS education_articles_schedule_idx ON education_articles(status, scheduled_at)`;
+      await sql`CREATE INDEX IF NOT EXISTS education_articles_primary_keyword_idx ON education_articles(primary_keyword)`;
+      await sql`CREATE INDEX IF NOT EXISTS education_articles_topic_cluster_idx ON education_articles(topic_cluster)`;
       for (const article of fallbackArticles()) {
         await sql`
           INSERT INTO education_articles
@@ -267,6 +308,19 @@ function rowToArticle(row: Record<string, unknown>): StoredArticle {
       ? row.source_references.filter((item): item is KnowledgeReference => Boolean(
         item && typeof item === 'object' && Number((item as KnowledgeReference).sourceId) > 0,
       )) : [],
+    primaryKeyword: String(row.primary_keyword ?? ''),
+    secondaryKeywords: textArray(row.secondary_keywords, 20, 100),
+    searchIntent: searchIntents.includes(row.search_intent as SearchIntent)
+      ? row.search_intent as SearchIntent : 'informational',
+    topicCluster: String(row.topic_cluster ?? ''),
+    contentRole: contentRoles.includes(row.content_role as ContentRole)
+      ? row.content_role as ContentRole : 'supporting',
+    experienceEvidence: String(row.experience_evidence ?? ''),
+    reviewerName: String(row.reviewer_name ?? ''),
+    reviewerRole: String(row.reviewer_role ?? ''),
+    reviewedAt: row.reviewed_at instanceof Date
+      ? row.reviewed_at.toISOString().slice(0, 10) : String(row.reviewed_at ?? '').slice(0, 10),
+    relatedSlugs: textArray(row.related_slugs, 12, 120),
     createdAt: row.created_at ? new Date(String(row.created_at)).toISOString() : undefined,
     updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : undefined,
   };
@@ -324,10 +378,14 @@ export async function createArticle(input: ArticleInput): Promise<StoredArticle>
   const rows = await sql`
     INSERT INTO education_articles
       (slug, category, title, excerpt, published_at, read_time, tone, featured, body, takeaway, status,
-       content_type, product_name, product_url, cta_label, scheduled_at, source_references)
+       content_type, product_name, product_url, cta_label, scheduled_at, source_references,
+       primary_keyword, secondary_keywords, search_intent, topic_cluster, content_role, experience_evidence,
+       reviewer_name, reviewer_role, reviewed_at, related_slugs)
     VALUES
       (${input.slug}, ${input.category}, ${input.title}, ${input.excerpt}, ${input.publishedAt}, ${input.readTime}, ${input.tone}, ${input.featured}, ${input.body}, ${input.takeaway}, ${input.status},
-       ${input.contentType}, ${input.productName}, ${input.productUrl}, ${input.ctaLabel}, ${input.scheduledAt || null}, ${sql.json(input.sourceReferences)})
+       ${input.contentType}, ${input.productName}, ${input.productUrl}, ${input.ctaLabel}, ${input.scheduledAt || null}, ${sql.json(input.sourceReferences)},
+       ${input.primaryKeyword}, ${sql.json(input.secondaryKeywords)}, ${input.searchIntent}, ${input.topicCluster}, ${input.contentRole}, ${input.experienceEvidence},
+       ${input.reviewerName}, ${input.reviewerRole}, ${input.reviewedAt || null}, ${sql.json(input.relatedSlugs)})
     RETURNING *
   `;
   return rowToArticle(rows[0]);
@@ -355,6 +413,16 @@ export async function updateArticle(id: number, input: ArticleInput): Promise<St
       cta_label = ${input.ctaLabel},
       scheduled_at = ${input.scheduledAt || null},
       source_references = ${sql.json(input.sourceReferences)},
+      primary_keyword = ${input.primaryKeyword},
+      secondary_keywords = ${sql.json(input.secondaryKeywords)},
+      search_intent = ${input.searchIntent},
+      topic_cluster = ${input.topicCluster},
+      content_role = ${input.contentRole},
+      experience_evidence = ${input.experienceEvidence},
+      reviewer_name = ${input.reviewerName},
+      reviewer_role = ${input.reviewerRole},
+      reviewed_at = ${input.reviewedAt || null},
+      related_slugs = ${sql.json(input.relatedSlugs)},
       updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -386,6 +454,10 @@ export function validateArticleInput(value: unknown): ArticleInput {
   if (!tones.includes(tone)) throw new Error('Warna sampul tidak valid.');
   if (!statuses.includes(status)) throw new Error('Status artikel tidak valid.');
   if (!contentTypes.includes(contentType)) throw new Error('Jenis artikel tidak valid.');
+  const searchIntent = String(data.searchIntent ?? 'informational') as SearchIntent;
+  const contentRole = String(data.contentRole ?? 'supporting') as ContentRole;
+  if (!searchIntents.includes(searchIntent)) throw new Error('Search intent tidak valid.');
+  if (!contentRoles.includes(contentRole)) throw new Error('Peran konten tidak valid.');
   const scheduledAtValue = String(data.scheduledAt ?? '').trim();
   let scheduledAt = '';
   if (scheduledAtValue) {
@@ -412,6 +484,10 @@ export function validateArticleInput(value: unknown): ArticleInput {
   if (contentType !== 'education' && (!productName || !productUrl)) {
     throw new Error('Nama dan alamat produk wajib diisi untuk artikel produk atau affiliate.');
   }
+  const reviewedAtValue = String(data.reviewedAt ?? '').trim();
+  if (reviewedAtValue && (!/^\d{4}-\d{2}-\d{2}$/.test(reviewedAtValue) || Number.isNaN(Date.parse(`${reviewedAtValue}T00:00:00Z`)))) {
+    throw new Error('Tanggal review tidak valid.');
+  }
   return {
     slug,
     category: text('category', 2, 80),
@@ -429,6 +505,17 @@ export function validateArticleInput(value: unknown): ArticleInput {
     productUrl,
     ctaLabel: String(data.ctaLabel ?? 'Pilih layanan').trim().slice(0, 80) || 'Pilih layanan',
     scheduledAt,
+    primaryKeyword: String(data.primaryKeyword ?? '').trim().slice(0, 160),
+    secondaryKeywords: textArray(data.secondaryKeywords, 20, 100),
+    searchIntent,
+    topicCluster: String(data.topicCluster ?? '').trim().slice(0, 120),
+    contentRole,
+    experienceEvidence: String(data.experienceEvidence ?? '').trim().slice(0, 4000),
+    reviewerName: String(data.reviewerName ?? '').trim().slice(0, 160),
+    reviewerRole: String(data.reviewerRole ?? '').trim().slice(0, 160),
+    reviewedAt: reviewedAtValue,
+    relatedSlugs: textArray(data.relatedSlugs, 12, 120)
+      .filter((relatedSlug) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(relatedSlug) && relatedSlug !== slug),
     sourceReferences: Array.isArray(data.sourceReferences)
       ? data.sourceReferences.flatMap((item) => {
         if (!item || typeof item !== 'object') return [];

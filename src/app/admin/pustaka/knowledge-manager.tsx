@@ -173,7 +173,7 @@ export default function KnowledgeManager({
   }
 
   return <div className="article-admin knowledge-admin">
-    <header className="article-admin-header"><Link href="/"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority /></Link><nav><span>Portal Tim</span><b>Pustaka STIFIn</b></nav><div><Link href="/admin/produk">Produk & Harga</Link><Link href="/admin/artikel">Kelola artikel</Link><Link href="/edukasi" target="_blank">Lihat edukasi ↗</Link><button onClick={logout}>Keluar</button></div></header>
+    <header className="article-admin-header"><Link href="/"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority /></Link><nav><span>Portal Tim</span><b>Pustaka STIFIn</b></nav><div><Link href="/admin/intelligence">Content Intelligence</Link><Link href="/admin/produk">Produk & Harga</Link><Link href="/admin/artikel">Kelola artikel</Link><Link href="/edukasi" target="_blank">Lihat edukasi ↗</Link><button onClick={logout}>Keluar</button></div></header>
     <main>
       <section className="article-admin-title"><div><span>PUSAT SUMBER</span><h1>Pustaka STIFIn terverifikasi</h1><p>Simpan PDF secara privat, periksa hasil ekstraksi, lalu izinkan sumber yang boleh dipakai AI.</p></div><div className="article-admin-metrics"><span><small>Sumber</small><b>{sources.length}</b></span><span><small>Halaman</small><b>{totalPages}</b></span><span><small>Aktif untuk AI</small><b>{activeCount}</b></span><span><small>Terbatas</small><b>{restrictedCount}</b></span></div></section>
 

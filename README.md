@@ -23,12 +23,30 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Harga katalog publik mengikuti harga yang tampil pada kartu produk SEJOLI.
 - Enam foto dokumentasi kegiatan nyata tampil di beranda dan halaman Tes STIFIn.
 - Tombol produk aktif membuka checkout SEJOLI; formulir minat dipisahkan sebagai bantuan memilih layanan.
+- Content Intelligence native Next.js untuk menilai kesiapan artikel terhadap SEO, AEO, dan pencarian berbasis AI.
+- Peta pilar–cluster, deteksi potensi kanibalisasi, serta saran internal link pada `/admin/intelligence`.
+- Metadata keyword, search intent, topical cluster, evidence pengalaman nyata, reviewer, sumber, dan artikel terkait.
+- Trust panel pada artikel publik menampilkan pengalaman nyata, reviewer, tanggal review, serta sumber yang memang aman dipublikasikan.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 Panduan mengaktifkan editor dan PostgreSQL tersedia di
 `PANDUAN_DASHBOARD_ARTIKEL.md`.
 Panduan fitur AI dan interaksi tersedia di `PANDUAN_AI_DAN_INTERAKSI.md`.
 Panduan Pustaka STIFIn tersedia di `PANDUAN_PUSTAKA_STIFIN.md`.
+Panduan upgrade Content Intelligence tersedia di
+`SERAH_TERIMA_CONTENT_INTELLIGENCE_V15.md`.
+
+## Content Intelligence
+
+Masuk ke `/admin/intelligence` untuk melihat skor kesiapan editorial 0–100,
+prioritas perbaikan, peta topical authority, konflik keyword/judul, dan saran
+internal link. Skor adalah alat quality control konten yang dapat dikendalikan
+tim, bukan jaminan ranking Google atau penyebutan oleh sistem AI.
+
+Lengkapi metadata artikel melalui `/admin/artikel`. Artikel lama tetap aman dan
+dapat diperbarui bertahap. Kolom database baru dibuat otomatis menggunakan
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` saat aplikasi pertama kali mengakses
+modul artikel setelah deployment.
 
 ## Mengelola link checkout SEJOLI
 
