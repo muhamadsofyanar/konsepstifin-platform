@@ -1,5 +1,7 @@
 # Konsep STIFIn Platform
 
+Versi saat ini: **0.2.3 / revisi v15.3** — Content Intelligence dengan pemetaan otomatis aman, pratinjau optimasi AI per artikel, dan perbaikan kontras halaman Affiliate. Lihat `SERAH_TERIMA_OPTIMASI_OTOMATIS_V15_3.md`.
+
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
 ## Isi versi ini
