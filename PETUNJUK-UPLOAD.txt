@@ -1,0 +1,29 @@
+UPDATE DISKON META + META PIXEL
+
+1. Ekstrak ZIP ini.
+2. Upload folder src ke root repository GitHub dan timpa file lama.
+3. Pastikan file baru src/app/meta-pixel.tsx ikut ter-upload.
+4. Di Coolify, buka konfigurasi Environment Variables.
+5. Tambahkan:
+   NEXT_PUBLIC_META_PIXEL_ID=ISI_PIXEL_ID_ANDA
+6. Simpan lalu lakukan Redeploy.
+
+URL pengujian promo:
+https://konsepstifin.com/jadi-promotor?utm_source=facebook
+
+Traffic organik tanpa UTM tetap menampilkan harga normal.
+Promo juga aktif jika URL memiliki fbclid dari Meta Ads.
+
+File yang berubah:
+- src/app/globals.css
+- src/app/jadi-promotor/page.tsx
+- src/app/layout.tsx
+- src/app/public-interest-action.tsx
+
+File baru:
+- src/app/meta-pixel.tsx
+
+PENTING:
+Harga promo yang tampil adalah Rp7.650.000. Pastikan harga atau kupon pada
+checkout SEJOLI juga menghasilkan total Rp7.650.000 agar tidak terjadi
+perbedaan antara landing page dan checkout.

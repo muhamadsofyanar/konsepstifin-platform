@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import JsonLd from './json-ld';
+import MetaPixel from './meta-pixel';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://konsepstifin.com'),
@@ -43,5 +44,5 @@ const siteSchema = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="id"><body><JsonLd data={siteSchema} />{children}</body></html>;
+  return <html lang="id"><body><JsonLd data={siteSchema} /><MetaPixel />{children}</body></html>;
 }

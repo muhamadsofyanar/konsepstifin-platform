@@ -16,12 +16,16 @@ export default function PublicInterestAction({
   service,
   className = '',
   checkoutUrl = '',
+  trackLead = false,
+  preserveCampaignParams = false,
 }: {
   linkKey: SejoliLinkKey;
   label: string;
   service: string;
   className?: string;
   checkoutUrl?: string;
+  trackLead?: boolean;
+  preserveCampaignParams?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
@@ -31,7 +35,22 @@ export default function PublicInterestAction({
   function start() {
     const target = checkoutUrl || sejoliLinks[linkKey];
     if (target && isOfficialSejoliUrl(target)) {
-      window.open(target, '_blank', 'noopener,noreferrer');
+      const checkoutTarget = new URL(target);
+      if (preserveCampaignParams) {
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.forEach((value, key) => {
+          if (key.toLowerCase().startsWith('utm_') || key.toLowerCase() === 'fbclid') {
+            checkoutTarget.searchParams.set(key, value);
+          }
+        });
+      }
+      if (trackLead) {
+        window.fbq?.('track', 'Lead', {
+          content_name: service,
+          content_category: 'Promotor STIFIn',
+        });
+      }
+      window.open(checkoutTarget.toString(), '_blank', 'noopener,noreferrer');
       return;
     }
     setStartedAt(Date.now());
