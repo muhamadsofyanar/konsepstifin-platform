@@ -48,18 +48,14 @@ export default async function Home() {
     <main>
       <section className="hub-hero">
         <div className="hub-hero-copy">
-          <span className="eyebrow">KONSEP STIFIN · PUSAT LAYANAN NASIONAL DALAM JARINGAN STIFIn GENETIC</span>
-          <h1>Cari layanan di wilayah Anda, lalu temukan <em>jalur Tes STIFIn bersama promotor.</em></h1>
-          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn dilakukan offline dan dibahas bersama promotor. Konsep STIFIn adalah pusat layanan dan koordinator nasional: kami mencocokkan promotor terdekat untuk wilayah yang sudah punya, serta membantu mencari jalur layanan untuk wilayah yang belum punya.</p>
-          <div className="hub-actions">
-            <Link className="public-cta big" href="/wilayah">🔎 Cari layanan di wilayah saya →</Link>
-            <Link className="public-cta ghost" href="/tes-stifin">Pilih paket tes langsung</Link>
-            <Link href="/edukasi">Saya ingin belajar dulu</Link>
-          </div>
+          <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
+          <h1>Kenali cara alami Anda, lalu temukan <em>promotor STIFIn di wilayah Anda.</em></h1>
+          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn dilakukan offline dan dibahas bersama promotor. Konsep STIFIn membantu Anda menemukan layanan, wilayah, dan langkah berikutnya.</p>
+          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
-          <figcaption className="media-story-card"><small>PERJALANAN ANDA</small><b>Kenali diri</b><span>Pilih wilayah · Cocokkan promotor · Tumbuh bersama</span></figcaption>
+          <figcaption className="media-story-card"><small>PERJALANAN ANDA</small><b>Kenali diri</b><span>Pahami perbedaan · Tumbuh bersama</span></figcaption>
         </figure>
       </section>
 

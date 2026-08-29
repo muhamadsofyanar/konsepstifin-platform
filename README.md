@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.2.4 / revisi v15.4** — Content Intelligence dengan tombol optimasi AI langsung per artikel, pemilihan artikel otomatis, pemetaan aman, dan perbaikan kontras halaman Affiliate. Lihat `SERAH_TERIMA_AKSES_OPTIMASI_AI_V15_4.md`.
+Versi saat ini: **0.3.0** — Pusat layanan nasional berbasis lead, pencocokan promotor multi-cabang, consent data pribadi, dan dashboard koordinasi `/admin/leads`.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -29,6 +29,9 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Peta pilar–cluster, deteksi potensi kanibalisasi, serta saran internal link pada `/admin/intelligence`.
 - Metadata keyword, search intent, topical cluster, evidence pengalaman nyata, reviewer, sumber, dan artikel terkait.
 - Trust panel pada artikel publik menampilkan pengalaman nyata, reviewer, tanggal review, serta sumber yang memang aman dipublikasikan.
+- Formulir nasional menyimpan provinsi, kabupaten/kota, consent, tenggat respons, dan status pencocokan awal.
+- Dashboard `/admin/leads` menampilkan pipeline operasional dan perubahan status yang tercatat dalam riwayat.
+- Nomor WhatsApp promotor tidak lagi diteruskan ke API atau halaman publik.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 Panduan mengaktifkan editor dan PostgreSQL tersedia di
@@ -119,7 +122,7 @@ berikut di deployment bila endpoint STIFIn tersedia:
 ```text
 STIFIN_API_BASE=https://apro.stifin.id/api
 STIFIN_BRANCH_CODE=KODE_CABANG
-STIFIN_PUBLIC_WHATSAPP=false
+STIFIN_BRANCH_CODES=NASIONAL,CABANG-LAIN
 STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
 # Opsional: daftar publik lokal tanpa mengambil data dari pusat
 STIFIN_PROMOTERS_JSON=[{"code":"BKS-HRA-40","name":"Nama Promotor","branchCode":"lokal","active":true,"menerimaKunjungan":true,"regionCodes":["31.74"]}]

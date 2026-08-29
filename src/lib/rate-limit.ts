@@ -24,8 +24,7 @@ export function checkRateLimit(request: Request, namespace: string, limit: numbe
   }
 
   if (current.count >= limit) {
-    const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
-    throw new Error(`Terlalu banyak permintaan. Coba lagi dalam ${retryAfter} detik.`);
+    return { allowed: false, retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)) };
   }
 
   current.count += 1;

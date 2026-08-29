@@ -9,9 +9,7 @@ export function OPTIONS() {
 export async function GET(request: NextRequest, { params }: { params: Promise<{ level: string }> }) {
   const { level } = await params;
   if (!levels.has(level as WilayahLevel)) return Response.json({ error: 'Level wilayah tidak valid.' }, { status: 400 });
-  const parent = request.nextUrl.searchParams.get('parent')
-    || request.nextUrl.searchParams.get('parentCode')
-    || undefined;
+  const parent = request.nextUrl.searchParams.get('parent') || undefined;
   if (level !== 'provinces' && !parent) return Response.json({ error: 'Parameter parent wajib.' }, { status: 400 });
   try {
     const data = await getWilayah(level as WilayahLevel, parent);

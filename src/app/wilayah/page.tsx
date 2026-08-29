@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getWilayah, wilayahChainPath } from '@/lib/wilayah';
 
 export const metadata: Metadata = { title: 'Wilayah Layanan Tes STIFIn | Konsep STIFIn', description: 'Jelajahi layanan Tes STIFIn berdasarkan provinsi, kabupaten/kota, kecamatan, dan desa/kelurahan di Indonesia.', alternates: { canonical: '/wilayah' } };
+export const dynamic = 'force-dynamic';
 
 export default async function WilayahIndexPage() {
   let provinces = [] as Awaited<ReturnType<typeof getWilayah>>;
