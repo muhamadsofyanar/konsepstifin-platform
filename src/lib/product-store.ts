@@ -22,7 +22,7 @@ export type ManagedProduct = {
 };
 
 const globalProducts = globalThis as unknown as { konsepStifinProductSchema?: Promise<void> };
-const PRODUCT_CATALOG_REVISION = 'catalog-2026-07-sejoli-v3-card-prices';
+const PRODUCT_CATALOG_REVISION = 'catalog-2026-08-sejoli-v4-verified-checkout-prices';
 
 const seeds: Omit<ManagedProduct, 'id'>[] = [
   ...publicProducts.map((item, index) => ({ productKey: item.linkKey, groupName: 'test' as const, eyebrow: item.category, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.features, bonuses: item.bonuses, action: item.action, checkoutUrl: sejoliLinks[item.linkKey], active: true, featured: Boolean(item.featured), sortOrder: index + 1 })),

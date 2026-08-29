@@ -1,7 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
+import TrustPageSchema from '../trust-page-schema';
 
 export const metadata: Metadata = { title: 'Tentang Konsep STIFIn | Konsep STIFIn', description: 'Posisi, layanan, dan cara kerja Konsep STIFIn dalam jaringan STIFIn Genetic.', alternates: { canonical: '/tentang' } };
 
-export default function AboutPage() { return <div className="public-site journey-site"><PublicHeader active="home" announcement="Konsep STIFIn · layanan dan edukasi dalam jaringan STIFIn Genetic" /><main className="trust-page"><section className="trust-hero"><span>TENTANG KONSEP STIFIN</span><h1>Layanan lokal, jaringan nasional, komunikasi yang jelas.</h1><p>Konsep STIFIn adalah brand layanan edukasi dan Tes STIFIn offline yang beroperasi dalam ekosistem jaringan STIFIn Genetic. Kami bukan pusat STIFIn; kami membantu peserta menemukan layanan, belajar, dan terhubung dengan promotor.</p></section><section className="trust-grid"><article><h2>Yang kami lakukan</h2><p>Menyediakan informasi yang mudah dipahami, membantu memilih layanan tes, menghubungkan peserta dengan promotor, dan membuka jalur belajar bagi calon promotor.</p></article><article><h2>Yang tidak kami klaim</h2><p>Website ini bukan pengganti ketentuan resmi, bukan diagnosis medis atau psikologis, dan tidak mengubah aturan jaringan STIFIn Genetic.</p></article></section><section className="trust-cta"><h2>Mulai dari kebutuhan Anda.</h2><Link className="public-cta big" href="/tes-stifin">Pilih layanan tes →</Link></section></main><PublicFooter /></div>; }
+export default function AboutPage() {
+  return <div className="public-site journey-site">
+    <TrustPageSchema path="/tentang" name="Tentang Konsep STIFIn" description="Posisi, layanan, dan cara kerja Konsep STIFIn dalam jaringan STIFIn Genetic." type="AboutPage" />
+    <PublicHeader active="home" announcement="Konsep STIFIn · layanan dan edukasi dalam jaringan STIFIn Genetic" />
+    <main className="trust-page">
+      <section className="trust-hero"><span>TENTANG KONSEP STIFIN</span><h1>Layanan lokal, jaringan nasional, komunikasi yang jelas.</h1><p>Konsep STIFIn adalah brand layanan edukasi dan Tes STIFIn offline yang beroperasi dalam ekosistem jaringan STIFIn Genetic. Kami bukan pusat STIFIn; kami membantu peserta menemukan layanan, belajar, dan terhubung dengan promotor.</p></section>
+      <section className="trust-grid"><article><h2>Yang kami lakukan</h2><p>Menyediakan informasi yang mudah dipahami, membantu memilih layanan tes, menghubungkan peserta dengan promotor, dan membuka jalur belajar bagi calon promotor.</p></article><article><h2>Yang tidak kami klaim</h2><p>Website ini bukan pengganti ketentuan resmi, bukan diagnosis medis atau psikologis, dan tidak mengubah aturan jaringan STIFIn Genetic.</p></article></section>
+      <section className="trust-cta"><h2>Mulai dari kebutuhan Anda.</h2><Link className="public-cta big" href="/tes-stifin">Pilih layanan tes →</Link></section>
+    </main>
+    <PublicFooter />
+  </div>;
+}

@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.3.0** — Pusat layanan nasional berbasis lead, pencocokan promotor multi-cabang, consent data pribadi, dan dashboard koordinasi `/admin/leads`.
+Versi saat ini: **0.3.1** — Pusat layanan nasional berbasis lead, Local SEO berbasis cakupan nyata, pencocokan promotor multi-cabang, consent data pribadi, dan dashboard koordinasi.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -31,6 +31,7 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Trust panel pada artikel publik menampilkan pengalaman nyata, reviewer, tanggal review, serta sumber yang memang aman dipublikasikan.
 - Formulir nasional menyimpan provinsi, kabupaten/kota, consent, tenggat respons, dan status pencocokan awal.
 - Dashboard `/admin/leads` menampilkan pipeline operasional dan perubahan status yang tercatat dalam riwayat.
+- Dashboard `/admin/promotor` memetakan promotor ke kode wilayah dan mengendalikan halaman Local SEO yang boleh diindeks.
 - Nomor WhatsApp promotor tidak lagi diteruskan ke API atau halaman publik.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
@@ -133,6 +134,30 @@ CTA layanan. Email, saldo voucher, PassID, dan data internal tidak pernah
 diteruskan ke API publik. Admin yang sudah login dapat menyimpan pemetaan
 promotor melalui `POST /api/admin/promotor` dengan body
 `{"code":"KODE-ID","regionCodes":["31.74.09"]}`.
+
+Pemetaan juga dapat dikelola melalui `/admin/promotor`. Status `active` dan
+`menerimaKunjungan` tidak dianggap aktif bila sumber data tidak mengirimkan
+nilainya. Untuk konfigurasi manual, tulis kedua nilai tersebut secara eksplisit.
+
+## Verifikasi harga SEJOLI
+
+Harga bawaan versi 0.3.1 dicocokkan langsung dengan checkout aktif pada
+29 Agustus 2026. Migrasi katalog `v4` menyelaraskan database lama satu kali.
+Harga final tetap mengikuti checkout pada saat transaksi.
+
+- Tes Personal: Rp650.000
+- Tes Pasangan: Rp1.100.000
+- Tes Keluarga: Rp1.550.000
+- Tes Keluarga Plus: Rp2.500.000
+- Sekolah & Komunitas: Rp0
+- WSL 1: Rp750.000
+- WSL 2: Rp4.500.001
+- ID Aplikasi & Scanner: Rp4.500.000
+- Paket Lengkap Promotor: Rp8.500.000
+- Aktivasi Affiliate: Rp1
+
+Harga campaign Meta Rp7.650.000 dihapus karena checkout yang diuji tetap
+menampilkan Rp8.500.000 ketika `utm_source=facebook` diteruskan.
 
 ## Deployment
 

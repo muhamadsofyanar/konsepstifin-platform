@@ -27,11 +27,18 @@ const siteSchema = {
       '@id': 'https://konsepstifin.com/#organization',
       name: 'Konsep STIFIn',
       description: 'Brand layanan edukasi dan Tes STIFIn offline dalam ekosistem jaringan STIFIn Genetic.',
-      parentOrganization: { '@type': 'Organization', name: 'STIFIn Genetic' },
+      memberOf: { '@type': 'Organization', name: 'STIFIn Genetic' },
       url: 'https://konsepstifin.com/',
       logo: {
         '@type': 'ImageObject',
         url: 'https://konsepstifin.com/stifin-konsep-wordmark.png',
+      },
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'layanan pelanggan',
+        url: 'https://konsepstifin.com/kontak',
+        areaServed: 'ID',
+        availableLanguage: 'id-ID',
       },
     },
     {

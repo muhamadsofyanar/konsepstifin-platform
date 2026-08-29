@@ -24,6 +24,11 @@ export function wilayahChainPath(chain: Wilayah[]) {
   return `/wilayah/${chain.map((item) => `${wilayahSlug(item.name)}-${item.code.replace(/\./g, '-')}`).join('/')}`;
 }
 
+export function wilayahCodeAncestors(code: string) {
+  const parts = code.split('.');
+  return parts.map((_, index) => parts.slice(0, index + 1).join('.'));
+}
+
 export async function getWilayah(level: WilayahLevel, parentCode?: string): Promise<Wilayah[]> {
   const key = `${level}:${parentCode ?? ''}`;
   const cached = memoryCache.get(key);
@@ -56,6 +61,21 @@ export async function findWilayahBySegment(level: WilayahLevel, segment: string,
   const normalized = segment.toLocaleLowerCase('id-ID');
   return rows.find((row) => `${wilayahSlug(row.name)}-${row.code.replace(/\./g, '-')}` === normalized
     || wilayahSlug(row.name) === normalized || row.code === segment) ?? null;
+}
+
+export async function getWilayahChainByCode(code: string) {
+  const codes = wilayahCodeAncestors(code);
+  if (codes.length < 1 || codes.length > 4) return null;
+  const levels: WilayahLevel[] = ['provinces', 'regencies', 'districts', 'villages'];
+  const chain: Wilayah[] = [];
+  let parentCode: string | undefined;
+  for (let index = 0; index < codes.length; index += 1) {
+    const item = (await getWilayah(levels[index], parentCode)).find((row) => row.code === codes[index]);
+    if (!item) return null;
+    chain.push(item);
+    parentCode = item.code;
+  }
+  return chain;
 }
 
 export function levelLabel(level: WilayahLevel) {

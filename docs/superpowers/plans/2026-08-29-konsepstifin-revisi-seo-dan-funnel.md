@@ -23,10 +23,10 @@
 - Modify: `src/app/wilayah/[...segments]/page.tsx`
 - Modify: `src/app/sitemap.ts`
 
-- [ ] Tambahkan sumber promotor publik manual melalui `STIFIN_PROMOTERS_JSON` agar sistem dapat berjalan tanpa operasi pusat.
-- [ ] Bentuk daftar kode wilayah dari mapping yang tersimpan/terkonfigurasi.
-- [ ] Tampilkan dan masukkan sitemap hanya untuk provinsi/kabupaten yang memiliki mapping layanan.
-- [ ] Uji TypeScript dan ESLint.
+- [x] Tambahkan sumber promotor publik manual melalui `STIFIN_PROMOTERS_JSON` agar sistem dapat berjalan tanpa operasi pusat.
+- [x] Bentuk daftar kode wilayah dari mapping yang tersimpan/terkonfigurasi.
+- [x] Tampilkan dan masukkan sitemap hanya untuk provinsi/kabupaten yang memiliki mapping layanan.
+- [x] Uji TypeScript dan ESLint.
 
 ### Task 2: Positioning STIFIn Genetic dan Halaman Kepercayaan
 
@@ -39,9 +39,9 @@
 - Create: `src/app/ketentuan/page.tsx`
 - Modify: `src/app/public-site-shell.tsx`
 
-- [ ] Tegaskan bahwa Konsep STIFIn adalah layanan/brand yang beroperasi dalam jaringan STIFIn Genetic, tanpa mengklaim sebagai pusat.
-- [ ] Tambahkan link footer dan internal link ke halaman kepercayaan.
-- [ ] Tambahkan metadata canonical dan schema organisasi/contact point.
+- [x] Tegaskan bahwa Konsep STIFIn adalah layanan/brand yang beroperasi dalam jaringan STIFIn Genetic, tanpa mengklaim sebagai pusat.
+- [x] Tambahkan link footer dan internal link ke halaman kepercayaan.
+- [x] Tambahkan metadata canonical dan schema organisasi/contact point.
 
 ### Task 3: Copy dan Funnel Berbasis KIRIM AI
 
@@ -51,10 +51,10 @@
 - Modify: `src/app/affiliate/page.tsx`
 - Modify: `src/app/jadi-promotor/page.tsx`
 
-- [ ] Ubah headline menjadi problem → curiosity → outcome yang spesifik.
-- [ ] Pastikan setiap funnel memiliki satu CTA utama dan CTA sekunder yang tidak bercampur.
-- [ ] Gunakan feature → manfaat → konteks nyata pada kartu layanan.
-- [ ] Pertahankan paragraf pendek, bullet list, dan visual yang sudah ada.
+- [x] Ubah headline menjadi problem → curiosity → outcome yang spesifik.
+- [x] Pastikan setiap funnel memiliki satu CTA utama dan CTA sekunder yang tidak bercampur.
+- [x] Gunakan feature → manfaat → konteks nyata pada kartu layanan.
+- [x] Pertahankan paragraf pendek, bullet list, dan visual yang sudah ada.
 
 ### Task 4: Audit Harga, Schema, Sitemap, dan Verifikasi
 
@@ -63,6 +63,6 @@
 - Modify: `src/app/sitemap.ts`
 - Modify: `README.md`
 
-- [ ] Tandai harga yang belum tervalidasi dari checkout sebagai perlu konfirmasi, bukan angka final.
-- [ ] Perbarui schema Service/Organization dan breadcrumb untuk halaman legal/wilayah nyata.
-- [ ] Jalankan `tsc --noEmit`, ESLint, dan build; catat error runtime lingkungan bila build tidak dapat berjalan.
+- [x] Tandai harga yang belum tervalidasi dari checkout sebagai perlu konfirmasi, bukan angka final.
+- [x] Perbarui schema Service/Organization dan breadcrumb untuk halaman legal/wilayah nyata.
+- [x] Jalankan `tsc --noEmit`, ESLint, dan build; catat error runtime lingkungan bila build tidak dapat berjalan.
