@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createInterestLead, validateInterestInput } from '@/lib/interest-store';
-import { getPublicPromoters } from '@/lib/promoter-store';
+import { submitInterest } from '@/lib/interest-service';
+import { createGenericInterestLead, validateGenericInterestInput } from '@/lib/interest-store';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
@@ -13,16 +13,17 @@ export async function POST(request: NextRequest) {
     if (!Number.isFinite(startedAt) || Date.now() - startedAt < 1_500) {
       return NextResponse.json({ error: 'Formulir dikirim terlalu cepat. Silakan coba kembali.' }, { status: 400 });
     }
-    const input = validateInterestInput(body);
-    let hasCandidate = false;
-    try { hasCandidate = (await getPublicPromoters(input.regencyCode || input.provinceCode)).some((item) => item.active); } catch { /* Jalur nasional tetap tersedia. */ }
-    const status = hasCandidate ? 'ditawarkan' : 'mencari_promotor';
-    const id = await createInterestLead(input, status);
-    return NextResponse.json({ ok: true, id, status }, { status: 201 });
+    if (body.requirePrecheckout === true) {
+      const result = await submitInterest(body);
+      return NextResponse.json({ ok: true, ...result }, { status: 201 });
+    }
+    const input = validateGenericInterestInput(body);
+    const id = await createGenericInterestLead(input);
+    return NextResponse.json({ ok: true, id, status: 'baru' }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Permintaan belum dapat disimpan.';
-    const status = /belum|perlu|minimal|valid|lengkap|pilih/i.test(message) ? 400 : 500;
-    if (status === 500) console.error('Gagal menyimpan formulir minat.', error);
+    const status = /checkout produk/i.test(message) ? 503 : /belum|perlu|minimal|valid|lengkap|pilih|persetujuan/i.test(message) ? 400 : 500;
+    if (status === 500) console.error('Gagal menyimpan formulir minat.');
     return NextResponse.json({ error: message }, { status });
   }
 }

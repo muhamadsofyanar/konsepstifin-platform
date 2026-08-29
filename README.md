@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.3.1** — Pusat layanan nasional berbasis lead, Local SEO berbasis cakupan nyata, pencocokan promotor multi-cabang, consent data pribadi, dan dashboard koordinasi.
+Versi saat ini: **0.4.0** — Direktori promotor nasional, pra-checkout Tes STIFIn terlacak, rekonsiliasi pembayaran, audit perubahan, dan margin operasional.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -24,7 +24,7 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
 - Harga katalog publik mengikuti harga yang tampil pada kartu produk SEJOLI.
 - Enam foto dokumentasi kegiatan nyata tampil di beranda dan halaman Tes STIFIn.
-- Tombol produk aktif membuka checkout SEJOLI; formulir minat dipisahkan sebagai bantuan memilih layanan.
+- Produk grup Tes STIFIn wajib menyimpan lead dan menampilkan kandidat promotor berdasarkan wilayah sebelum membuka checkout SEJOLI milik Konsep STIFIn. Produk affiliate dan jalur jadi-promotor tetap memakai perilaku sebelumnya.
 - Content Intelligence native Next.js untuk menilai kesiapan artikel terhadap SEO, AEO, dan pencarian berbasis AI.
 - Peta pilar–cluster, deteksi potensi kanibalisasi, serta saran internal link pada `/admin/intelligence`.
 - Metadata keyword, search intent, topical cluster, evidence pengalaman nyata, reviewer, sumber, dan artikel terkait.
@@ -113,31 +113,31 @@ GET /api/wilayah/provinces
 GET /api/wilayah/regencies?parent=31
 GET /api/wilayah/districts?parent=31.74
 GET /api/wilayah/villages?parent=31.74.09
-GET /api/promotor?region=31.74
+GET /api/promotor?provinceCode=32&provinceName=Jawa%20Barat&regencyCode=32.04&regencyName=Kabupaten%20Bandung
 GET /promotor
 ```
 
-Sinkronisasi promotor bersifat opsional dan selalu server-side. Atur environment
-berikut di deployment bila endpoint STIFIn tersedia:
+Sinkronisasi promotor selalu dilakukan server-side. Mode nasional menjadi default produksi dan mengambil endpoint `https://apro.stifin.id/api/proGet/pro/PRO`:
 
 ```text
 STIFIN_API_BASE=https://apro.stifin.id/api
-STIFIN_BRANCH_CODE=KODE_CABANG
-STIFIN_BRANCH_CODES=NASIONAL,CABANG-LAIN
+STIFIN_PROMOTER_MODE=national
 STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
 # Opsional: daftar publik lokal tanpa mengambil data dari pusat
-STIFIN_PROMOTERS_JSON=[{"code":"BKS-HRA-40","name":"Nama Promotor","branchCode":"lokal","active":true,"menerimaKunjungan":true,"regionCodes":["31.74"]}]
+STIFIN_PROMOTERS_JSON=[{"KodeID":"BKS-HRA-40","Nama":"Nama Promotor","Sub":"BKS-CAB-1","Area":"Bekasi","Propinsi":"Jawa Barat","Aktif":1}]
 ```
 
-Tanpa `STIFIN_BRANCH_CODE`, halaman wilayah tetap berjalan dan hanya menampilkan
-CTA layanan. Email, saldo voucher, PassID, dan data internal tidak pernah
-diteruskan ke API publik. Admin yang sudah login dapat menyimpan pemetaan
+Mode fallback/staging dapat memakai `STIFIN_PROMOTER_MODE=branch` bersama `STIFIN_BRANCH_CODE` atau `STIFIN_BRANCH_CODES`. Email, nomor telepon, saldo voucher, PassID, tanggal lahir, dan data internal tidak pernah diteruskan ke cache atau API publik. Admin yang sudah login dapat menyimpan pemetaan
 promotor melalui `POST /api/admin/promotor` dengan body
 `{"code":"KODE-ID","regionCodes":["31.74.09"]}`.
 
 Pemetaan juga dapat dikelola melalui `/admin/promotor`. Status `active` dan
 `menerimaKunjungan` tidak dianggap aktif bila sumber data tidak mengirimkan
 nilainya. Untuk konfigurasi manual, tulis kedua nilai tersebut secara eksplisit.
+
+Pencocokan kandidat memakai urutan mapping kode wilayah manual, nama kabupaten/kota, lalu provinsi. Kandidat bersifat administratif, bukan klaim jarak atau jaminan jadwal. Tidak adanya kandidat tidak menghalangi checkout; kegagalan penyimpanan lead menghalangi checkout. Rekonsiliasi order SEJOLI, pembayaran, penugasan promotor, payout, biaya, dan margin dilakukan manual melalui `/admin/leads`.
+
+Panduan deployment, rekonsiliasi, dan rollback tersedia di `docs/OPERASIONAL_PROMOTOR_NASIONAL.md`.
 
 ## Verifikasi harga SEJOLI
 

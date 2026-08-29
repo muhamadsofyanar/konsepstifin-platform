@@ -101,6 +101,13 @@ export async function getPublicManagedProducts(groupName: ProductGroup) {
   catch (error) { console.error('Product database fallback', error); return seeds.filter((item) => item.groupName === groupName).map((item, index) => ({ ...item, id: -(index + 1) })); }
 }
 
+export async function resolveTestCheckoutUrl(productKey: string) {
+  const products = await getPublicManagedProducts('test');
+  const product = products.find((item) => item.productKey === productKey);
+  if (!product || !isOfficialSejoliUrl(product.checkoutUrl)) throw new Error('Checkout produk belum tersedia.');
+  return product.checkoutUrl;
+}
+
 export async function updateManagedProduct(id: number, input: Partial<ManagedProduct>) {
   await ensureProductSchema();
   const title = String(input.title ?? '').trim();

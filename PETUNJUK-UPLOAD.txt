@@ -1,29 +1,27 @@
-UPDATE DISKON META + META PIXEL
+KONSEP STIFIn PLATFORM V0.4.0
 
 1. Ekstrak ZIP ini.
-2. Upload folder src ke root repository GitHub dan timpa file lama.
-3. Pastikan file baru src/app/meta-pixel.tsx ikut ter-upload.
-4. Di Coolify, buka konfigurasi Environment Variables.
-5. Tambahkan:
-   NEXT_PUBLIC_META_PIXEL_ID=ISI_PIXEL_ID_ANDA
-6. Simpan lalu lakukan Redeploy.
+2. Upload seluruh isi hasil ekstrak ke root repository GitHub dan timpa file lama.
+3. Commit ke branch main.
+4. Di Coolify, isi Environment Variables:
 
-URL pengujian promo:
-https://konsepstifin.com/jadi-promotor?utm_source=facebook
+   STIFIN_API_BASE=https://apro.stifin.id/api
+   STIFIN_PROMOTER_MODE=national
 
-Traffic organik tanpa UTM tetap menampilkan harga normal.
-Promo juga aktif jika URL memiliki fbclid dari Meta Ads.
+5. Pastikan DATABASE_URL dan kredensial admin tetap tersedia di Coolify.
+6. Hapus STIFIN_BRANCH_CODES dari konfigurasi produksi nasional.
+7. Redeploy dan tunggu health check berhasil.
+8. Uji /tes-stifin, /wilayah, /api/promotor, dan /admin/leads.
 
-File yang berubah:
-- src/app/globals.css
-- src/app/jadi-promotor/page.tsx
-- src/app/layout.tsx
-- src/app/public-interest-action.tsx
+Perubahan utama:
+- sumber promotor nasional /proGet/pro/PRO dengan cache aman;
+- sanitasi data promotor tanpa kontak atau field sensitif;
+- pencocokan kandidat berdasarkan mapping, kabupaten/kota, lalu provinsi;
+- lead idempoten wajib sebelum checkout produk Tes STIFIn;
+- checkout hanya ke https://app.konsepstifin.com;
+- rekonsiliasi pembayaran, order, biaya, promotor, jadwal, margin, dan audit;
+- affiliate dan jalur jadi-promotor tetap memakai alur sebelumnya.
 
-File baru:
-- src/app/meta-pixel.tsx
+Panduan lengkap: docs/OPERASIONAL_PROMOTOR_NASIONAL.md
 
-PENTING:
-Harga promo yang tampil adalah Rp7.650.000. Pastikan harga atau kupon pada
-checkout SEJOLI juga menghasilkan total Rp7.650.000 agar tidak terjadi
-perbedaan antara landing page dan checkout.
+Jangan upload .env, node_modules, .next, token, password, atau data pelanggan.
