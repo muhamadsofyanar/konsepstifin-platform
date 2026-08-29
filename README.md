@@ -98,6 +98,36 @@ npm run dev
 
 Aplikasi berjalan pada `http://localhost:3000`.
 
+## Wilayah nasional dan API publik
+
+Seluruh hierarki wilayah tersedia melalui `/wilayah`: provinsi, kabupaten/kota,
+kecamatan, serta desa/kelurahan. Data administratif diambil dari Wilayah.id
+dan dicache 24 jam di server. Endpoint JSON yang dapat dipakai aplikasi lain:
+
+```text
+GET /api/wilayah/provinces
+GET /api/wilayah/regencies?parent=31
+GET /api/wilayah/districts?parent=31.74
+GET /api/wilayah/villages?parent=31.74.09
+GET /api/promotor?region=31.74
+```
+
+Sinkronisasi promotor bersifat opsional dan selalu server-side. Atur environment
+berikut di deployment bila endpoint STIFIn tersedia:
+
+```text
+STIFIN_API_BASE=https://apro.stifin.id/api
+STIFIN_BRANCH_CODE=KODE_CABANG
+STIFIN_PUBLIC_WHATSAPP=false
+STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
+```
+
+Tanpa `STIFIN_BRANCH_CODE`, halaman wilayah tetap berjalan dan hanya menampilkan
+CTA layanan. Email, saldo voucher, PassID, dan data internal tidak pernah
+diteruskan ke API publik. Admin yang sudah login dapat menyimpan pemetaan
+promotor melalui `POST /api/admin/promotor` dengan body
+`{"code":"KODE-ID","regionCodes":["31.74.09"]}`.
+
 ## Deployment
 
 Repository ini sudah dilengkapi `Dockerfile` untuk deployment melalui Coolify.

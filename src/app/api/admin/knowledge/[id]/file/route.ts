@@ -4,7 +4,9 @@ import { readKnowledgeFile } from '@/lib/knowledge-store';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(_: Request, context: RouteContext<'/api/admin/knowledge/[id]/file'>) {
+type KnowledgeFileRouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_: Request, context: KnowledgeFileRouteContext) {
   if (!await isAdminAuthenticated()) return Response.json({ message: 'Sesi tidak valid.' }, { status: 401 });
   const id = Number((await context.params).id);
   if (!Number.isInteger(id) || id <= 0) return Response.json({ message: 'ID sumber tidak valid.' }, { status: 400 });

@@ -8,12 +8,14 @@ import {
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+type KnowledgeRouteContext = { params: Promise<{ id: string }> };
+
 function parseId(value: string) {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : 0;
 }
 
-export async function GET(_: Request, context: RouteContext<'/api/admin/knowledge/[id]'>) {
+export async function GET(_: Request, context: KnowledgeRouteContext) {
   if (!await isAdminAuthenticated()) return Response.json({ message: 'Sesi tidak valid.' }, { status: 401 });
   const id = parseId((await context.params).id);
   if (!id) return Response.json({ message: 'ID sumber tidak valid.' }, { status: 400 });
@@ -23,7 +25,7 @@ export async function GET(_: Request, context: RouteContext<'/api/admin/knowledg
     : Response.json({ message: 'Sumber tidak ditemukan.' }, { status: 404 });
 }
 
-export async function PATCH(request: Request, context: RouteContext<'/api/admin/knowledge/[id]'>) {
+export async function PATCH(request: Request, context: KnowledgeRouteContext) {
   if (!await isAdminAuthenticated()) return Response.json({ message: 'Sesi tidak valid.' }, { status: 401 });
   try {
     const id = parseId((await context.params).id);
@@ -38,7 +40,7 @@ export async function PATCH(request: Request, context: RouteContext<'/api/admin/
   }
 }
 
-export async function DELETE(_: Request, context: RouteContext<'/api/admin/knowledge/[id]'>) {
+export async function DELETE(_: Request, context: KnowledgeRouteContext) {
   if (!await isAdminAuthenticated()) return Response.json({ message: 'Sesi tidak valid.' }, { status: 401 });
   const id = parseId((await context.params).id);
   if (!id) return Response.json({ message: 'ID sumber tidak valid.' }, { status: 400 });
