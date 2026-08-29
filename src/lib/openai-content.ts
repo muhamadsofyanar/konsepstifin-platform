@@ -188,6 +188,13 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
   const avoidInstruction = input.avoidTitles.length
     ? `Jangan memakai atau mendekati judul berikut:\n- ${input.avoidTitles.join('\n- ')}`
     : 'Tidak ada daftar judul yang perlu dihindari.';
+  const internalCopywritingFramework = [
+    'Kerangka penyampaian internal yang wajib dipakai tanpa menyebut nama materi:',
+    'Headline harus menghentikan perhatian, memunculkan rasa ingin tahu yang relevan, dan menyaring pembaca yang tepat. Jangan memakai sensasi atau janji berlebihan.',
+    'Ubah fitur yang telah terverifikasi menjadi manfaat konkret dalam situasi sehari-hari. Jangan menciptakan manfaat yang tidak didukung fakta.',
+    'Gunakan paragraf pendek, subjudul spesifik, daftar hanya saat membantu pemindaian, CTA yang jelas, dan buang kalimat pengisi.',
+    'Materi copywriting internal bukan sumber klaim STIFIn dan tidak boleh dikutip, ditiru panjang, atau dicantumkan sebagai referensi publik.',
+  ].join(' ');
 
   return {
     systemInstruction: [
@@ -199,6 +206,7 @@ function buildArticlePrompt(input: ArticleGenerationRequest) {
       'Tulis artikel yang ringan, praktis, menghargai perbedaan, dan tidak memberi diagnosis atau janji hasil.',
       'Jangan mengarang kutipan, penelitian, statistik, kredensial, atau sumber.',
       'Jangan menyatakan STIFIn sebagai pengganti layanan medis, psikologis, pendidikan, atau profesional.',
+      internalCopywritingFramework,
       'Field body wajib berupa array berisi 5–9 bagian yang runtut. Setiap bagian memiliki heading, paragraphs, dan bullets.',
       'Setiap bagian wajib memiliki 2–4 paragraf. Setiap paragraf berisi satu gagasan utama, 3–5 kalimat, dan tidak boleh digabung dengan heading.',
       'Gunakan bullets hanya untuk langkah, daftar periksa, atau rangkuman praktis; isi dengan array kosong bila tidak diperlukan.',

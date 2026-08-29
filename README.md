@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.2.6 / Lead Operations Fix** — wilayah layanan berbasis pemetaan promotor nyata, funnel publik terpisah, serta dashboard tindak lanjut lead yang lengkap dan siap dibangun untuk deployment.
+Versi saat ini: **0.3.0 / Copywriting & Deployment Reliability** — copy homepage dan funnel utama menerapkan kerangka C3H, BenBi, dan FSP secara turunan, sumber faktual dipisahkan tegas, serta aset CSS diverifikasi sebelum container dinyatakan sehat.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -15,8 +15,9 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
 - Dashboard artikel dengan login admin, status draf/terjadwal/terbit, serta penyimpanan PostgreSQL.
 - Generator Gemini/OpenAI untuk 1, 3, atau 5 artikel sekaligus dengan kategori yang dapat diklik.
-- Pustaka STIFIn privat untuk mengunggah PDF, mengekstrak teks per halaman, dan memberi sumber pada artikel AI.
-- Pemisahan otomatis antara rujukan STIFIn, materi internal, materi terbatas, dan modul copywriting/kampanye.
+- Pustaka privat untuk mengunggah PDF faktual dan PDF/PNG referensi internal.
+- `C3H`, `BenBi`, dan `FSP` otomatis menjadi **Panduan Copywriting**, akses terbatas, risiko tinggi, dan tidak pernah dipakai sebagai sumber fakta STIFIn.
+- Generator artikel hanya mengambil landasan faktual dari sumber bertujuan `stifin_factual`. Kerangka copywriting turunan diterapkan untuk headline, manfaat, struktur, dan CTA tanpa mengirim materi mentah.
 - Artikel AI lebih panjang dan terstruktur, dengan waktu baca yang dihitung dari isi nyata.
 - Jejak rujukan dan halaman disimpan untuk pemeriksaan admin, tetapi tidak ditampilkan pada halaman artikel publik.
 - Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
@@ -109,8 +110,8 @@ Aplikasi berjalan pada `http://localhost:3000`.
 ## Wilayah nasional dan API publik
 
 Hierarki wilayah administratif tersedia melalui route dinamis `/wilayah`.
-Navigasi publik dan sitemap hanya memuat wilayah yang memiliki pemetaan promotor
-aktif. Data administratif diambil dari Wilayah.id dan dicache 24 jam di server.
+Semua provinsi dapat dijelajahi, sedangkan status cakupan mengikuti pemetaan
+promotor. Data administratif diambil dari Wilayah.id dan dicache 24 jam di server.
 Endpoint JSON yang dapat dipakai aplikasi lain:
 
 ```text
@@ -128,6 +129,10 @@ berikut di deployment bila endpoint STIFIn tersedia:
 ```text
 STIFIN_API_BASE=https://apro.stifin.id/api
 STIFIN_BRANCH_CODE=KODE_CABANG
+STIFIN_API_TIMEOUT_MS=10000
+# Isi hanya jika STIFIn memberikan autentikasi resmi. Simpan nilainya sebagai secret.
+STIFIN_API_AUTH_HEADER=Authorization
+STIFIN_API_AUTH_VALUE=Bearer_TOKEN_RESMI
 STIFIN_PUBLIC_WHATSAPP=false
 STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
 # Opsional: daftar publik lokal tanpa mengambil data dari pusat
@@ -144,6 +149,11 @@ promotor melalui `POST /api/admin/promotor` dengan body
 
 Repository ini sudah dilengkapi `Dockerfile` untuk deployment melalui Coolify.
 Port aplikasi: `3000`.
+
+Build menjalankan pemeriksaan aset otomatis. Container juga memiliki health
+check `GET /api/health`. Selain CSS bawaan Next.js pada `/_next/static`, halaman
+memuat `/site.css` sebagai fallback agar tampilan tidak kembali menjadi HTML
+polos saat jalur aset Next.js tertahan oleh konfigurasi proxy atau cache.
 
 Salin `.env.example` menjadi acuan Environment Variables di Coolify. Jangan
 mengunggah file `.env` yang berisi nilai produksi ke repository.
@@ -165,5 +175,5 @@ Gunakan Environment Variables di Coolify untuk seluruh informasi rahasia.
 - Periksa kembali harga, bonus, komisi affiliate, dan persyaratan program.
 - Pastikan setiap produk SEJOLI sudah aktif sebelum link ditempel.
 - Uji seluruh tombol checkout pada desktop dan ponsel.
-- Periksa kembali klasifikasi setiap PDF di **Pustaka STIFIn**, terutama materi
+- Periksa kembali klasifikasi setiap file di **Pustaka STIFIn**, terutama materi
   copywriting, kesehatan, finansial, politik, dan materi lisensi.

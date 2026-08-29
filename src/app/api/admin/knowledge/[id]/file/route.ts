@@ -16,7 +16,7 @@ export async function GET(_: Request, context: KnowledgeFileRouteContext) {
     const safeFilename = file.filename.replace(/[\r\n"]/g, '_');
     return new Response(file.bytes, {
       headers: {
-        'Content-Type': 'application/pdf',
+        'Content-Type': file.mimeType,
         'Content-Disposition': `inline; filename="${safeFilename}"`,
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',

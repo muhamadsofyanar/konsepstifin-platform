@@ -46,5 +46,11 @@ const siteSchema = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="id"><body><JsonLd data={siteSchema} /><MetaPixel />{children}</body></html>;
+  return <html lang="id">
+    <head>
+      {/* eslint-disable-next-line @next/next/no-css-tags -- fallback saat aset /_next terhalang proxy */}
+      <link rel="stylesheet" href="/site.css" />
+    </head>
+    <body><JsonLd data={siteSchema} /><MetaPixel />{children}</body>
+  </html>;
 }

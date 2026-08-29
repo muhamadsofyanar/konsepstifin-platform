@@ -81,8 +81,9 @@ SEJOLI_AFFILIATE_PARAM=ref
 4. Pilih jenis artikel: **Edukasi umum**, **Edukasi + produk**, atau
    **Affiliate SEJOLI**.
 5. Isi topik dan klik satu atau beberapa kategori.
-6. Aktifkan **Gunakan Pustaka STIFIn**, lalu gunakan pencarian otomatis atau
-   pilih sumber tertentu. Lihat `PANDUAN_PUSTAKA_STIFIN.md` untuk konfigurasi.
+6. Aktifkan **Gunakan sumber faktual STIFIn**, lalu gunakan pencarian otomatis
+   atau pilih PDF faktual tertentu. C3H, BenBi, FSP, referensi kampanye, dan PNG
+   tidak dikirim sebagai sumber fakta. Lihat `PANDUAN_PUSTAKA_STIFIN.md`.
 7. Pilih jumlah **1**, **3**, atau **5 artikel**.
 8. Pilih hasil **Draf** atau **Terjadwal**. Untuk jadwal, tentukan jam artikel
    pertama dan jarak hari antarartikel.

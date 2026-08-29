@@ -7,7 +7,9 @@ import { getDatabaseClient } from '@/lib/article-store';
 export type KnowledgeAccessLevel = 'reference' | 'internal' | 'restricted';
 export type KnowledgeRiskLevel = 'low' | 'medium' | 'high';
 export type KnowledgeStatus = 'ready' | 'disabled' | 'error';
-export type KnowledgeDocumentType = 'workbook' | 'book' | 'ebook' | 'guide' | 'other';
+export type KnowledgeDocumentType = 'workbook' | 'book' | 'ebook' | 'guide' | 'image' | 'other';
+export type KnowledgePurpose = 'stifin_factual' | 'copywriting_internal' | 'campaign_reference' | 'restricted';
+export type KnowledgeMimeType = 'application/pdf' | 'image/png';
 
 export type KnowledgeSource = {
   id: number;
@@ -15,6 +17,8 @@ export type KnowledgeSource = {
   originalFilename: string;
   category: string;
   documentType: KnowledgeDocumentType;
+  purpose: KnowledgePurpose;
+  mimeType: KnowledgeMimeType;
   accessLevel: KnowledgeAccessLevel;
   riskLevel: KnowledgeRiskLevel;
   publicationYear: number | null;
@@ -48,6 +52,7 @@ type KnowledgeUpload = {
   title?: string;
   category?: string;
   documentType?: string;
+  purpose?: string;
   accessLevel?: string;
   riskLevel?: string;
   publicationYear?: number | null;
@@ -56,7 +61,9 @@ type KnowledgeUpload = {
 
 const accessLevels: KnowledgeAccessLevel[] = ['reference', 'internal', 'restricted'];
 const riskLevels: KnowledgeRiskLevel[] = ['low', 'medium', 'high'];
-const documentTypes: KnowledgeDocumentType[] = ['workbook', 'book', 'ebook', 'guide', 'other'];
+const documentTypes: KnowledgeDocumentType[] = ['workbook', 'book', 'ebook', 'guide', 'image', 'other'];
+const purposes: KnowledgePurpose[] = ['stifin_factual', 'copywriting_internal', 'campaign_reference', 'restricted'];
+const mimeTypes: KnowledgeMimeType[] = ['application/pdf', 'image/png'];
 const statuses: KnowledgeStatus[] = ['ready', 'disabled', 'error'];
 
 const globalForKnowledge = globalThis as unknown as {
@@ -88,6 +95,8 @@ export async function ensureKnowledgeSchema() {
           stored_filename TEXT NOT NULL UNIQUE,
           category TEXT NOT NULL DEFAULT 'Dasar STIFIn',
           document_type TEXT NOT NULL DEFAULT 'workbook',
+          purpose TEXT NOT NULL DEFAULT 'stifin_factual',
+          mime_type TEXT NOT NULL DEFAULT 'application/pdf',
           access_level TEXT NOT NULL DEFAULT 'internal',
           risk_level TEXT NOT NULL DEFAULT 'medium',
           publication_year INTEGER,
@@ -103,6 +112,8 @@ export async function ensureKnowledgeSchema() {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `;
+      await sql`ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'stifin_factual'`;
+      await sql`ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS mime_type TEXT NOT NULL DEFAULT 'application/pdf'`;
       await sql`
         CREATE TABLE IF NOT EXISTS knowledge_chunks (
           id BIGSERIAL PRIMARY KEY,
@@ -117,27 +128,34 @@ export async function ensureKnowledgeSchema() {
       `;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_chunks_source_idx ON knowledge_chunks(source_id, page_number)`;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_sources_ai_idx ON knowledge_sources(status, enabled_for_ai, access_level)`;
+      await sql`CREATE INDEX IF NOT EXISTS knowledge_sources_purpose_idx ON knowledge_sources(purpose, status, enabled_for_ai)`;
       await sql`CREATE INDEX IF NOT EXISTS knowledge_chunks_search_idx ON knowledge_chunks USING GIN(to_tsvector('simple', content))`;
       await sql`
         UPDATE knowledge_sources
-        SET category = 'Copywriting & Kampanye', access_level = 'internal', risk_level = 'medium',
+        SET category = 'Panduan Copywriting', purpose = 'copywriting_internal', access_level = 'restricted', risk_level = 'high',
             enabled_for_ai = FALSE, updated_at = NOW()
-        WHERE category = 'Dasar STIFIn' AND access_level = 'reference' AND enabled_for_ai = TRUE
-          AND (
+        WHERE (
             original_filename ILIKE '%copywriting%' OR original_filename ILIKE '%landing page%'
             OR original_filename ILIKE '%landing-page%' OR original_filename ILIKE '%funnel%'
             OR original_filename ILIKE '%headline%' OR original_filename ILIKE '%storytelling%'
             OR original_filename ILIKE '%personal branding%' OR original_filename ILIKE '%content marketing%'
+            OR original_filename ILIKE '%benbi%' OR original_filename ILIKE '%c3h%'
+            OR original_filename ~* '(^|[ _-])fsp([ _.0-9-]|$)'
             OR original_filename ~* '(^|[ _-])modul([ _.0-9-]|$)'
           )
       `;
       await sql`
         UPDATE knowledge_sources
-        SET category = 'Copywriting & Kampanye', access_level = 'restricted', risk_level = 'high',
+        SET category = 'Panduan Copywriting', purpose = 'restricted', access_level = 'restricted', risk_level = 'high',
             enabled_for_ai = FALSE, updated_at = NOW()
         WHERE original_filename ILIKE '%hipnotik%' OR original_filename ILIKE '%hypnotic%'
            OR original_filename ILIKE '%membius%' OR original_filename ILIKE '%trance%'
            OR original_filename ILIKE '%covert%'
+      `;
+      await sql`
+        UPDATE knowledge_sources
+        SET enabled_for_ai = FALSE, status = 'disabled', updated_at = NOW()
+        WHERE purpose <> 'stifin_factual' AND enabled_for_ai = TRUE
       `;
     })().catch((error) => {
       globalForKnowledge.konsepStifinKnowledgeSchema = undefined;
@@ -149,6 +167,8 @@ export async function ensureKnowledgeSchema() {
 
 function sourceFromRow(row: Record<string, unknown>): KnowledgeSource {
   const documentType = String(row.document_type) as KnowledgeDocumentType;
+  const purpose = String(row.purpose) as KnowledgePurpose;
+  const mimeType = String(row.mime_type) as KnowledgeMimeType;
   const accessLevel = String(row.access_level) as KnowledgeAccessLevel;
   const riskLevel = String(row.risk_level) as KnowledgeRiskLevel;
   const status = String(row.status) as KnowledgeStatus;
@@ -158,6 +178,8 @@ function sourceFromRow(row: Record<string, unknown>): KnowledgeSource {
     originalFilename: String(row.original_filename),
     category: String(row.category),
     documentType: documentTypes.includes(documentType) ? documentType : 'other',
+    purpose: purposes.includes(purpose) ? purpose : 'stifin_factual',
+    mimeType: mimeTypes.includes(mimeType) ? mimeType : 'application/pdf',
     accessLevel: accessLevels.includes(accessLevel) ? accessLevel : 'internal',
     riskLevel: riskLevels.includes(riskLevel) ? riskLevel : 'medium',
     publicationYear: row.publication_year == null ? null : Number(row.publication_year),
@@ -175,7 +197,7 @@ function sourceFromRow(row: Record<string, unknown>): KnowledgeSource {
 
 function displayTitle(filename: string) {
   return filename
-    .replace(/\.pdf$/i, '')
+    .replace(/\.(?:pdf|png)$/i, '')
     .replace(/^\d{1,3}[-_ ]*/, '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -189,8 +211,12 @@ export function inferKnowledgeMetadata(filename: string) {
   let accessLevel: KnowledgeAccessLevel = 'reference';
   let riskLevel: KnowledgeRiskLevel = 'low';
   let enabledForAi = true;
+  let purpose: KnowledgePurpose = 'stifin_factual';
+  const documentType: KnowledgeDocumentType = name.endsWith('.png') ? 'image' : 'workbook';
 
   const restrictedCopyTerms = ['hipnotik', 'hypnotic', 'membius', 'trance', 'covert'];
+  const kirimAiTerms = ['benbi', 'c3h'];
+  const fspPattern = /(^|[^a-z0-9])fsp([^a-z0-9]|$)/i;
   const campaignTerms = [
     'copywriting', 'landing page', 'landing-page', 'funnel', 'launch', 'headline',
     'frasa', 'storytelling', 'affiliate', 'personal branding', 'content marketing',
@@ -199,17 +225,26 @@ export function inferKnowledgeMetadata(filename: string) {
   const genericModule = /(^|[\s_-])modul([\s_.-]|\d|$)/i.test(name);
 
   if (restrictedCopyTerms.some((term) => name.includes(term))) {
-    category = 'Copywriting & Kampanye';
+    category = 'Panduan Copywriting';
+    purpose = 'restricted';
+    accessLevel = 'restricted';
+    riskLevel = 'high';
+    enabledForAi = false;
+  } else if (kirimAiTerms.some((term) => name.includes(term)) || fspPattern.test(name)) {
+    category = 'Panduan Copywriting';
+    purpose = 'copywriting_internal';
     accessLevel = 'restricted';
     riskLevel = 'high';
     enabledForAi = false;
   } else if (campaignTerms.some((term) => name.includes(term))) {
     category = 'Copywriting & Kampanye';
+    purpose = 'campaign_reference';
     accessLevel = 'internal';
     riskLevel = 'medium';
     enabledForAi = false;
   } else if (genericModule) {
     category = 'Materi Pemasaran';
+    purpose = 'campaign_reference';
     accessLevel = 'internal';
     riskLevel = 'medium';
     enabledForAi = false;
@@ -267,7 +302,8 @@ export function inferKnowledgeMetadata(filename: string) {
   return {
     title: displayTitle(filename),
     category,
-    documentType: 'workbook' as KnowledgeDocumentType,
+    documentType,
+    purpose,
     accessLevel,
     riskLevel,
     enabledForAi,
@@ -300,11 +336,17 @@ function chunkPageText(pageText: string) {
   return chunks;
 }
 
-export async function ingestKnowledgePdf(input: KnowledgeUpload): Promise<KnowledgeSource> {
+function detectMimeType(bytes: Uint8Array): KnowledgeMimeType | undefined {
+  if (bytes.byteLength >= 5 && new TextDecoder().decode(bytes.slice(0, 5)) === '%PDF-') return 'application/pdf';
+  const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.byteLength >= 8 && pngSignature.every((value, index) => bytes[index] === value)) return 'image/png';
+  return undefined;
+}
+
+export async function ingestKnowledgeFile(input: KnowledgeUpload): Promise<KnowledgeSource> {
   await ensureKnowledgeSchema();
-  if (input.bytes.byteLength < 5 || new TextDecoder().decode(input.bytes.slice(0, 5)) !== '%PDF-') {
-    throw new Error('File bukan PDF yang valid.');
-  }
+  const mimeType = detectMimeType(input.bytes);
+  if (!mimeType) throw new Error('File harus berupa PDF atau PNG yang valid.');
   if (input.bytes.byteLength > knowledgeMaxFileBytes()) {
     throw new Error(`Ukuran PDF melebihi batas ${Math.round(knowledgeMaxFileBytes() / 1024 / 1024)} MB.`);
   }
@@ -312,7 +354,7 @@ export async function ingestKnowledgePdf(input: KnowledgeUpload): Promise<Knowle
   const checksum = createHash('sha256').update(input.bytes).digest('hex');
   const sql = getDatabaseClient();
   const existing = await sql`SELECT id FROM knowledge_sources WHERE checksum = ${checksum} LIMIT 1`;
-  if (existing[0]) throw new Error('PDF ini sudah ada di Pustaka STIFIn.');
+  if (existing[0]) throw new Error('File ini sudah ada di Pustaka STIFIn.');
 
   const inferred = inferKnowledgeMetadata(input.filename);
   const accessLevel = accessLevels.includes(input.accessLevel as KnowledgeAccessLevel)
@@ -321,47 +363,56 @@ export async function ingestKnowledgePdf(input: KnowledgeUpload): Promise<Knowle
     ? input.riskLevel as KnowledgeRiskLevel : inferred.riskLevel;
   const documentType = documentTypes.includes(input.documentType as KnowledgeDocumentType)
     ? input.documentType as KnowledgeDocumentType : inferred.documentType;
+  const purpose = purposes.includes(input.purpose as KnowledgePurpose)
+    ? input.purpose as KnowledgePurpose : inferred.purpose;
   const publicationYear = input.publicationYear && input.publicationYear >= 1900 && input.publicationYear <= 2100
     ? input.publicationYear : inferred.publicationYear;
-  const enabledForAi = accessLevel === 'restricted' ? false : inferred.enabledForAi;
-  const storedFilename = `${randomUUID()}.pdf`;
+  const enabledForAi = accessLevel === 'restricted' || purpose !== 'stifin_factual' ? false : inferred.enabledForAi;
+  const storedFilename = `${randomUUID()}${mimeType === 'image/png' ? '.png' : '.pdf'}`;
   const storageDirectory = knowledgeStorageDirectory();
   const storedPath = knowledgeFilePath(storedFilename);
   await mkdir(storageDirectory, { recursive: true });
   await writeFile(storedPath, input.bytes, { flag: 'wx' });
 
   try {
-    const pdf = await getDocumentProxy(input.bytes);
-    const extracted = await extractText(pdf, { mergePages: false });
-    await pdf.destroy();
-    const chunks = extracted.text.flatMap((page, pageIndex) =>
-      chunkPageText(cleanPageText(page)).map((chunk, chunkIndex) => ({
-        page_number: pageIndex + 1,
-        chunk_index: chunkIndex,
-        content: chunk.content,
-        word_count: chunk.wordCount,
-      })),
-    );
-    if (!chunks.length) throw new Error('PDF tidak memiliki lapisan teks yang dapat dibaca.');
+    let pageCount = 1;
+    let chunks: Array<{ page_number: number; chunk_index: number; content: string; word_count: number }> = [];
+    if (mimeType === 'application/pdf') {
+      const pdf = await getDocumentProxy(input.bytes);
+      const extracted = await extractText(pdf, { mergePages: false });
+      await pdf.destroy();
+      pageCount = extracted.totalPages;
+      chunks = extracted.text.flatMap((page, pageIndex) =>
+        chunkPageText(cleanPageText(page)).map((chunk, chunkIndex) => ({
+          page_number: pageIndex + 1,
+          chunk_index: chunkIndex,
+          content: chunk.content,
+          word_count: chunk.wordCount,
+        })),
+      );
+      if (!chunks.length) throw new Error('PDF tidak memiliki lapisan teks yang dapat dibaca.');
+    }
 
     const source = await sql.begin(async (transaction) => {
       const rows = await transaction`
         INSERT INTO knowledge_sources
-          (title, original_filename, stored_filename, category, document_type, access_level, risk_level,
+          (title, original_filename, stored_filename, category, document_type, purpose, mime_type, access_level, risk_level,
            publication_year, enabled_for_ai, page_count, chunk_count, file_size, checksum, notes, status)
         VALUES
           (${String(input.title || inferred.title).trim().slice(0, 180)}, ${input.filename.slice(0, 260)}, ${storedFilename},
-           ${String(input.category || inferred.category).trim().slice(0, 100)}, ${documentType}, ${accessLevel}, ${riskLevel},
-           ${publicationYear}, ${enabledForAi}, ${extracted.totalPages}, ${chunks.length}, ${input.bytes.byteLength},
-           ${checksum}, ${String(input.notes || '').trim().slice(0, 2000)}, 'ready')
+           ${String(input.category || inferred.category).trim().slice(0, 100)}, ${documentType}, ${purpose}, ${mimeType}, ${accessLevel}, ${riskLevel},
+           ${publicationYear}, ${enabledForAi}, ${pageCount}, ${chunks.length}, ${input.bytes.byteLength},
+           ${checksum}, ${String(input.notes || '').trim().slice(0, 2000)}, ${enabledForAi ? 'ready' : 'disabled'})
         RETURNING *
       `;
       const sourceId = Number(rows[0].id);
-      await transaction`
-        INSERT INTO knowledge_chunks
-        ${transaction(chunks.map((chunk) => ({ source_id: sourceId, ...chunk })),
-          'source_id', 'page_number', 'chunk_index', 'content', 'word_count')}
-      `;
+      if (chunks.length) {
+        await transaction`
+          INSERT INTO knowledge_chunks
+          ${transaction(chunks.map((chunk) => ({ source_id: sourceId, ...chunk })),
+            'source_id', 'page_number', 'chunk_index', 'content', 'word_count')}
+        `;
+      }
       return sourceFromRow(rows[0]);
     });
     return source;
@@ -370,6 +421,8 @@ export async function ingestKnowledgePdf(input: KnowledgeUpload): Promise<Knowle
     throw error;
   }
 }
+
+export const ingestKnowledgePdf = ingestKnowledgeFile;
 
 export async function getKnowledgeSources() {
   await ensureKnowledgeSchema();
@@ -414,6 +467,8 @@ export async function updateKnowledgeSource(id: number, value: unknown) {
   const category = String(data.category ?? current.category).trim().slice(0, 100);
   const documentType = documentTypes.includes(data.documentType as KnowledgeDocumentType)
     ? data.documentType as KnowledgeDocumentType : current.documentType;
+  const purpose = purposes.includes(data.purpose as KnowledgePurpose)
+    ? data.purpose as KnowledgePurpose : current.purpose;
   const accessLevel = accessLevels.includes(data.accessLevel as KnowledgeAccessLevel)
     ? data.accessLevel as KnowledgeAccessLevel : current.accessLevel;
   const riskLevel = riskLevels.includes(data.riskLevel as KnowledgeRiskLevel)
@@ -421,11 +476,12 @@ export async function updateKnowledgeSource(id: number, value: unknown) {
   const year = Number(data.publicationYear);
   const publicationYear = Number.isInteger(year) && year >= 1900 && year <= 2100 ? year : null;
   const notes = String(data.notes ?? current.notes).trim().slice(0, 2000);
-  const enabledForAi = Boolean(data.enabledForAi);
+  const enabledForAi = Boolean(data.enabledForAi) && accessLevel !== 'restricted' && purpose === 'stifin_factual'
+    && current.mimeType === 'application/pdf' && current.chunkCount > 0;
   if (title.length < 3 || category.length < 2) throw new Error('Judul dan kategori wajib diisi.');
   const rows = await getDatabaseClient()`
     UPDATE knowledge_sources SET
-      title = ${title}, category = ${category}, document_type = ${documentType}, access_level = ${accessLevel},
+      title = ${title}, category = ${category}, document_type = ${documentType}, purpose = ${purpose}, access_level = ${accessLevel},
       risk_level = ${riskLevel}, publication_year = ${publicationYear}, enabled_for_ai = ${enabledForAi},
       notes = ${notes}, status = ${enabledForAi ? 'ready' : 'disabled'}, updated_at = NOW()
     WHERE id = ${id}
@@ -447,12 +503,13 @@ export async function deleteKnowledgeSource(id: number) {
 export async function readKnowledgeFile(id: number) {
   await ensureKnowledgeSchema();
   const rows = await getDatabaseClient()`
-    SELECT original_filename, stored_filename FROM knowledge_sources WHERE id = ${id} LIMIT 1
+    SELECT original_filename, stored_filename, mime_type FROM knowledge_sources WHERE id = ${id} LIMIT 1
   `;
   if (!rows[0]) return undefined;
   const storedFilename = path.basename(String(rows[0].stored_filename));
   const bytes = await readFile(knowledgeFilePath(storedFilename));
-  return { bytes, filename: String(rows[0].original_filename) };
+  const mimeType = String(rows[0].mime_type) as KnowledgeMimeType;
+  return { bytes, filename: String(rows[0].original_filename), mimeType: mimeTypes.includes(mimeType) ? mimeType : 'application/pdf' };
 }
 
 const searchStopWords = new Set([
@@ -495,6 +552,7 @@ export async function findKnowledgeContext({
       JOIN knowledge_sources ks ON ks.id = kc.source_id
       WHERE ks.status = 'ready'
         AND ks.enabled_for_ai = TRUE
+        AND ks.purpose = 'stifin_factual'
         AND (
           to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${expression})
           OR to_tsvector('simple', kc.content) @@ websearch_to_tsquery('simple', ${foundationExpression})

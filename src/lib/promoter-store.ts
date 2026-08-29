@@ -13,6 +13,23 @@ export type PublicPromoter = {
 function normalize(value: unknown) { return String(value ?? '').trim(); }
 function truthy(value: unknown) { return ['1', 'true', 'ya', 'yes', 'aktif'].includes(normalize(value).toLowerCase()); }
 
+function stifinApiHeaders() {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const name = normalize(process.env.STIFIN_API_AUTH_HEADER);
+  const value = normalize(process.env.STIFIN_API_AUTH_VALUE);
+  if (name && value && /^[A-Za-z0-9-]+$/.test(name)) headers[name] = value;
+  return headers;
+}
+
+function promoterRows(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return [];
+  const object = value as Record<string, unknown>;
+  if (Array.isArray(object.data)) return object.data;
+  if (object.data && typeof object.data === 'object') return promoterRows(object.data);
+  return [];
+}
+
 let schemaPromise: Promise<void> | undefined;
 async function ensureSchema() {
   if (!databaseConfigured()) return;
@@ -36,22 +53,27 @@ async function loadRegionMappings() {
 export async function getPublicPromoters(region?: string): Promise<PublicPromoter[]> {
   const base = process.env.STIFIN_API_BASE || 'https://apro.stifin.id/api';
   const branch = normalize(process.env.STIFIN_BRANCH_CODE).toUpperCase();
+  const timeoutValue = Number(process.env.STIFIN_API_TIMEOUT_MS);
+  const timeout = Number.isFinite(timeoutValue) ? Math.min(60_000, Math.max(5_000, timeoutValue)) : 10_000;
   let rows: unknown[] = [];
   let sourceBranch = branch;
   const manual = normalize(process.env.STIFIN_PROMOTERS_JSON);
   if (manual) {
     try {
       const parsed: unknown = JSON.parse(manual);
-      rows = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' && 'data' in parsed && Array.isArray(parsed.data) ? parsed.data : []);
+      rows = promoterRows(parsed);
       sourceBranch = 'manual';
     } catch { rows = []; }
   } else if (branch) {
     const response = await fetch(`${base.replace(/\/$/, '')}/proGetCab/pro/${encodeURIComponent(branch)}`, {
-      headers: { accept: 'application/json' }, next: { revalidate: 300, tags: [`promoters:${branch}`] }, signal: AbortSignal.timeout(10000),
+      headers: stifinApiHeaders(),
+      next: { revalidate: 300, tags: [`promoters:${branch}`] },
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeout),
     });
     if (!response.ok) throw new Error(`Promotor upstream HTTP ${response.status}.`);
     const body: unknown = await response.json();
-    rows = body && typeof body === 'object' && 'data' in body && Array.isArray(body.data) ? body.data : [];
+    rows = promoterRows(body);
   }
   let regionMap: Record<string, string[]> = {};
   try { regionMap = JSON.parse(process.env.STIFIN_PROMOTER_REGION_MAP || '{}') as Record<string, string[]>; } catch { regionMap = {}; }

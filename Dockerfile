@@ -7,7 +7,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN npm run build && npm run verify:assets
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -20,4 +20,6 @@ RUN mkdir -p /app/storage/stifin-sources
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -q -O - http://127.0.0.1:3000/api/health | grep -q '"ok":true' || exit 1
 CMD ["node", "server.js"]
