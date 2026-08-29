@@ -6,28 +6,28 @@ export type PublicPromoter = {
   branchCode: string;
   active: boolean;
   menerimaKunjungan: boolean;
-  whatsapp?: string;
   regionCodes: string[];
 };
 
 function normalize(value: unknown) { return String(value ?? '').trim(); }
 function truthy(value: unknown) { return ['1', 'true', 'ya', 'yes', 'aktif'].includes(normalize(value).toLowerCase()); }
-
-function stifinApiHeaders() {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  const name = normalize(process.env.STIFIN_API_AUTH_HEADER);
-  const value = normalize(process.env.STIFIN_API_AUTH_VALUE);
-  if (name && value && /^[A-Za-z0-9-]+$/.test(name)) headers[name] = value;
-  return headers;
+function regionCodeList(value: unknown) {
+  const values = Array.isArray(value) ? value : normalize(value).split(/[;,\s]+/);
+  return [...new Set(values.map(String).map((item) => item.trim()).filter((item) => /^\d{2}(?:\.\d{2}){0,3}$/.test(item)))];
+}
+function regionMatches(requested: string, mapped: string) {
+  return requested === mapped || requested.startsWith(`${mapped}.`) || mapped.startsWith(`${requested}.`);
 }
 
-function promoterRows(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value;
-  if (!value || typeof value !== 'object') return [];
-  const object = value as Record<string, unknown>;
-  if (Array.isArray(object.data)) return object.data;
-  if (object.data && typeof object.data === 'object') return promoterRows(object.data);
-  return [];
+export function promoterSourceStatus() {
+  const manual = Boolean(normalize(process.env.STIFIN_PROMOTERS_JSON));
+  const branchCount = [...new Set((process.env.STIFIN_BRANCH_CODES || process.env.STIFIN_BRANCH_CODE || '')
+    .split(',').map((item) => normalize(item).toUpperCase()).filter(Boolean))].length;
+  return {
+    configured: manual || branchCount > 0,
+    source: manual ? 'manual' as const : branchCount > 0 ? 'stifin-api' as const : 'none' as const,
+    branchCount,
+  };
 }
 
 let schemaPromise: Promise<void> | undefined;
@@ -52,48 +52,47 @@ async function loadRegionMappings() {
 
 export async function getPublicPromoters(region?: string): Promise<PublicPromoter[]> {
   const base = process.env.STIFIN_API_BASE || 'https://apro.stifin.id/api';
-  const branch = normalize(process.env.STIFIN_BRANCH_CODE).toUpperCase();
-  const timeoutValue = Number(process.env.STIFIN_API_TIMEOUT_MS);
-  const timeout = Number.isFinite(timeoutValue) ? Math.min(60_000, Math.max(5_000, timeoutValue)) : 10_000;
+  const branches = [...new Set((process.env.STIFIN_BRANCH_CODES || process.env.STIFIN_BRANCH_CODE || '').split(',').map((item) => normalize(item).toUpperCase()).filter(Boolean))];
   let rows: unknown[] = [];
-  let sourceBranch = branch;
+  let sourceBranch = branches.join(',');
   const manual = normalize(process.env.STIFIN_PROMOTERS_JSON);
   if (manual) {
     try {
       const parsed: unknown = JSON.parse(manual);
-      rows = promoterRows(parsed);
+      rows = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' && 'data' in parsed && Array.isArray(parsed.data) ? parsed.data : []);
       sourceBranch = 'manual';
     } catch { rows = []; }
-  } else if (branch) {
-    const response = await fetch(`${base.replace(/\/$/, '')}/proGetCab/pro/${encodeURIComponent(branch)}`, {
-      headers: stifinApiHeaders(),
-      next: { revalidate: 300, tags: [`promoters:${branch}`] },
-      redirect: 'error',
-      signal: AbortSignal.timeout(timeout),
-    });
-    if (!response.ok) throw new Error(`Promotor upstream HTTP ${response.status}.`);
-    const body: unknown = await response.json();
-    rows = promoterRows(body);
+  } else if (branches.length) {
+    const responses = await Promise.allSettled(branches.map(async (branch) => {
+      const authHeader = normalize(process.env.STIFIN_API_AUTH_HEADER);
+      const authValue = normalize(process.env.STIFIN_API_AUTH_VALUE);
+      const headers: Record<string, string> = { accept: 'application/json' };
+      if (authHeader && authValue && /^[A-Za-z0-9-]+$/.test(authHeader)) headers[authHeader] = authValue;
+      const response = await fetch(`${base.replace(/\/$/, '')}/proGetCab/pro/${encodeURIComponent(branch)}`, {
+        headers, next: { revalidate: 300, tags: [`promoters:${branch}`] }, signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error(`Promotor upstream HTTP ${response.status}.`);
+      const body: unknown = await response.json();
+      return body && typeof body === 'object' && 'data' in body && Array.isArray(body.data) ? body.data.map((item) => ({ ...(item as object), __branch: branch })) : [];
+    }));
+    rows = responses.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
+    if (!rows.length && responses.some((result) => result.status === 'rejected')) throw new Error('Sumber promotor nasional sedang tidak tersedia.');
   }
   let regionMap: Record<string, string[]> = {};
   try { regionMap = JSON.parse(process.env.STIFIN_PROMOTER_REGION_MAP || '{}') as Record<string, string[]>; } catch { regionMap = {}; }
   regionMap = { ...regionMap, ...(await loadRegionMappings()) };
-  const publicWhatsapp = process.env.STIFIN_PUBLIC_WHATSAPP === 'true';
-  return rows.flatMap((row: unknown) => {
+  const sanitized = rows.flatMap((row: unknown) => {
     if (!row || typeof row !== 'object') return [];
     const item = row as Record<string, unknown>;
     const code = normalize(item.KodeID ?? item.kode ?? item.code).toUpperCase();
     const name = normalize(item.Nama ?? item.nama ?? item.name);
     if (!code || !name) return [];
-    const inlineRegionCodes = Array.isArray(item.regionCodes)
-      ? item.regionCodes.map(String).filter((value) => /^\d{2}(?:\.\d{2}){0,3}$/.test(value))
-      : [];
-    const mappedRegionCodes = Array.isArray(regionMap[code]) ? regionMap[code].map(String).filter(Boolean) : [];
-    const regionCodes = [...new Set([...inlineRegionCodes, ...mappedRegionCodes])];
-    if (region && !regionCodes.some((codeValue) => region === codeValue || region.startsWith(`${codeValue}.`))) return [];
-    const phone = normalize(item.Telepon ?? item.NoHP ?? item.phone).replace(/[^\d+]/g, '');
-    return [{ code, name, branchCode: normalize(item.KodeCabang ?? item.branchCode) || sourceBranch, active: truthy(item.Aktif ?? item.active ?? true), menerimaKunjungan: truthy(item.MenerimaKunjungan ?? item.menerima_kunjungan ?? true), ...(publicWhatsapp && phone ? { whatsapp: phone } : {}), regionCodes }];
+    const rowRegionCodes = regionCodeList(item.regionCodes ?? item.RegionCodes ?? item.region_codes);
+    const regionCodes = regionCodeList(Array.isArray(regionMap[code]) && regionMap[code].length ? regionMap[code] : rowRegionCodes);
+    if (region && !regionCodes.some((codeValue) => regionMatches(region, codeValue))) return [];
+    return [{ code, name, branchCode: normalize(item.KodeCabang ?? item.branchCode ?? item.__branch) || sourceBranch, active: truthy(item.Aktif ?? item.active ?? true), menerimaKunjungan: truthy(item.MenerimaKunjungan ?? item.menerima_kunjungan ?? true), regionCodes }];
   });
+  return [...new Map(sanitized.map((item) => [item.code, item])).values()];
 }
 
 export async function getServedRegionCodes() {

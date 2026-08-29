@@ -1,16 +1,12 @@
 {
   "name": "konsepstifin-platform",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/sync-public-css.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/sync-public-css.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "verify:assets": "node scripts/verify-build-assets.mjs",
-    "check": "npm run lint && npm run build && npm run verify:assets"
+    "lint": "eslint"
   },
   "dependencies": {
     "next": "16.2.10",

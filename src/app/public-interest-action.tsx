@@ -18,6 +18,7 @@ export default function PublicInterestAction({
   checkoutUrl = '',
   trackLead = false,
   preserveCampaignParams = false,
+  provinceCode = '', provinceName = '', regencyCode = '', regencyName = '',
 }: {
   linkKey: SejoliLinkKey;
   label: string;
@@ -26,6 +27,7 @@ export default function PublicInterestAction({
   checkoutUrl?: string;
   trackLead?: boolean;
   preserveCampaignParams?: boolean;
+  provinceCode?: string; provinceName?: string; regencyCode?: string; regencyName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
@@ -70,6 +72,9 @@ export default function PublicInterestAction({
       body: JSON.stringify({
         name: form.get('name'), phone: form.get('phone'), city: form.get('city'),
         service: form.get('service'), notes: form.get('notes'), website: form.get('website'),
+        provinceCode, provinceName, regencyCode, regencyName,
+        consentToContact: form.get('consentToContact') === 'on',
+        consentToShare: form.get('consentToShare') === 'on',
         sourcePath: window.location.pathname, startedAt,
       }),
     });
@@ -98,6 +103,8 @@ export default function PublicInterestAction({
             <label>Nomor WhatsApp<input name="phone" required inputMode="tel" placeholder="08xx xxxx xxxx" /></label>
             <div className="form-row"><label>Kota/domisili<input name="city" required placeholder="Contoh: Bandung" /></label><label>Pilihan layanan<select name="service" defaultValue={service}>{serviceOptions.map((item) => <option key={item}>{item}</option>)}</select></label></div>
             <label>Jadwal atau kebutuhan tambahan<textarea name="notes" rows={3} placeholder="Contoh: Sabtu pagi / ingin informasi WSL 1" /></label>
+            <label className="interest-consent"><input type="checkbox" name="consentToContact" required /> Saya setuju nomor WhatsApp digunakan tim untuk menindaklanjuti permintaan ini.</label>
+            <label className="interest-consent"><input type="checkbox" name="consentToShare" required /> Saya setuju nomor WhatsApp hanya dapat dibagikan kepada promotor yang ditugaskan untuk melayani permintaan ini.</label>
             <label className="interest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
             <div className="privacy-note">Tes STIFIn dilakukan offline. Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
             {error && <p className="interest-error" role="alert">{error}</p>}

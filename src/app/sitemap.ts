@@ -1,19 +1,15 @@
 import type { MetadataRoute } from 'next';
 import { getPublishedArticles } from '@/lib/article-store';
 import { getWilayah, wilayahChainPath } from '@/lib/wilayah';
-import { getServedRegionCodes } from '@/lib/promoter-store';
 
 export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://konsepstifin.com';
   const articles = await getPublishedArticles();
   let provinces = [] as Awaited<ReturnType<typeof getWilayah>>;
-  try {
-    const [allProvinces, servedCodes] = await Promise.all([getWilayah('provinces'), getServedRegionCodes()]);
-    const servedProvinces = new Set(servedCodes.map((code) => code.split('.')[0]));
-    provinces = allProvinces.filter((province) => servedProvinces.has(province.code));
-  } catch { provinces = []; }
+  try { provinces = await getWilayah('provinces'); } catch { provinces = []; }
   return [
     { url: baseUrl, lastModified: new Date('2026-07-16'), changeFrequency: 'weekly', priority: 1 },
     { url: `${baseUrl}/tes-stifin`, lastModified: new Date('2026-07-16'), changeFrequency: 'weekly', priority: 0.9 },

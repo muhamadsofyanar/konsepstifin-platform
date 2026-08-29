@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin/', '/api/'],
     },
-    sitemap: 'https://konsepstifin.com/sitemap.xml',
+    sitemap: 'https://konsepstifin.com/sitemap-index.xml',
     host: 'https://konsepstifin.com',
   };
 }

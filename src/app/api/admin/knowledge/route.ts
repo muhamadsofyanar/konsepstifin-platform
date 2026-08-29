@@ -1,7 +1,7 @@
 import { isAdminAuthenticated } from '@/lib/admin-auth';
 import {
   getKnowledgeSources,
-  ingestKnowledgeFile,
+  ingestKnowledgePdf,
   knowledgeMaxFileBytes,
 } from '@/lib/knowledge-store';
 
@@ -26,12 +26,12 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file');
-    if (!(file instanceof File)) throw new Error('Pilih satu file PDF atau PNG.');
+    if (!(file instanceof File)) throw new Error('Pilih satu file PDF.');
     if (file.size > knowledgeMaxFileBytes()) {
       throw new Error(`Ukuran PDF melebihi batas ${Math.round(knowledgeMaxFileBytes() / 1024 / 1024)} MB.`);
     }
     const publicationYearValue = Number(formData.get('publicationYear'));
-    const source = await ingestKnowledgeFile({
+    const source = await ingestKnowledgePdf({
       bytes: new Uint8Array(await file.arrayBuffer()),
       filename: file.name,
       title: String(formData.get('title') ?? ''),
@@ -44,8 +44,8 @@ export async function POST(request: Request) {
     });
     return Response.json({ source }, { status: 201 });
   } catch (error) {
-    console.error('Gagal mengimpor file pustaka.', error);
-    const message = error instanceof Error ? error.message : 'File gagal diproses.';
+    console.error('Gagal mengimpor PDF pustaka.', error);
+    const message = error instanceof Error ? error.message : 'PDF gagal diproses.';
     const status = message.includes('sudah ada') ? 409 : 400;
     return Response.json({ message }, { status });
   }

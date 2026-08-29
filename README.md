@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.3.0 / Copywriting & Deployment Reliability** — copy homepage dan funnel utama menerapkan kerangka C3H, BenBi, dan FSP secara turunan, sumber faktual dipisahkan tegas, serta aset CSS diverifikasi sebelum container dinyatakan sehat.
+Versi saat ini: **0.4.0** — Pusat layanan nasional berbasis lead, pencocokan promotor multi-cabang, pemetaan Wilayah.id, consent data pribadi, serta dashboard Content Intelligence dan Local SEO.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -15,9 +15,8 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
 - Dashboard artikel dengan login admin, status draf/terjadwal/terbit, serta penyimpanan PostgreSQL.
 - Generator Gemini/OpenAI untuk 1, 3, atau 5 artikel sekaligus dengan kategori yang dapat diklik.
-- Pustaka privat untuk mengunggah PDF faktual dan PDF/PNG referensi internal.
-- `C3H`, `BenBi`, dan `FSP` otomatis menjadi **Panduan Copywriting**, akses terbatas, risiko tinggi, dan tidak pernah dipakai sebagai sumber fakta STIFIn.
-- Generator artikel hanya mengambil landasan faktual dari sumber bertujuan `stifin_factual`. Kerangka copywriting turunan diterapkan untuk headline, manfaat, struktur, dan CTA tanpa mengirim materi mentah.
+- Pustaka STIFIn privat untuk mengunggah PDF, mengekstrak teks per halaman, dan memberi sumber pada artikel AI.
+- Pemisahan otomatis antara rujukan STIFIn, materi internal, materi terbatas, dan modul copywriting/kampanye.
 - Artikel AI lebih panjang dan terstruktur, dengan waktu baca yang dihitung dari isi nyata.
 - Jejak rujukan dan halaman disimpan untuk pemeriksaan admin, tetapi tidak ditampilkan pada halaman artikel publik.
 - Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
@@ -26,14 +25,19 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Harga katalog publik mengikuti harga yang tampil pada kartu produk SEJOLI.
 - Enam foto dokumentasi kegiatan nyata tampil di beranda dan halaman Tes STIFIn.
 - Tombol produk aktif membuka checkout SEJOLI; formulir minat dipisahkan sebagai bantuan memilih layanan.
-- Dashboard `/admin/leads` menampilkan lead formulir publik, filter status, penanggung jawab, dan catatan tindak lanjut.
-- Status lead tersedia dari baru, dihubungi, terkualifikasi, konversi, sampai ditutup.
-- Pencarian `/wilayah` selalu menampilkan 38 provinsi dengan status layanan terpetakan atau koordinasi nasional.
-- Halaman wilayah dan direktori promotor menggunakan header, footer, serta navigasi publik yang konsisten.
 - Content Intelligence native Next.js untuk menilai kesiapan artikel terhadap SEO, AEO, dan pencarian berbasis AI.
 - Peta pilar–cluster, deteksi potensi kanibalisasi, serta saran internal link pada `/admin/intelligence`.
 - Metadata keyword, search intent, topical cluster, evidence pengalaman nyata, reviewer, sumber, dan artikel terkait.
 - Trust panel pada artikel publik menampilkan pengalaman nyata, reviewer, tanggal review, serta sumber yang memang aman dipublikasikan.
+- Formulir nasional menyimpan provinsi, kabupaten/kota, consent, tenggat respons, dan status pencocokan awal.
+- Dashboard `/admin/leads` menampilkan pipeline operasional dan perubahan status yang tercatat dalam riwayat.
+- Nomor WhatsApp promotor tidak lagi diteruskan ke API atau halaman publik.
+- Dashboard `/admin/promotor` untuk memetakan satu promotor ke beberapa kode Wilayah.id.
+- Skor kesiapan SEO, AEO, dan GEO yang terpisah pada `/admin/intelligence`.
+- Local SEO Planner, audit freshness, intent, internal link, kanibalisasi keyword, serta pilar–cluster.
+- Alur editorial Draf, Review, Terjadwal, dan Terbit.
+- Sitemap index terpisah untuk halaman statis, artikel, wilayah, dan direktori promotor.
+- Schema Article, Service, BreadcrumbList, dan FAQPage.
 
 Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
 Panduan mengaktifkan editor dan PostgreSQL tersedia di
@@ -81,10 +85,6 @@ website otomatis
 membuka formulir minat dan menyimpan permintaan ke PostgreSQL pada tabel
 `public_interest_leads`.
 
-Permintaan tersebut dapat dikelola melalui `/admin/leads`. Kolom penugasan,
-catatan admin, serta waktu pembaruan ditambahkan otomatis secara aman saat modul
-pertama kali dibuka. Data awal pengunjung tetap dipisahkan dari catatan internal.
-
 Saat upgrade versi 0.1.2 pertama kali dijalankan, migrasi katalog satu kali akan
 menyamakan harga dan link database dengan kartu produk SEJOLI yang disepakati.
 Sesudah itu, perubahan berikutnya tetap dapat dilakukan melalui `/admin/produk`.
@@ -109,10 +109,9 @@ Aplikasi berjalan pada `http://localhost:3000`.
 
 ## Wilayah nasional dan API publik
 
-Hierarki wilayah administratif tersedia melalui route dinamis `/wilayah`.
-Semua provinsi dapat dijelajahi, sedangkan status cakupan mengikuti pemetaan
-promotor. Data administratif diambil dari Wilayah.id dan dicache 24 jam di server.
-Endpoint JSON yang dapat dipakai aplikasi lain:
+Seluruh hierarki wilayah tersedia melalui `/wilayah`: provinsi, kabupaten/kota,
+kecamatan, serta desa/kelurahan. Data administratif diambil dari Wilayah.id
+dan dicache 24 jam di server. Endpoint JSON yang dapat dipakai aplikasi lain:
 
 ```text
 GET /api/wilayah/provinces
@@ -129,34 +128,30 @@ berikut di deployment bila endpoint STIFIn tersedia:
 ```text
 STIFIN_API_BASE=https://apro.stifin.id/api
 STIFIN_BRANCH_CODE=KODE_CABANG
-STIFIN_API_TIMEOUT_MS=10000
-# Isi hanya jika STIFIn memberikan autentikasi resmi. Simpan nilainya sebagai secret.
+STIFIN_BRANCH_CODES=NASIONAL,CABANG-LAIN
+STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
+# Opsional bila API STIFIn memakai header autentikasi resmi
 STIFIN_API_AUTH_HEADER=Authorization
 STIFIN_API_AUTH_VALUE=Bearer_TOKEN_RESMI
-STIFIN_PUBLIC_WHATSAPP=false
-STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
 # Opsional: daftar publik lokal tanpa mengambil data dari pusat
 STIFIN_PROMOTERS_JSON=[{"code":"BKS-HRA-40","name":"Nama Promotor","branchCode":"lokal","active":true,"menerimaKunjungan":true,"regionCodes":["31.74"]}]
 ```
 
-Tanpa `STIFIN_BRANCH_CODE`, halaman wilayah tetap berjalan dan hanya menampilkan
+Tanpa `STIFIN_BRANCH_CODE` atau `STIFIN_BRANCH_CODES`, halaman wilayah tetap berjalan dan hanya menampilkan
 CTA layanan. Email, saldo voucher, PassID, dan data internal tidak pernah
 diteruskan ke API publik. Admin yang sudah login dapat menyimpan pemetaan
 promotor melalui `POST /api/admin/promotor` dengan body
 `{"code":"KODE-ID","regionCodes":["31.74.09"]}`.
 
+Pemetaan kabupaten/kota juga berlaku pada halaman provinsi induknya. Karena itu,
+promotor yang dipetakan ke `12.71` tetap muncul pada halaman Sumatera Utara
+(`12`). Respons `/api/promotor` menyertakan metadata konfigurasi nonrahasia untuk
+memudahkan pemeriksaan environment di Coolify.
+
 ## Deployment
 
 Repository ini sudah dilengkapi `Dockerfile` untuk deployment melalui Coolify.
 Port aplikasi: `3000`.
-
-Build menjalankan pemeriksaan aset otomatis. Container juga memiliki health
-check `GET /api/health`. Selain CSS bawaan Next.js pada `/_next/static`, halaman
-memuat `/site.css` sebagai fallback agar tampilan tidak kembali menjadi HTML
-polos saat jalur aset Next.js tertahan oleh konfigurasi proxy atau cache.
-
-Salin `.env.example` menjadi acuan Environment Variables di Coolify. Jangan
-mengunggah file `.env` yang berisi nilai produksi ke repository.
 
 Domain produksi: `https://konsepstifin.com`.
 
@@ -175,5 +170,5 @@ Gunakan Environment Variables di Coolify untuk seluruh informasi rahasia.
 - Periksa kembali harga, bonus, komisi affiliate, dan persyaratan program.
 - Pastikan setiap produk SEJOLI sudah aktif sebelum link ditempel.
 - Uji seluruh tombol checkout pada desktop dan ponsel.
-- Periksa kembali klasifikasi setiap file di **Pustaka STIFIn**, terutama materi
+- Periksa kembali klasifikasi setiap PDF di **Pustaka STIFIn**, terutama materi
   copywriting, kesehatan, finansial, politik, dan materi lisensi.

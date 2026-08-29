@@ -14,10 +14,18 @@ export type ArticleAudit = {
   grade: 'kuat' | 'cukup' | 'lemah';
   wordCount: number;
   headingCount: number;
+  scores: { seo: number; aeo: number; geo: number };
   checks: AuditCheck[];
   conflicts: string[];
   suggestedLinks: Array<{ slug: string; title: string; score: number }>;
 };
+
+function scoreChecks(checks: AuditCheck[], ids: string[]) {
+  const selected = checks.filter((check) => ids.includes(check.id));
+  const possible = selected.reduce((total, check) => total + check.points, 0);
+  const earned = selected.reduce((total, check) => total + (check.passed ? check.points : 0), 0);
+  return possible ? Math.round((earned / possible) * 100) : 0;
+}
 
 export type ContentCluster = {
   name: string;
@@ -120,12 +128,18 @@ export function auditArticle(article: StoredArticle, articles: StoredArticle[]):
   const earned = checks.reduce((total, check) => total + (check.passed ? check.points : 0), 0);
   const penalty = Math.min(15, conflicts.length * 5);
   const score = Math.max(0, earned - penalty);
+  const scores = {
+    seo: scoreChecks(checks, ['keyword', 'keyword-title', 'title', 'excerpt', 'links', 'cluster', 'freshness']),
+    aeo: scoreChecks(checks, ['excerpt', 'structure', 'depth', 'sources', 'reviewer']),
+    geo: scoreChecks(checks, ['structure', 'sources', 'experience', 'reviewer', 'freshness', 'links']),
+  };
   return {
     article,
     score,
     grade: score >= 80 ? 'kuat' : score >= 60 ? 'cukup' : 'lemah',
     wordCount,
     headingCount,
+    scores,
     checks,
     conflicts,
     suggestedLinks: suggestions,
@@ -147,6 +161,8 @@ export function buildContentIntelligence(articles: StoredArticle[]) {
     averageScore: Math.round(clusterArticles.reduce((total, article) => total + (auditBySlug.get(article.slug)?.score || 0), 0) / clusterArticles.length),
   })).sort((left, right) => right.articles.length - left.articles.length);
   const conflicts = detectCannibalization(articles);
+  const averageDimension = (dimension: keyof ArticleAudit['scores']) => articles.length
+    ? Math.round(audits.reduce((total, audit) => total + audit.scores[dimension], 0) / articles.length) : 0;
   return {
     audits,
     clusters,
@@ -155,6 +171,9 @@ export function buildContentIntelligence(articles: StoredArticle[]) {
       total: articles.length,
       published: articles.filter((article) => article.status === 'published').length,
       averageScore: articles.length ? Math.round(audits.reduce((total, audit) => total + audit.score, 0) / articles.length) : 0,
+      averageSeo: averageDimension('seo'),
+      averageAeo: averageDimension('aeo'),
+      averageGeo: averageDimension('geo'),
       strong: audits.filter((audit) => audit.grade === 'kuat').length,
       needsReview: audits.filter((audit) => audit.score < 60).length,
       unmapped: articles.filter((article) => !article.topicCluster || !article.primaryKeyword).length,

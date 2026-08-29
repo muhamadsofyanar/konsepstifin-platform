@@ -3,7 +3,7 @@ import { articles, type ArticleBlock, type ArticleTone } from '@/app/edukasi/art
 import { isOfficialSejoliUrl } from '@/app/site-config';
 import type { KnowledgeReference } from '@/lib/knowledge-store';
 
-export type ArticleStatus = 'draft' | 'scheduled' | 'published';
+export type ArticleStatus = 'draft' | 'review' | 'scheduled' | 'published';
 export type ArticleContentType = 'education' | 'product' | 'affiliate';
 export type SearchIntent = 'informational' | 'commercial' | 'transactional' | 'navigational';
 export type ContentRole = 'pillar' | 'cluster' | 'supporting';
@@ -45,7 +45,7 @@ export type StoredArticle = {
 export type ArticleInput = Omit<StoredArticle, 'id' | 'publishedLabel' | 'createdAt' | 'updatedAt'>;
 
 const tones: ArticleTone[] = ['forest', 'leaf', 'sand', 'mint', 'charcoal'];
-const statuses: ArticleStatus[] = ['draft', 'scheduled', 'published'];
+const statuses: ArticleStatus[] = ['draft', 'review', 'scheduled', 'published'];
 const contentTypes: ArticleContentType[] = ['education', 'product', 'affiliate'];
 const searchIntents: SearchIntent[] = ['informational', 'commercial', 'transactional', 'navigational'];
 const contentRoles: ContentRole[] = ['pillar', 'cluster', 'supporting'];

@@ -17,23 +17,23 @@ export const metadata: Metadata = {
 const journeys = [
   {
     number: '01', eyebrow: 'LAYANAN PESERTA', title: 'Tes STIFIn',
-    description: 'Berhenti menebak cara yang cocok. Pilih paket personal, pasangan, keluarga, atau kelompok, lalu lakukan tes offline bersama promotor.',
-    href: '/tes-stifin', action: 'Bandingkan paket tes', tone: 'forest',
+    description: 'Ingin mengenali Mesin Kecerdasan Anda? Pilih layanan personal, keluarga, atau institusi. Tes dilakukan langsung bersama promotor.',
+    href: '/tes-stifin', action: 'Saya ingin ikut tes', tone: 'forest',
   },
   {
     number: '02', eyebrow: 'PUSAT PENGETAHUAN', title: 'Artikel & Edukasi',
-    description: 'Belum ingin mengambil tes? Mulai dari bacaan yang membantu Anda memahami istilah, proses, manfaat, dan batas penggunaan STIFIn.',
-    href: '/edukasi', action: 'Pelajari STIFIn dulu', tone: 'mint',
+    description: 'Belum ingin tes? Mulai dari bacaan tentang belajar, keluarga, pekerjaan, dan cara menerapkan konsep STIFIn dalam keseharian.',
+    href: '/edukasi', action: 'Saya ingin belajar dulu', tone: 'mint',
   },
   {
     number: '03', eyebrow: 'JALUR PROFESI', title: 'Jadi Promotor',
-    description: 'Ingin mendampingi peserta dan membangun layanan STIFIn? Lihat peran, tahapan belajar, biaya, dan syarat sebelum memutuskan.',
-    href: '/jadi-promotor', action: 'Lihat jalur promotor', tone: 'sand',
+    description: 'Sudah merasakan manfaatnya dan ingin mendampingi lebih banyak orang? Kenali dulu peran serta tahapan resmi seorang promotor.',
+    href: '/jadi-promotor', action: 'Saya ingin mengenal profesinya', tone: 'sand',
   },
   {
     number: '04', eyebrow: 'JALUR REKOMENDASI', title: 'Program Affiliate',
-    description: 'Belum siap menjalankan tes? Rekomendasikan layanan yang relevan melalui tautan referral dengan transaksi tercatat di SEJOLI.',
-    href: '/affiliate', action: 'Lihat jalur affiliate', tone: 'leaf',
+    description: 'Belum siap menjadi promotor? Mulai dengan merekomendasikan layanan melalui tautan referral dan sistem pencatatan SEJOLI.',
+    href: '/affiliate', action: 'Saya ingin mengenal affiliate', tone: 'leaf',
   },
 ];
 
@@ -48,10 +48,10 @@ export default async function Home() {
     <main>
       <section className="hub-hero">
         <div className="hub-hero-copy">
-          <span className="eyebrow">TES STIFIn OFFLINE · UNTUK DIRI, KELUARGA, DAN PROFESI</span>
-          <h1>Sudah berusaha keras, tetapi cara belajar, bekerja, atau berkomunikasi masih terasa <em>tidak pas?</em></h1>
-          <p>Berhenti menebak-nebak. Kenali Mesin Kecerdasan melalui Tes STIFIn offline, bahas hasilnya bersama promotor, lalu pilih penyesuaian yang paling relevan untuk situasi Anda.</p>
-          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin#layanan">Bandingkan paket tes →</Link><Link href="/tes-stifin#proses">Lihat proses tes</Link></div>
+          <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
+          <h1>Kenali cara alami Anda, lalu temukan <em>promotor STIFIn di wilayah Anda.</em></h1>
+          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn dilakukan offline dan dibahas bersama promotor. Konsep STIFIn membantu Anda menemukan layanan, wilayah, dan langkah berikutnya.</p>
+          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
@@ -60,14 +60,14 @@ export default async function Home() {
       </section>
 
       <section className="life-situations" aria-label="Situasi yang sering dialami">
-        <article><small>DI RUMAH</small><p>Penjelasan yang sama sudah diulang, tetapi anak atau pasangan tetap menangkapnya secara berbeda.</p><span>Dapatkan bahasa awal untuk membahas perbedaan cara menerima informasi.</span></article>
-        <article><small>DALAM DIRI</small><p>Anda mampu melakukan banyak hal, tetapi belum tahu aktivitas mana yang terasa paling alami.</p><span>Gunakan hasil sebagai bahan refleksi, bukan sebagai label yang membatasi.</span></article>
-        <article><small>DI TEMPAT KERJA</small><p>Satu cara memberi arahan ternyata tidak menghasilkan respons yang sama pada setiap orang.</p><span>Mulai menyesuaikan komunikasi tanpa harus terus menebak.</span></article>
+        <article><small>DI RUMAH</small><p>“Sudah dijelaskan berkali-kali, kenapa cara menangkapnya tetap berbeda?”</p><span>Pahami cara belajar dan berkomunikasi.</span></article>
+        <article><small>DALAM DIRI</small><p>“Saya bisa banyak hal, tetapi mana yang paling alami untuk saya?”</p><span>Kenali pola kerja yang terasa lebih mengalir.</span></article>
+        <article><small>DI TEMPAT KERJA</small><p>“Mengapa satu cara memotivasi tidak cocok untuk semua orang?”</p><span>Lihat perbedaan sebagai petunjuk, bukan hambatan.</span></article>
       </section>
 
       <section className="hub-purpose">
-        <div><span>MULAI DARI MASALAH YANG NYATA</span><h2>Satu cara tidak selalu cocok untuk semua orang. Kenali polanya sebelum mengubah strateginya.</h2></div>
-        <p>Pilih jalur sesuai kebutuhan Anda sekarang. Ikuti tes bila ingin mengetahui hasil pribadi, mulai dari edukasi bila masih ingin memahami konsep, atau pelajari jalur promotor dan affiliate bila tujuan Anda adalah membangun layanan.</p>
+        <div><span>PERNAH MERASAKANNYA?</span><h2>Sering kali bukan kurang usaha. Kita hanya belum memahami cara kerjanya.</h2></div>
+        <p>Ada yang datang karena ingin lebih paham dirinya. Ada yang sedang mencari cara berkomunikasi dengan pasangan atau anak. Ada pula yang ingin menjadikan STIFIn sebagai jalan belajar dan profesi. Mulailah dari kebutuhan yang paling dekat dengan Anda.</p>
       </section>
 
       <section className="journey-grid" aria-label="Pilihan perjalanan">
@@ -79,7 +79,7 @@ export default async function Home() {
       </section>
 
       <section className="section home-catalog" aria-label="Ringkasan produk dan harga">
-        <div className="section-heading"><span>PRODUK & HARGA SEJOLI</span><h2>Bandingkan pilihan tanpa membuka banyak halaman.</h2><p>Lihat jenis layanan dan kisaran biaya terlebih dahulu. Rincian manfaat, syarat, fasilitas, dan harga final tetap ditampilkan kembali sebelum pembayaran di SEJOLI.</p></div>
+        <div className="section-heading"><span>PRODUK & HARGA SEJOLI</span><h2>Lihat pilihannya dulu, lalu masuk ke halaman yang paling sesuai.</h2><p>Harga yang ditampilkan mengikuti angka pada kartu produk SEJOLI. Harga dan ketentuan final tetap terlihat kembali sebelum pembayaran.</p></div>
         <div className="journey-grid catalog-overview">
           <article className="journey-card forest"><header><span>LAYANAN TES</span><b>01</b></header><h2>Personal & Keluarga</h2><p>{publicProducts.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/tes-stifin">Lihat seluruh paket tes <span>→</span></Link></article>
           <article className="journey-card sand"><header><span>JALUR PROFESI</span><b>02</b></header><h2>Tahapan Promotor</h2><p>{promoterSteps.slice(1).map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/jadi-promotor">Lihat tahapan promotor <span>→</span></Link></article>
@@ -90,7 +90,7 @@ export default async function Home() {
       <ActivityGallery />
 
       <section className="hub-foundation">
-        <div className="hub-foundation-copy"><span>SETELAH TAHU HASILNYA</span><h2>Jangan berhenti pada nama tipe. Bawa hasilnya ke situasi yang benar-benar Anda hadapi.</h2><p>Gunakan pembahasan hasil untuk menyusun pertanyaan, mencoba penyesuaian kecil, dan melihat respons dalam keseharian. Hasil tes menjadi lebih berguna ketika dipahami bersama konteks, bukan dipakai sebagai cap permanen.</p><Link href="/edukasi">Lihat contoh penerapannya →</Link></div>
+        <div className="hub-foundation-copy"><span>SETELAH TAHU HASILNYA</span><h2>Tes memberi nama pada pola. Pemahaman membuatnya berguna.</h2><p>Hasil STIFIn adalah awal percakapan tentang cara Anda menyerap informasi, mengambil keputusan, bergerak, dan bertumbuh. Nilainya terasa ketika hasil dibahas dengan baik lalu diterapkan sesuai situasi nyata—bukan ketika dipakai untuk membatasi diri.</p><Link href="/edukasi">Lihat cara menerapkannya →</Link></div>
         <div className="hub-principles">
           <article><b>01</b><div><h3>Kenali Mesin Kecerdasan</h3><p>Pahami kecenderungan dominan yang ditemukan melalui proses tes.</p></div></article>
           <article><b>02</b><div><h3>Bahas, jangan hanya membaca</h3><p>Promotor membantu menerjemahkan hasil ke dalam bahasa yang lebih mudah dipahami.</p></div></article>
@@ -107,8 +107,8 @@ export default async function Home() {
       </section>}
 
       <section className="hub-final">
-        <div><span>LANGKAH PERTAMA</span><h2>Pilih kebutuhan Anda, lihat rincian biayanya, lalu lanjutkan hanya ketika sudah yakin.</h2></div>
-        <div><Link className="public-cta big" href="/tes-stifin#layanan">Bandingkan paket tes →</Link><Link href="/jadi-promotor#tahapan">Lihat tahapan promotor</Link></div>
+        <div><span>LANGKAH PERTAMA</span><h2>Tidak harus memahami semuanya hari ini. Mulai saja dari pertanyaan yang sedang Anda bawa.</h2></div>
+        <div><Link className="public-cta big" href="/tes-stifin">Pilih layanan tes →</Link><Link href="/jadi-promotor">Kenali jalur promotor</Link></div>
       </section>
     </main>
     <PublicFooter />
