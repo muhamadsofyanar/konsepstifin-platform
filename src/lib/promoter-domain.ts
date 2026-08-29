@@ -1,6 +1,8 @@
+export type MappingSource = 'automatic' | 'manual' | 'unresolved';
+
 export type PublicPromoter = {
   code: string; name: string; branchCode: string; area: string; province: string;
-  active: boolean; menerimaKunjungan: boolean; regionCodes: string[];
+  active: boolean; regionCodes: string[]; mappingSource: MappingSource;
 };
 export type PromoterLocationInput = { provinceCode: string; provinceName: string; regencyCode: string; regencyName: string };
 export type MatchMethod = 'manual_region' | 'area' | 'province' | 'none';
@@ -35,12 +37,19 @@ export function sanitizePromoterRows(rows: unknown[], sourceBranch = ''): Public
   const safe = rows.slice(0, 10_000).flatMap((row) => {
     if (!row || typeof row !== 'object') return [];
     const item = row as Record<string, unknown>;
-    const code = compact(item.KodeID, 80).toUpperCase();
-    const name = compact(item.Nama, 160);
+    const code = compact(item.KodeID ?? item.kode ?? item.code, 80).toUpperCase();
+    const name = compact(item.Nama ?? item.nama ?? item.name, 160);
     if (!code || !name) return [];
-    return [{ code, name, branchCode: normalizeBranchCode(item.Sub ?? sourceBranch),
-      area: compact(item.Area, 120), province: compact(item.Propinsi, 120),
-      active: truthy(item.Aktif), menerimaKunjungan: false, regionCodes: [] }];
+    return [{
+      code,
+      name,
+      branchCode: normalizeBranchCode(item.Sub ?? item.KodeCabang ?? item.branchCode ?? sourceBranch),
+      area: compact(item.Area ?? item.area, 120),
+      province: compact(item.Propinsi ?? item.province, 120),
+      active: truthy(item.Aktif ?? item.active),
+      regionCodes: normalizeRegionCodes(item.regionCodes ?? item.RegionCodes ?? item.region_codes),
+      mappingSource: 'unresolved' as const,
+    }];
   });
   const unique = new Map<string, PublicPromoter>();
   for (const item of safe) if (!unique.has(item.code)) unique.set(item.code, item);

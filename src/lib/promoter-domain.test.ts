@@ -3,16 +3,17 @@ import { matchPromoters, normalizeAdministrativeName, normalizeBranchCode, norma
 
 const promoter = (input: Partial<PublicPromoter> & Pick<PublicPromoter, 'code' | 'name'>): PublicPromoter => ({
   code: input.code, name: input.name, branchCode: input.branchCode ?? 'JML-CAB-62', area: input.area ?? '',
-  province: input.province ?? '', active: input.active ?? true, menerimaKunjungan: false, regionCodes: input.regionCodes ?? [],
+  province: input.province ?? '', active: input.active ?? true, regionCodes: input.regionCodes ?? [],
+  mappingSource: input.mappingSource ?? 'unresolved',
 });
 const bandung = { provinceCode: '32', provinceName: 'Jawa Barat', regencyCode: '32.04', regencyName: 'Kabupaten Bandung' };
 
 describe('promoter-domain', () => {
   it('hanya menghasilkan field publik dan membuang PII', () => {
     const [result] = sanitizePromoterRows([{ KodeID: ' pro-001 ', Nama: ' Siti Aminah ', Sub: 'jml-cab-62', Area: 'Kabupaten Bandung', Propinsi: 'Jawa Barat', Aktif: '1', Phone: '08123456789', Email: 'private@example.com', PassID: 'secret', TglLahir: '1990-01-01' }]);
-    expect(result).toEqual({ code: 'PRO-001', name: 'Siti Aminah', branchCode: 'JML-CAB-62', area: 'Kabupaten Bandung', province: 'Jawa Barat', active: true, menerimaKunjungan: false, regionCodes: [] });
+    expect(result).toEqual({ code: 'PRO-001', name: 'Siti Aminah', branchCode: 'JML-CAB-62', area: 'Kabupaten Bandung', province: 'Jawa Barat', active: true, regionCodes: [], mappingSource: 'unresolved' });
     expect(JSON.stringify(result)).not.toMatch(/081234|private@|secret|1990/);
-    expect(Object.keys(result).sort()).toEqual(['active', 'area', 'branchCode', 'code', 'menerimaKunjungan', 'name', 'province', 'regionCodes']);
+    expect(Object.keys(result).sort()).toEqual(['active', 'area', 'branchCode', 'code', 'mappingSource', 'name', 'province', 'regionCodes']);
   });
   it('menormalisasi data dan mendeduplikasi kode promotor', () => {
     const result = sanitizePromoterRows([{ KodeID: 'A-1', Nama: 'Awal', Sub: '- -', Aktif: 1 }, { KodeID: 'a-1', Nama: 'Duplikat', Sub: 'XXX-CAB-00', Aktif: 1 }]);

@@ -27,7 +27,7 @@ const journeys = [
   },
   {
     number: '03', eyebrow: 'JALUR PROFESI', title: 'Jadi Promotor',
-    description: 'Sudah merasakan manfaatnya dan ingin mendampingi lebih banyak orang? Kenali dulu peran serta tahapan resmi seorang promotor.',
+    description: 'Ingin memahami peran promotor? Pelajari Preview, WSL, aktivasi, tanggung jawab layanan, dan kebutuhan biayanya sebelum berkomitmen.',
     href: '/jadi-promotor', action: 'Saya ingin mengenal profesinya', tone: 'sand',
   },
   {
@@ -49,9 +49,9 @@ export default async function Home() {
       <section className="hub-hero">
         <div className="hub-hero-copy">
           <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
-          <h1>Kenali cara alami Anda, lalu temukan <em>promotor STIFIn di wilayah Anda.</em></h1>
-          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn dilakukan offline dan dibahas bersama promotor. Konsep STIFIn membantu Anda menemukan layanan, wilayah, dan langkah berikutnya.</p>
-          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div>
+          <h1>Pilih jalur Anda: ikut Tes STIFIn atau <em>pelajari peran promotor.</em></h1>
+          <p>Untuk konsumen, temukan layanan tes dan promotor berdasarkan cakupan wilayah. Untuk calon promotor, pahami tahap belajar, biaya, dan tanggung jawabnya sebelum mengambil keputusan.</p>
+          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/jadi-promotor">Saya ingin jadi promotor</Link></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />

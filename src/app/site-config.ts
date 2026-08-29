@@ -169,7 +169,7 @@ export const promoterSteps = [
     title: 'Workshop STIFIn Level 2 (WSL 2)',
     price: 'Rp4.500.000',
     priceNote: 'program offline · 2–3 hari pelatihan',
-    description: 'Perdalam materi dan praktik sesuai tahapan resmi sebelum masuk ke proses aktivasi.',
+    description: 'Perdalam materi dan praktik sesuai tahap yang berlaku sebelum masuk ke proses aktivasi.',
     benefits: ['Pendalaman konsep STIFIn tingkat lanjut', 'Praktik membaca dan membahas hasil tes', 'Ujian kompetensi sesuai ketentuan', 'Persiapan menuju aktivasi promotor'],
     linkKey: 'wsl2' as SejoliLinkKey,
     action: 'Lihat jadwal WSL 2',
@@ -187,7 +187,7 @@ export const promoterSteps = [
   },
   {
     number: '05',
-    label: 'PAKET PALING HEMAT',
+    label: 'PAKET TERPADU',
     title: 'Paket Lengkap Menjadi Promotor STIFIn',
     price: 'Rp8.499.999',
     priceNote: 'paket lengkap · ketentuan mengikuti checkout SEJOLI',
@@ -231,6 +231,6 @@ export const faqItems = [
   ['Apakah tes dilakukan secara online?', 'Tidak. Proses pemindaian sidik jari dilakukan secara tatap muka oleh promotor. Website digunakan untuk memilih layanan, pembayaran, dan pengaturan jadwal.'],
   ['Apa yang terjadi setelah pembayaran?', 'Tim menghubungi peserta melalui WhatsApp untuk mencocokkan kota, promotor, dan waktu pelaksanaan tes.'],
   ['Apakah saya bisa langsung membeli ID dan alat tes?', 'Tidak langsung. Calon promotor perlu mengikuti tahapan yang berlaku, termasuk WSL 1 dan WSL 2, sebelum proses ID dan alat.'],
-  ['Apa perbedaan affiliate dengan promotor?', 'Affiliate membantu merekomendasikan layanan melalui tautan referral. Promotor resmi menjalankan tes dan harus memenuhi tahapan serta ketentuan resmi.'],
+  ['Apa perbedaan affiliate dengan promotor?', 'Affiliate membantu merekomendasikan layanan melalui tautan referral. Promotor aktif menjalankan tes setelah memenuhi tahap dan ketentuan yang berlaku.'],
   ['Apakah hasil tes merupakan diagnosis?', 'Bukan. Layanan ini digunakan untuk edukasi dan pengembangan diri, bukan diagnosis medis atau psikologis.'],
 ];

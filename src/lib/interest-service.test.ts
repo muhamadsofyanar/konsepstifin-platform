@@ -2,11 +2,32 @@ import { describe, expect, it, vi } from 'vitest';
 import { submitInterest } from './interest-service';
 const raw = { name: 'Budi Santoso', phone: '081234567890', email: 'budi@example.com', provinceCode: '32', provinceName: 'Jawa Barat', regencyCode: '32.04', regencyName: 'Kabupaten Bandung', city: 'Bandung', service: 'Tes STIFIn Personal', productKey: 'tesPersonal', notes: '', sourcePath: '/tes-stifin', consentToContact: true, consentToShare: true, idempotencyKey: '123e4567-e89b-42d3-a456-426614174000' };
 describe('submitInterest', () => {
+  it('tidak mencari promotor atau checkout untuk lead calon promotor', async () => {
+    const findMatch = vi.fn();
+    const resolveCheckout = vi.fn();
+    const createLead = vi.fn().mockResolvedValue({ id: 41, leadType: 'promoter_candidate', status: 'baru' });
+    const result = await submitInterest({
+      ...raw,
+      leadType: 'promoter_candidate',
+      productKey: 'wsl1',
+      service: 'WSL 1',
+      consentToShare: false,
+    }, { findMatch, createLead, resolveCheckout });
+
+    expect(findMatch).not.toHaveBeenCalled();
+    expect(resolveCheckout).not.toHaveBeenCalled();
+    expect(createLead).toHaveBeenCalledWith(expect.objectContaining({
+      interest: expect.objectContaining({ leadType: 'promoter_candidate' }),
+      status: 'baru',
+      match: null,
+    }));
+    expect(result.match).toBeNull();
+  });
   it('menyimpan kandidat sebelum mengembalikan checkout', async () => {
     const createLead = vi.fn().mockResolvedValue({ id: 42 });
     const result = await submitInterest(raw, { findMatch: vi.fn().mockResolvedValue({ method: 'area', primary: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat', active: true, menerimaKunjungan: false, regionCodes: [] }, candidates: [] }), createLead, resolveCheckout: vi.fn().mockResolvedValue('https://app.konsepstifin.com/product/tes-personal/') });
     expect(createLead).toHaveBeenCalledWith(expect.objectContaining({ status: 'ditawarkan', match: expect.objectContaining({ assignedPromoterCode: 'P-1' }) }));
-    expect(result.reference).toBe('KSF-42'); expect(result.match.promoter?.name).toBe('Promotor Aman');
+    expect(result.reference).toBe('KSF-42'); expect(result.match?.promoter?.name).toBe('Promotor Aman');
   });
   it('tetap checkout tanpa kandidat ketika sumber promotor gagal', async () => {
     const result = await submitInterest(raw, { findMatch: vi.fn().mockRejectedValue(new Error('upstream')), createLead: vi.fn().mockResolvedValue({ id: 43 }), resolveCheckout: vi.fn().mockResolvedValue('https://app.konsepstifin.com/product/tes-personal/') });

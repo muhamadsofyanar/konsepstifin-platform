@@ -101,6 +101,18 @@ export async function getPublicManagedProducts(groupName: ProductGroup) {
   catch (error) { console.error('Product database fallback', error); return seeds.filter((item) => item.groupName === groupName).map((item, index) => ({ ...item, id: -(index + 1) })); }
 }
 
+export async function getPublicProductByKey(productKey: string) {
+  const normalized = String(productKey ?? '').trim();
+  if (!normalized) return null;
+  if (!databaseConfigured()) return seeds.find((item) => item.productKey === normalized && item.active) ?? null;
+  try {
+    return (await getManagedProducts()).find((item) => item.productKey === normalized && item.active) ?? null;
+  } catch (error) {
+    console.error('Product database fallback', error);
+    return seeds.find((item) => item.productKey === normalized && item.active) ?? null;
+  }
+}
+
 export async function updateManagedProduct(id: number, input: Partial<ManagedProduct>) {
   await ensureProductSchema();
   const title = String(input.title ?? '').trim();

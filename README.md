@@ -1,186 +1,79 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.4.1** — Pusat layanan nasional berbasis lead, pencocokan promotor multi-cabang, pemetaan Wilayah.id, consent data pribadi, serta dashboard Content Intelligence dan Local SEO.
+Versi **0.5.0** adalah website Next.js untuk `konsepstifin.com`: direktori promotor nasional yang aman, dua funnel lead terpisah, halaman lokal berbasis bukti, dan dashboard operasional.
 
-Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
+Source ini tidak mencakup dan tidak mengubah WordPress/SEJOLI di `app.konsepstifin.com`. Domain tersebut tetap menjadi tujuan checkout, member area, dan affiliate.
 
-## Isi versi ini
+## Fitur utama
 
-- Beranda utama sebagai pintu masuk ke tiga perjalanan yang terpisah.
-- Landing page khusus `/tes-stifin` untuk layanan personal, keluarga, sekolah, dan komunitas.
-- Landing page khusus `/jadi-promotor` untuk Preview, WSL, aktivasi, dan affiliate.
-- Bonus produk berupa e-book, video, atau fasilitas lain yang mudah disesuaikan.
-- Jalur calon promotor: Preview, WSL 1, WSL 2, lalu ID dan alat sesuai persyaratan.
-- Dua program affiliate: Affiliate Umum dan Affiliate Promotor Resmi.
-- Pusat edukasi dengan halaman daftar dan detail artikel yang siap dikembangkan.
-- Dashboard artikel dengan login admin, status draf/terjadwal/terbit, serta penyimpanan PostgreSQL.
-- Generator Gemini/OpenAI untuk 1, 3, atau 5 artikel sekaligus dengan kategori yang dapat diklik.
-- Pustaka STIFIn privat untuk mengunggah PDF, mengekstrak teks per halaman, dan memberi sumber pada artikel AI.
-- Pemisahan otomatis antara rujukan STIFIn, materi internal, materi terbatas, dan modul copywriting/kampanye.
-- Artikel AI lebih panjang dan terstruktur, dengan waktu baca yang dihitung dari isi nyata.
-- Jejak rujukan dan halaman disimpan untuk pemeriksaan admin, tetapi tidak ditampilkan pada halaman artikel publik.
-- Artikel edukasi, rekomendasi produk, dan affiliate SEJOLI dengan CTA serta keterbukaan affiliate.
-- Komentar bermoderasi, like, share, klik produk, dan statistik interaksi.
-- Tombol **Masuk tim** mengarah ke portal pengelolaan artikel yang dilindungi login.
-- Harga katalog publik mengikuti harga yang tampil pada kartu produk SEJOLI.
-- Enam foto dokumentasi kegiatan nyata tampil di beranda dan halaman Tes STIFIn.
-- Tombol produk aktif membuka checkout SEJOLI; formulir minat dipisahkan sebagai bantuan memilih layanan.
-- Content Intelligence native Next.js untuk menilai kesiapan artikel terhadap SEO, AEO, dan pencarian berbasis AI.
-- Peta pilar–cluster, deteksi potensi kanibalisasi, serta saran internal link pada `/admin/intelligence`.
-- Metadata keyword, search intent, topical cluster, evidence pengalaman nyata, reviewer, sumber, dan artikel terkait.
-- Trust panel pada artikel publik menampilkan pengalaman nyata, reviewer, tanggal review, serta sumber yang memang aman dipublikasikan.
-- Formulir nasional menyimpan provinsi, kabupaten/kota, consent, tenggat respons, dan status pencocokan awal.
-- Dashboard `/admin/leads` menampilkan pipeline operasional dan perubahan status yang tercatat dalam riwayat.
-- Nomor WhatsApp promotor tidak lagi diteruskan ke API atau halaman publik.
-- Dashboard `/admin/promotor` untuk memetakan satu promotor ke beberapa kode Wilayah.id.
-- Skor kesiapan SEO, AEO, dan GEO yang terpisah pada `/admin/intelligence`.
-- Local SEO Planner, audit freshness, intent, internal link, kanibalisasi keyword, serta pilar–cluster.
-- Alur editorial Draf, Review, Terjadwal, dan Terbit.
-- Sitemap index terpisah untuk halaman statis, artikel, wilayah, dan direktori promotor.
-- Schema Article, Service, BreadcrumbList, dan FAQPage.
-
-Panduan menambahkan artikel tersedia di `PANDUAN_ARTIKEL.md`.
-Panduan mengaktifkan editor dan PostgreSQL tersedia di
-`PANDUAN_DASHBOARD_ARTIKEL.md`.
-Panduan fitur AI dan interaksi tersedia di `PANDUAN_AI_DAN_INTERAKSI.md`.
-Panduan Pustaka STIFIn tersedia di `PANDUAN_PUSTAKA_STIFIN.md`.
-Panduan upgrade Content Intelligence tersedia di
-`SERAH_TERIMA_CONTENT_INTELLIGENCE_V15.md`.
-
-## Content Intelligence
-
-Masuk ke `/admin/intelligence` untuk melihat skor kesiapan editorial 0–100,
-prioritas perbaikan, peta topical authority, konflik keyword/judul, dan saran
-internal link. Skor adalah alat quality control konten yang dapat dikendalikan
-tim, bukan jaminan ranking Google atau penyebutan oleh sistem AI.
-
-Lengkapi metadata artikel melalui `/admin/artikel`. Artikel lama tetap aman dan
-dapat diperbarui bertahap. Kolom database baru dibuat otomatis menggunakan
-`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` saat aplikasi pertama kali mengakses
-modul artikel setelah deployment.
-
-## Mengelola link checkout SEJOLI
-
-Link bawaan checkout dipusatkan dalam satu file:
-
-```text
-src/app/site-config.ts
-```
-
-Buka file tersebut untuk mengubah URL bawaan produk. Setelah aplikasi memakai
-PostgreSQL, nama, harga, deskripsi, status, urutan, dan URL checkout juga dapat
-dikelola tanpa redeploy melalui `/admin/produk`.
-
-```ts
-export const sejoliLinks = {
-  tesPersonal: 'https://alamat-checkout-sejoli-anda',
-  paketKeluarga: 'https://alamat-checkout-sejoli-anda',
-  // lanjutkan untuk produk lainnya
-};
-```
-
-Nilai dari `/admin/produk` menjadi prioritas. Jika URL database kosong, website
-memakai `sejoliLinks`. Jika keduanya belum diisi, tombol tidak akan rusak dan
-website otomatis
-membuka formulir minat dan menyimpan permintaan ke PostgreSQL pada tabel
-`public_interest_leads`.
-
-Saat upgrade versi 0.1.2 pertama kali dijalankan, migrasi katalog satu kali akan
-menyamakan harga dan link database dengan kartu produk SEJOLI yang disepakati.
-Sesudah itu, perubahan berikutnya tetap dapat dilakukan melalui `/admin/produk`.
-
-## Dokumentasi kegiatan nyata
-
-Foto web berada di `public/images/dokumentasi`. Daftar foto, caption, dan teks
-alternatif dipusatkan di `src/app/activity-gallery.tsx`. Salinan web sudah
-dioptimalkan ke WebP dan metadata kamera telah dibuang.
-
-Sebelum publikasi, pastikan izin penggunaan wajah setiap peserta sudah sesuai
-dengan persetujuan dokumentasi yang dimiliki tim.
+- Direktori `/promotor` dengan pencarian nama/KodeID, filter wilayah/cabang, pagination 24 kartu, dan tanpa kontak pribadi.
+- Adapter promotor nasional dengan sanitizer allowlist, cache fresh 15 menit, serta stale fallback maksimal 24 jam.
+- Pemetaan wilayah otomatis dan override PostgreSQL manual.
+- Dashboard `/admin/promotor` untuk status upstream, mapping, CSV, dan bukti cakupan layanan.
+- Funnel `test_service` untuk konsumen Tes STIFIn: matching promotor, consent berbagi terbatas, lalu pre-checkout.
+- Funnel `promoter_candidate` untuk calon promotor: antrean konsultasi dan PIC tanpa checkout layanan tes.
+- Dashboard `/admin/leads` untuk pipeline, assignment, atribusi, pembayaran layanan tes, margin, catatan, dan riwayat.
+- Halaman `/tes-stifin/[kota]`, `/promotor-stifin/[kota]`, dan `/promotor/[slug-promotor]` dengan aturan index/noindex berbasis bukti.
+- Sitemap stabil yang hanya memuat wilayah indexable dan memakai waktu pembaruan sumber yang tersimpan.
+- Dashboard artikel, produk, pustaka, dan Content Intelligence yang telah ada tetap dipertahankan.
 
 ## Menjalankan secara lokal
 
 ```bash
-npm install
+npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Aplikasi berjalan pada `http://localhost:3000`.
+Aplikasi berjalan di `http://localhost:3000`.
 
-## Wilayah nasional dan API publik
+Verifikasi pengembangan:
 
-Seluruh hierarki wilayah tersedia melalui `/wilayah`: provinsi, kabupaten/kota,
-kecamatan, serta desa/kelurahan. Data administratif diambil dari Wilayah.id
-dan dicache 24 jam di server. Endpoint JSON yang dapat dipakai aplikasi lain:
-
-```text
-GET /api/wilayah/provinces
-GET /api/wilayah/regencies?parent=31
-GET /api/wilayah/districts?parent=31.74
-GET /api/wilayah/villages?parent=31.74.09
-GET /api/promotor?region=31.74
-GET /promotor
+```bash
+npm test
+npm run lint
+npx tsc --noEmit
+npm run build
 ```
 
-Sinkronisasi promotor bersifat opsional dan selalu server-side. Atur environment
-berikut di deployment bila endpoint STIFIn tersedia:
+Test integrasi PostgreSQL otomatis di-skip bila `TEST_DATABASE_URL` tidak tersedia.
 
-```text
+## Environment promotor nasional
+
+Konfigurasi produksi utama:
+
+```env
 STIFIN_API_BASE=https://apro.stifin.id/api
 STIFIN_PROMOTER_MODE=national
-STIFIN_BRANCH_CODES=KODE-CABANG-1,KODE-CABANG-2
-# Alternatif bila tersedia endpoint nasional resmi
-STIFIN_PROMOTER_NATIONAL_PATH=/PATH-ENDPOINT-NASIONAL-RESMI
-STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
-# Opsional bila API STIFIn memakai header autentikasi resmi
-STIFIN_API_AUTH_HEADER=Authorization
-STIFIN_API_AUTH_VALUE=Bearer_TOKEN_RESMI
-# Opsional: daftar publik lokal tanpa mengambil data dari pusat
-STIFIN_PROMOTERS_JSON=[{"code":"BKS-HRA-40","name":"Nama Promotor","branchCode":"lokal","active":true,"menerimaKunjungan":true,"regionCodes":["31.74"]}]
+STIFIN_PROMOTER_NATIONAL_PATH=/proGet/pro/PRO
+STIFIN_API_TIMEOUT_MS=15000
 ```
 
-`STIFIN_PROMOTER_MODE=national` kini dibaca oleh aplikasi. Mode ini menggabungkan
-semua cabang pada `STIFIN_BRANCH_CODES`. Jika STIFIn menyediakan endpoint nasional
-resmi, jalurnya dapat dipasang melalui `STIFIN_PROMOTER_NATIONAL_PATH`. Tanpa daftar
-cabang atau endpoint resmi, API mengembalikan pesan konfigurasi yang jelas dan
-tidak lagi diam-diam menampilkan daftar kosong. Untuk satu cabang, gunakan
-`STIFIN_PROMOTER_MODE=branch` bersama `STIFIN_BRANCH_CODE`.
+Mode `national` tidak membutuhkan kode cabang. Contoh mode `branch` dan `manual` tersedia di `.env.example`. Nilai autentikasi dan kredensial database harus disimpan sebagai secret di Coolify, bukan di repository.
 
-Email, saldo voucher, PassID, dan data internal tidak pernah
-diteruskan ke API publik. Admin yang sudah login dapat menyimpan pemetaan
-promotor melalui `POST /api/admin/promotor` dengan body
-`{"code":"KODE-ID","regionCodes":["31.74.09"]}`.
+## Kontrak data publik
 
-Pemetaan kabupaten/kota juga berlaku pada halaman provinsi induknya. Karena itu,
-promotor yang dipetakan ke `12.71` tetap muncul pada halaman Sumatera Utara
-(`12`). Respons `/api/promotor` menyertakan metadata konfigurasi nonrahasia untuk
-memudahkan pemeriksaan environment di Coolify.
+`GET /api/promotor?q=&province=&regency=&branch=&page=` mengembalikan maksimal 24 item per halaman. Field promotor publik hanya:
 
-Menu **Cari Lokasi** tersedia pada navigasi desktop dan mobile. Seluruh halaman
-`/wilayah` memakai header dan footer publik yang sama. Endpoint `/api/health`
-digunakan Docker untuk memastikan rolling update hanya diteruskan saat aplikasi sehat.
+```text
+code, name, branchCode, area, province, active, regionCodes
+```
+
+Email, telepon, PassID, tanggal lahir, saldo, alamat pribadi, identitas akun, konfigurasi upstream, dan error internal tidak boleh muncul pada respons publik.
 
 ## Deployment
 
-Repository ini sudah dilengkapi `Dockerfile` untuk deployment melalui Coolify.
-Port aplikasi: `3000`.
+Deployment produksi memakai `Dockerfile`, port `3000`, dan healthcheck `/api/health`. Domain utama adalah `https://konsepstifin.com`; transaksi tetap diarahkan ke `https://app.konsepstifin.com`.
 
-Domain produksi: `https://konsepstifin.com`.
+Panduan environment Coolify, pemantauan API, mapping CSV, pipeline lead, rollback, sitemap, dan smoke test ada di [PANDUAN_PROMOTOR_NASIONAL_DAN_LEAD.md](./PANDUAN_PROMOTOR_NASIONAL_DAN_LEAD.md).
 
-Website publik, edukasi, SEO, katalog, dan landing page berada di domain utama.
-Checkout SEJOLI, member area, serta affiliate berada di
-`https://app.konsepstifin.com`. Subdomain `tes.konsepstifin.com` tidak lagi
-digunakan.
+## Batas klaim publik
+
+Tes STIFIn disajikan sebagai layanan edukasi dan refleksi, bukan diagnosis medis atau psikologis. Website tidak menjanjikan hasil belajar, karier, usaha, atau penghasilan. Jadwal layanan selalu menggunakan keterangan **“Jadwal berdasarkan konfirmasi”**.
 
 ## Keamanan
 
-Jangan menyimpan password, token, API key, atau data peserta dalam repository.
-Gunakan Environment Variables di Coolify untuk seluruh informasi rahasia.
-
-## Catatan sebelum dipublikasikan
-
-- Periksa kembali harga, bonus, komisi affiliate, dan persyaratan program.
-- Pastikan setiap produk SEJOLI sudah aktif sebelum link ditempel.
-- Uji seluruh tombol checkout pada desktop dan ponsel.
-- Periksa kembali klasifikasi setiap PDF di **Pustaka STIFIn**, terutama materi
-  copywriting, kesehatan, finansial, politik, dan materi lisensi.
+- Jangan commit password, token, API key, dump lead, atau data peserta.
+- Gunakan HTTPS untuk seluruh sumber eksternal dan checkout.
+- Jangan menulis payload PII atau header autentikasi ke log.
+- Pastikan izin dokumentasi foto peserta telah tersedia sebelum publikasi.

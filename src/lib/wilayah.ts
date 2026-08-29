@@ -1,5 +1,6 @@
 export type WilayahLevel = 'provinces' | 'regencies' | 'districts' | 'villages';
 export type Wilayah = { code: string; name: string; level: WilayahLevel; parentCode?: string };
+export type ProvinceWithRegencies = Wilayah & { regencies: Wilayah[] };
 
 const API_ROOT = 'https://wilayah.id/api';
 const memoryCache = new Map<string, { expiresAt: number; value: Wilayah[] }>();
@@ -45,6 +46,25 @@ export async function getWilayah(level: WilayahLevel, parentCode?: string): Prom
   });
   memoryCache.set(key, { expiresAt: Date.now() + CACHE_TTL, value });
   return value;
+}
+
+export async function getProvinceRegencyCatalog(): Promise<ProvinceWithRegencies[]> {
+  const provinces = await getWilayah('provinces');
+  return Promise.all(provinces.map(async (province) => ({
+    ...province,
+    regencies: await getWilayah('regencies', province.code),
+  })));
+}
+
+export async function wilayahCodeExists(code: string) {
+  const normalized = code.trim();
+  if (!/^\d{2}(?:\.\d{2}){0,2}(?:\.\d{4})?$/.test(normalized)) return false;
+  const parts = normalized.split('.');
+  const level = ({ 1: 'provinces', 2: 'regencies', 3: 'districts', 4: 'villages' } as const)[parts.length];
+  if (!level) return false;
+  const parentCode = parts.length > 1 ? parts.slice(0, -1).join('.') : undefined;
+  const rows = await getWilayah(level, parentCode);
+  return rows.some((row) => row.code === normalized);
 }
 
 export const childLevel: Record<WilayahLevel, WilayahLevel | null> = {

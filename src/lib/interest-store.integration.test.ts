@@ -18,7 +18,26 @@ suite('interest-store PostgreSQL integration', () => {
       status TEXT NOT NULL DEFAULT 'baru', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`;
   });
-  afterAll(async () => { await sql`DELETE FROM public_interest_leads WHERE idempotency_key=${key}`; await sql.end(); });
+  afterAll(async () => {
+    await sql`DELETE FROM public_interest_leads WHERE idempotency_key=${key} OR name LIKE 'Backfill Test %'`;
+    await sql.end();
+  });
+
+  it('memigrasikan layanan lama ke dua funnel secara idempoten', async () => {
+    await sql`INSERT INTO public_interest_leads (name, phone, city, service, notes, source_path, status)
+      VALUES
+      ('Backfill Test Tes', '628100000001', 'Bandung', 'Tes STIFIn Personal', '', '/', 'baru'),
+      ('Backfill Test WSL', '628100000002', 'Bandung', 'WSL 1', '', '/', 'baru'),
+      ('Backfill Test Unknown', '628100000003', 'Bandung', 'Layanan lama', '', '/', 'baru')`;
+    await store.initializeInterestSchema();
+    const rows = await sql`SELECT service, lead_type, internal_notes FROM public_interest_leads WHERE name LIKE 'Backfill Test %'`;
+    const rowsByService = Object.fromEntries(rows.map((row) => [String(row.service), row]));
+
+    expect(rowsByService['Tes STIFIn Personal'].lead_type).toBe('test_service');
+    expect(rowsByService['WSL 1'].lead_type).toBe('promoter_candidate');
+    expect(rowsByService['Layanan lama'].lead_type).toBe('test_service');
+    expect(rowsByService['Layanan lama'].internal_notes).toContain('Backfill');
+  });
 
   it('memigrasikan tabel lama dan insert idempoten', async () => {
     const input = { interest: store.validateInterestInput({ name: 'Integration Test', phone: '081234567890', email: 'integration@example.com', provinceCode: '32', provinceName: 'Jawa Barat', regencyCode: '32.04', regencyName: 'Kabupaten Bandung', city: 'Bandung', service: 'Tes STIFIn Personal', productKey: 'tesPersonal', notes: '', sourcePath: '/tes-stifin', consentToContact: true, consentToShare: true }), idempotencyKey: key, status: 'ditawarkan' as const, match: { matchMethod: 'area' as const, assignedPromoterCode: 'P-1', matchedPromoterName: 'Promotor Aman', matchedBranchCode: 'BDG-CAB-1' } };
