@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+coverage
+test
+tests
+**/__tests__
+**/*.test.*
+**/*.spec.*
+vitest.config.*
+vitest.setup.*

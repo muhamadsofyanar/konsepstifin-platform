@@ -1,7 +1,7 @@
-import { defineConfig } from 'vitest/config';
-import { fileURLToPath } from 'node:url';
-
-export default defineConfig({
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  test: { environment: 'node', restoreMocks: true, clearMocks: true },
-});
+/**
+ * Compatibility tombstone for overwrite-based deployments.
+ *
+ * v0.2.6 does not use Vitest. This dependency-free module overwrites a stale
+ * Vitest configuration that may remain in an older repository checkout.
+ */
+export default {};
