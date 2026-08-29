@@ -25,7 +25,6 @@ const benefits = [
 
 export default async function AffiliateLandingPage() {
   const affiliatePrograms = await getPublicManagedProducts('affiliate');
-  const registrationProduct = affiliatePrograms.find((program) => program.productKey === 'affiliateUmum');
   const affiliateSchema = {
     '@context': 'https://schema.org',
     '@type': 'Service',
@@ -35,13 +34,13 @@ export default async function AffiliateLandingPage() {
     url: 'https://konsepstifin.com/affiliate',
     provider: { '@id': 'https://konsepstifin.com/#organization' },
     areaServed: { '@type': 'Country', name: 'Indonesia' },
-    offers: registrationProduct ? {
+    offers: {
       '@type': 'Offer',
-      price: registrationProduct.price.replace(/\D/g, '') || '0',
+      price: '0',
       priceCurrency: 'IDR',
-      url: registrationProduct.checkoutUrl || platformLinks.affiliateRegistration,
+      url: platformLinks.affiliateRegistration,
       availability: 'https://schema.org/InStock',
-    } : undefined,
+    },
   };
   return <div className="public-site journey-site affiliate-landing">
     <JsonLd data={affiliateSchema} />

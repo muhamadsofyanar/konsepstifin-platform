@@ -22,7 +22,7 @@ export type ManagedProduct = {
 };
 
 const globalProducts = globalThis as unknown as { konsepStifinProductSchema?: Promise<void> };
-const PRODUCT_CATALOG_REVISION = 'catalog-2026-08-sejoli-v4-verified-checkout-prices';
+const PRODUCT_CATALOG_REVISION = 'catalog-2026-07-sejoli-v3-card-prices';
 
 const seeds: Omit<ManagedProduct, 'id'>[] = [
   ...publicProducts.map((item, index) => ({ productKey: item.linkKey, groupName: 'test' as const, eyebrow: item.category, title: item.title, description: item.description, price: item.price, priceNote: item.priceNote, features: item.features, bonuses: item.bonuses, action: item.action, checkoutUrl: sejoliLinks[item.linkKey], active: true, featured: Boolean(item.featured), sortOrder: index + 1 })),
@@ -99,13 +99,6 @@ export async function getPublicManagedProducts(groupName: ProductGroup) {
   if (!databaseConfigured()) return seeds.filter((item) => item.groupName === groupName).map((item, index) => ({ ...item, id: -(index + 1) }));
   try { return (await getManagedProducts(groupName)).filter((item) => item.active); }
   catch (error) { console.error('Product database fallback', error); return seeds.filter((item) => item.groupName === groupName).map((item, index) => ({ ...item, id: -(index + 1) })); }
-}
-
-export async function resolveTestCheckoutUrl(productKey: string) {
-  const products = await getPublicManagedProducts('test');
-  const product = products.find((item) => item.productKey === productKey);
-  if (!product || !isOfficialSejoliUrl(product.checkoutUrl)) throw new Error('Checkout produk belum tersedia.');
-  return product.checkoutUrl;
 }
 
 export async function updateManagedProduct(id: number, input: Partial<ManagedProduct>) {

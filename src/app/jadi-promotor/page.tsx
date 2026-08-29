@@ -18,6 +18,10 @@ export const metadata: Metadata = {
 };
 export const dynamic = 'force-dynamic';
 
+const META_CAMPAIGN_SOURCES = new Set(['facebook', 'instagram', 'meta', 'fb', 'ig']);
+const PROMOTOR_CAMPAIGN_PRICE = 7_650_000;
+const PROMOTOR_NORMAL_PRICE = 8_500_000;
+
 const rupiah = new Intl.NumberFormat('id-ID', {
   style: 'currency',
   currency: 'IDR',
@@ -28,7 +32,15 @@ function priceNumber(price: string) {
   return Number(price.replace(/\D/g, '') || 0);
 }
 
-export default async function PromoterLandingPage() {
+export default async function PromoterLandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = await searchParams;
+  const rawSource = Array.isArray(query.utm_source) ? query.utm_source[0] : query.utm_source;
+  const hasFbclid = typeof query.fbclid === 'string' || Array.isArray(query.fbclid);
+  const isMetaCampaign = META_CAMPAIGN_SOURCES.has(rawSource?.toLowerCase() ?? '') || hasFbclid;
   const promoterFaq = faqItems.filter((_, index) => [2, 3].includes(index));
   const promoterSteps = await getPublicManagedProducts('promoter');
   const individualInvestment = promoterSteps
@@ -60,20 +72,22 @@ export default async function PromoterLandingPage() {
       <section className="promoter-role"><div><span>SEBENARNYA, APA YANG DIKERJAKAN PROMOTOR?</span><h2>Bukan sekadar mengoperasikan alat tes. Promotor menemani orang memahami hasilnya.</h2></div><div className="role-grid"><article><b>01</b><h3>Menjalankan tes dengan benar</h3><p>Melakukan pemindaian secara langsung dan menjaga proses sesuai perangkat, alur, serta ketentuan yang berlaku.</p></article><article><b>02</b><h3>Membuat hasil lebih mudah dipahami</h3><p>Menjelaskan Mesin Kecerdasan peserta dengan bahasa yang dekat, tanpa memberi label atau membuat janji berlebihan.</p></article><article><b>03</b><h3>Menumbuhkan layanan dan jaringan</h3><p>Menjaga komunikasi, jadwal, tindak lanjut, serta hubungan baik agar manfaat STIFIn menjangkau lebih banyak orang.</p></article></div></section>
 
       <section id="tahapan" className="section promoter-section">
-        <div className="section-heading"><span>PROGRAM, MANFAAT & BIAYA</span><h2>Mulai dari mengenal profesinya, bukan langsung membeli alat.</h2><p>Harga setiap tahap telah dicocokkan dengan checkout SEJOLI. Harga dan ketentuan final tetap ditampilkan kembali sebelum pembayaran.</p></div>
+        <div className="section-heading"><span>PROGRAM, MANFAAT & BIAYA</span><h2>Mulai dari mengenal profesinya, bukan langsung membeli alat.</h2><p>Harga ditempatkan di setiap tahap agar Anda dapat menyiapkan perjalanan dengan tenang. Posisi harga dipilih di tengah: tidak menekan nilai pelatihan, tetapi tetap lebih terjangkau dibanding sejumlah penawaran pasar.</p></div>
         <div className="promoter-path">{promoterSteps.map((step, index) => {
+          const isDiscountedPackage = isMetaCampaign && step.productKey === 'paketPromotor';
           const tracksPromotorLead = ['wsl1', 'wsl2', 'idDanAlat', 'paketPromotor'].includes(step.productKey);
-          return <article key={step.productKey}>
+          return <article className={isDiscountedPackage ? 'campaign-product' : undefined} key={step.productKey}>
+            {isDiscountedPackage && <div className="campaign-discount-badge">DISKON 10%</div>}
             <div className="step-top"><b>{String(index + 1).padStart(2, '0')}</b><span>{step.eyebrow}</span></div>
             <h3>{step.title}</h3>
-            <div className="promoter-price"><b>{step.price}</b><small>{step.priceNote}</small></div>
+            <div className="promoter-price">{isDiscountedPackage ? <><s>{rupiah.format(PROMOTOR_NORMAL_PRICE)}</s><b>{rupiah.format(PROMOTOR_CAMPAIGN_PRICE)}</b><small>Khusus pendaftar dari campaign Meta bulan ini</small></> : <><b>{step.price}</b><small>{step.priceNote}</small></>}</div>
             <p>{step.description}</p><ul>{step.features.map((benefit) => <li key={benefit}>✓ {benefit}</li>)}</ul>
             <PublicInterestAction linkKey={step.productKey} checkoutUrl={step.checkoutUrl} label={`${step.action} →`} service={step.productKey === 'previewPromotor' ? 'Preview Calon Promotor' : step.productKey === 'idDanAlat' ? 'Informasi ID & Alat' : step.title} trackLead={tracksPromotorLead} preserveCampaignParams />
           </article>;
         })}</div>
-        <div className="promoter-investment">
-          <div><span>{packageProduct ? 'PAKET LENGKAP PALING HEMAT' : 'INVESTASI TAHAP UTAMA'}</span><strong>{rupiah.format(mainInvestment)}</strong><small>{packageProduct ? 'WSL 1 + WSL 2 + ID aplikasi & scanner dalam Paket Lengkap SEJOLI.' : 'WSL 1 + WSL 2 + ID & scanner. Tes Personal prasyarat dan biaya lain di luar rincian ini.'}</small></div>
-          <div className="promoter-investment-detail">{packageProduct && individualInvestment > packageInvestment && <div className="investment-saving"><small>Jika dibeli terpisah</small><s>{rupiah.format(individualInvestment)}</s><b>Hemat {rupiah.format(packageSavings)}</b></div>}<p>Pemenuhan tahapan tetap mengikuti kelulusan dan persyaratan yang berlaku. Tes Personal serta biaya lain di luar rincian ini.</p>{packageProduct && <PublicInterestAction className="investment-checkout" linkKey="paketPromotor" checkoutUrl={packageProduct.checkoutUrl} label="Pilih Paket Lengkap →" service={packageProduct.title} trackLead preserveCampaignParams />}</div>
+        <div className={isMetaCampaign && packageProduct ? 'promoter-investment campaign-investment' : 'promoter-investment'}>
+          <div><span>{isMetaCampaign && packageProduct ? 'DISKON 10% KHUSUS CAMPAIGN META' : packageProduct ? 'PAKET LENGKAP PALING HEMAT' : 'INVESTASI TAHAP UTAMA'}</span>{isMetaCampaign && packageProduct && <s className="campaign-normal-price">{rupiah.format(PROMOTOR_NORMAL_PRICE)}</s>}<strong>{rupiah.format(isMetaCampaign && packageProduct ? PROMOTOR_CAMPAIGN_PRICE : mainInvestment)}</strong><small>{packageProduct ? 'WSL 1 + WSL 2 + ID aplikasi & scanner dalam Paket Lengkap SEJOLI.' : 'WSL 1 + WSL 2 + ID & scanner. Tes Personal prasyarat dan biaya lain di luar rincian ini.'}</small></div>
+          <div className="promoter-investment-detail">{!isMetaCampaign && packageProduct && individualInvestment > packageInvestment && <div className="investment-saving"><small>Jika dibeli terpisah</small><s>{rupiah.format(individualInvestment)}</s><b>Hemat {rupiah.format(packageSavings)}</b></div>}<p>{isMetaCampaign && packageProduct ? 'Harga promo harus sama dengan harga yang diterapkan pada checkout SEJOLI. Pemenuhan tahapan tetap mengikuti persyaratan yang berlaku.' : 'Pemenuhan tahapan tetap mengikuti kelulusan dan persyaratan yang berlaku. Tes Personal serta biaya lain di luar rincian ini.'}</p>{packageProduct && <PublicInterestAction className="investment-checkout" linkKey="paketPromotor" checkoutUrl={packageProduct.checkoutUrl} label="Pilih Paket Lengkap →" service={packageProduct.title} trackLead preserveCampaignParams />}</div>
         </div>
         <div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & scanner</b><span>Aktivasi sesuai syarat</span></div></div>
       </section>

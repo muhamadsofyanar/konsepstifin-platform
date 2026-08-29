@@ -67,10 +67,6 @@ Hak akses tersebut belum boleh dianggap aman sampai autentikasi server dan datab
 - Versi aplikasi saat ini adalah MVP antarmuka: landing page, formulir booking, dashboard, CRM, promotor, voucher, WSL, laporan, dan pengaturan.
 - Data demo/booking browser dapat memakai `localStorage`; ini bukan database produksi dan dapat hilang jika data browser dibersihkan.
 - Integrasi StarSender, Mailketing, n8n, login aman, pembayaran, dan database belum dianggap selesai sampai diuji end-to-end.
-- Produksi memakai `STIFIN_PROMOTER_MODE=national` dan endpoint server-side `/proGet/pro/PRO`; mode branch dipertahankan untuk rollback.
-- Produk Tes STIFIn memakai pra-checkout: data konsumen disimpan idempoten, kandidat promotor administratif ditampilkan, lalu checkout resmi `https://app.konsepstifin.com` dibuka pada tab yang sama.
-- Tidak adanya kandidat tidak menghalangi checkout, tetapi kegagalan database wajib menghentikannya. Rekonsiliasi SEJOLI, pembayaran, payout, biaya, promotor final, dan jadwal masih manual.
-- Kandidat berdasarkan wilayah tidak menjamin jarak atau ketersediaan jadwal. Affiliate dan jalur jadi-promotor tidak memakai pra-checkout Tes STIFIn.
 
 ## Prioritas pembangunan berikutnya
 
