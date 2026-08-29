@@ -11,6 +11,6 @@ export async function GET(request: NextRequest) {
     const data = await getPublicPromoters(region);
     return Response.json({ data, count: data.length, meta: { ...promoterSourceStatus(), region: region ?? null } }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800', 'Access-Control-Allow-Origin': '*' } });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : 'Data promotor tidak tersedia.' }, { status: 502 });
+    return Response.json({ error: error instanceof Error ? error.message : 'Data promotor tidak tersedia.', meta: promoterSourceStatus() }, { status: 502 });
   }
 }

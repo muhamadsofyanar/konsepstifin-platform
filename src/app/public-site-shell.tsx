@@ -4,13 +4,14 @@ import type { LinkProps } from 'next/link';
 import MobileNavigation, { type MobileNavigationLink } from './mobile-navigation';
 import { platformLinks } from './site-config';
 
-type PublicPage = 'home' | 'test' | 'education' | 'promoter' | 'affiliate';
+type PublicPage = 'home' | 'test' | 'location' | 'education' | 'promoter' | 'affiliate';
 
 type PublicHref = LinkProps['href'];
 
 const navigation: Array<{ page: PublicPage; href: PublicHref; label: string }> = [
   { page: 'home', href: '/', label: 'Beranda' },
   { page: 'test', href: '/tes-stifin', label: 'Tes STIFIn' },
+  { page: 'location', href: '/wilayah', label: 'Cari Lokasi' },
   { page: 'education', href: '/edukasi', label: 'Edukasi' },
   { page: 'promoter', href: '/jadi-promotor', label: 'Jadi Promotor' },
   { page: 'affiliate', href: '/affiliate', label: 'Affiliate' },

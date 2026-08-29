@@ -1,4 +1,4 @@
-# Serah Terima Konsep STIFIn Platform v0.4.0
+# Serah Terima Konsep STIFIn Platform v0.4.1
 
 ## Perbaikan promotor
 
@@ -18,27 +18,31 @@ Penyebab yang ditemukan pada source:
 4. Pemetaan promotor tersedia melalui API admin, tetapi belum memiliki layar
    pengelolaan.
 
-Versi 0.4.0 memperbaiki keempat masalah tersebut. Respons `/api/promotor` juga
+Versi 0.4.1 memperbaiki keempat masalah tersebut. Respons `/api/promotor` juga
 memuat metadata nonrahasia `configured`, `source`, `branchCount`, dan `region`
 untuk diagnosis produksi.
 
 ## Konfigurasi Coolify wajib
 
-Salin nilai **Kode Cabang** yang dipakai pada WordPress Admin → STIFIn Voucher,
-lalu pasang pada aplikasi Next.js:
+Untuk cakupan nasional, pertahankan mode awal dan isi daftar cabang yang hendak
+digabungkan:
 
 ```text
 STIFIN_API_BASE=https://apro.stifin.id/api
-STIFIN_BRANCH_CODE=KODE_CABANG_YANG_SAMA_DENGAN_PLUGIN_VOUCHER
-```
-
-Jika lebih dari satu cabang:
-
-```text
+STIFIN_PROMOTER_MODE=national
 STIFIN_BRANCH_CODES=KODE-CABANG-1,KODE-CABANG-2
 ```
 
-Setelah redeploy, buka `/api/promotor`. Nilai `meta.configured` harus `true` dan
+Jika STIFIn memberikan endpoint nasional resmi, gunakan:
+
+```text
+STIFIN_PROMOTER_MODE=national
+STIFIN_PROMOTER_NATIONAL_PATH=/PATH-ENDPOINT-NASIONAL-RESMI
+```
+
+Untuk satu cabang, gunakan `STIFIN_PROMOTER_MODE=branch` dan
+`STIFIN_BRANCH_CODE`. Setelah redeploy, buka `/api/promotor`. Nilai
+`meta.configured` harus `true`, `meta.mode` harus `national`, dan
 `count` harus lebih dari nol. Masuk ke `/admin/promotor`, lalu isi kode wilayah
 seperti `12.71` untuk Kota Medan atau kode lain sesuai Wilayah.id.
 
@@ -69,3 +73,10 @@ berikutnya karena memerlukan koneksi akun Google dan data produksi.
 - TypeScript `tsc --noEmit`: lulus.
 - Next.js production build: lulus.
 - Route baru `/admin/promotor` dan seluruh sitemap terdeteksi oleh build.
+
+## Pemulihan deploy e58bb3
+
+- Menu **Cari Lokasi** dipulihkan pada navigasi desktop dan mobile.
+- Halaman `/wilayah` kembali memakai header serta footer publik.
+- Endpoint `/api/health` dan Docker `HEALTHCHECK` ditambahkan agar Coolify
+  menunggu status sehat sebelum menghapus container lama.

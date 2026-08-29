@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.4.0** — Pusat layanan nasional berbasis lead, pencocokan promotor multi-cabang, pemetaan Wilayah.id, consent data pribadi, serta dashboard Content Intelligence dan Local SEO.
+Versi saat ini: **0.4.1** — Pusat layanan nasional berbasis lead, pencocokan promotor multi-cabang, pemetaan Wilayah.id, consent data pribadi, serta dashboard Content Intelligence dan Local SEO.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -127,8 +127,10 @@ berikut di deployment bila endpoint STIFIn tersedia:
 
 ```text
 STIFIN_API_BASE=https://apro.stifin.id/api
-STIFIN_BRANCH_CODE=KODE_CABANG
-STIFIN_BRANCH_CODES=NASIONAL,CABANG-LAIN
+STIFIN_PROMOTER_MODE=national
+STIFIN_BRANCH_CODES=KODE-CABANG-1,KODE-CABANG-2
+# Alternatif bila tersedia endpoint nasional resmi
+STIFIN_PROMOTER_NATIONAL_PATH=/PATH-ENDPOINT-NASIONAL-RESMI
 STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
 # Opsional bila API STIFIn memakai header autentikasi resmi
 STIFIN_API_AUTH_HEADER=Authorization
@@ -137,8 +139,14 @@ STIFIN_API_AUTH_VALUE=Bearer_TOKEN_RESMI
 STIFIN_PROMOTERS_JSON=[{"code":"BKS-HRA-40","name":"Nama Promotor","branchCode":"lokal","active":true,"menerimaKunjungan":true,"regionCodes":["31.74"]}]
 ```
 
-Tanpa `STIFIN_BRANCH_CODE` atau `STIFIN_BRANCH_CODES`, halaman wilayah tetap berjalan dan hanya menampilkan
-CTA layanan. Email, saldo voucher, PassID, dan data internal tidak pernah
+`STIFIN_PROMOTER_MODE=national` kini dibaca oleh aplikasi. Mode ini menggabungkan
+semua cabang pada `STIFIN_BRANCH_CODES`. Jika STIFIn menyediakan endpoint nasional
+resmi, jalurnya dapat dipasang melalui `STIFIN_PROMOTER_NATIONAL_PATH`. Tanpa daftar
+cabang atau endpoint resmi, API mengembalikan pesan konfigurasi yang jelas dan
+tidak lagi diam-diam menampilkan daftar kosong. Untuk satu cabang, gunakan
+`STIFIN_PROMOTER_MODE=branch` bersama `STIFIN_BRANCH_CODE`.
+
+Email, saldo voucher, PassID, dan data internal tidak pernah
 diteruskan ke API publik. Admin yang sudah login dapat menyimpan pemetaan
 promotor melalui `POST /api/admin/promotor` dengan body
 `{"code":"KODE-ID","regionCodes":["31.74.09"]}`.
@@ -147,6 +155,10 @@ Pemetaan kabupaten/kota juga berlaku pada halaman provinsi induknya. Karena itu,
 promotor yang dipetakan ke `12.71` tetap muncul pada halaman Sumatera Utara
 (`12`). Respons `/api/promotor` menyertakan metadata konfigurasi nonrahasia untuk
 memudahkan pemeriksaan environment di Coolify.
+
+Menu **Cari Lokasi** tersedia pada navigasi desktop dan mobile. Seluruh halaman
+`/wilayah` memakai header dan footer publik yang sama. Endpoint `/api/health`
+digunakan Docker untuk memastikan rolling update hanya diteruskan saat aplikasi sehat.
 
 ## Deployment
 
