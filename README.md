@@ -110,6 +110,7 @@ GET /api/wilayah/regencies?parent=31
 GET /api/wilayah/districts?parent=31.74
 GET /api/wilayah/villages?parent=31.74.09
 GET /api/promotor?region=31.74
+GET /promotor
 ```
 
 Sinkronisasi promotor bersifat opsional dan selalu server-side. Atur environment
@@ -120,6 +121,8 @@ STIFIN_API_BASE=https://apro.stifin.id/api
 STIFIN_BRANCH_CODE=KODE_CABANG
 STIFIN_PUBLIC_WHATSAPP=false
 STIFIN_PROMOTER_REGION_MAP={"KODE-ID":["31.74","31.74.09"]}
+# Opsional: daftar publik lokal tanpa mengambil data dari pusat
+STIFIN_PROMOTERS_JSON=[{"code":"BKS-HRA-40","name":"Nama Promotor","branchCode":"lokal","active":true,"menerimaKunjungan":true,"regionCodes":["31.74"]}]
 ```
 
 Tanpa `STIFIN_BRANCH_CODE`, halaman wilayah tetap berjalan dan hanya menampilkan

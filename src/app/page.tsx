@@ -9,8 +9,8 @@ import ActivityGallery from './activity-gallery';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Konsep STIFIn — Kenali Cara Alami Anda Berpikir dan Bertumbuh',
-  description: 'Kenali Mesin Kecerdasan melalui Tes STIFIn offline, pelajari penerapannya, dan temukan jalur belajar atau promotor yang sesuai.',
+  title: 'Tes STIFIn dan Promotor di Indonesia | Konsep STIFIn',
+  description: 'Kenali Mesin Kecerdasan melalui Tes STIFIn offline, temukan promotor berdasarkan wilayah, dan pelajari jalur affiliate atau profesi.',
   alternates: { canonical: '/' },
 };
 
@@ -48,9 +48,9 @@ export default async function Home() {
     <main>
       <section className="hub-hero">
         <div className="hub-hero-copy">
-          <span className="eyebrow">MULAI DARI DIRI</span>
-          <h1>Lebih mudah memahami orang lain, setelah kita <em>mengenali diri sendiri.</em></h1>
-          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn membantu Anda mengenali pola alaminya, lalu membahas hasil tersebut bersama promotor.</p>
+          <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
+          <h1>Kenali cara alami Anda, lalu temukan <em>promotor STIFIn di wilayah Anda.</em></h1>
+          <p>“Kenapa cara saya dan orang terdekat sering berbeda?” Tes STIFIn dilakukan offline dan dibahas bersama promotor. Konsep STIFIn membantu Anda menemukan layanan, wilayah, dan langkah berikutnya.</p>
           <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div>
         </div>
         <figure className="journey-hero-media home-hero-media">

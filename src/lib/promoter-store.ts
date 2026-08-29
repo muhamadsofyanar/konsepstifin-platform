@@ -1,3 +1,5 @@
+import { databaseConfigured, getDatabaseClient } from '@/lib/article-store';
+
 export type PublicPromoter = {
   code: string;
   name: string;
@@ -34,15 +36,23 @@ async function loadRegionMappings() {
 export async function getPublicPromoters(region?: string): Promise<PublicPromoter[]> {
   const base = process.env.STIFIN_API_BASE || 'https://apro.stifin.id/api';
   const branch = normalize(process.env.STIFIN_BRANCH_CODE).toUpperCase();
-  if (!branch) return [];
-  const response = await fetch(`${base.replace(/\/$/, '')}/proGetCab/pro/${encodeURIComponent(branch)}`, {
-    headers: { accept: 'application/json' },
-    next: { revalidate: 300, tags: [`promoters:${branch}`] },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw new Error(`Promotor upstream HTTP ${response.status}.`);
-  const body: unknown = await response.json();
-  const rows = body && typeof body === 'object' && 'data' in body && Array.isArray(body.data) ? body.data : [];
+  let rows: unknown[] = [];
+  let sourceBranch = branch;
+  const manual = normalize(process.env.STIFIN_PROMOTERS_JSON);
+  if (manual) {
+    try {
+      const parsed: unknown = JSON.parse(manual);
+      rows = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' && 'data' in parsed && Array.isArray(parsed.data) ? parsed.data : []);
+      sourceBranch = 'manual';
+    } catch { rows = []; }
+  } else if (branch) {
+    const response = await fetch(`${base.replace(/\/$/, '')}/proGetCab/pro/${encodeURIComponent(branch)}`, {
+      headers: { accept: 'application/json' }, next: { revalidate: 300, tags: [`promoters:${branch}`] }, signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Promotor upstream HTTP ${response.status}.`);
+    const body: unknown = await response.json();
+    rows = body && typeof body === 'object' && 'data' in body && Array.isArray(body.data) ? body.data : [];
+  }
   let regionMap: Record<string, string[]> = {};
   try { regionMap = JSON.parse(process.env.STIFIN_PROMOTER_REGION_MAP || '{}') as Record<string, string[]>; } catch { regionMap = {}; }
   regionMap = { ...regionMap, ...(await loadRegionMappings()) };
@@ -56,8 +66,13 @@ export async function getPublicPromoters(region?: string): Promise<PublicPromote
     const regionCodes = Array.isArray(regionMap[code]) ? regionMap[code].map(String).filter(Boolean) : [];
     if (region && !regionCodes.some((codeValue) => region === codeValue || region.startsWith(`${codeValue}.`))) return [];
     const phone = normalize(item.Telepon ?? item.NoHP ?? item.phone).replace(/[^\d+]/g, '');
-    return [{ code, name, branchCode: branch, active: truthy(item.Aktif ?? item.active), menerimaKunjungan: truthy(item.MenerimaKunjungan ?? item.menerima_kunjungan), ...(publicWhatsapp && phone ? { whatsapp: phone } : {}), regionCodes }];
+    return [{ code, name, branchCode: normalize(item.KodeCabang ?? item.branchCode) || sourceBranch, active: truthy(item.Aktif ?? item.active ?? true), menerimaKunjungan: truthy(item.MenerimaKunjungan ?? item.menerima_kunjungan ?? true), ...(publicWhatsapp && phone ? { whatsapp: phone } : {}), regionCodes }];
   });
+}
+
+export async function getServedRegionCodes() {
+  const promoters = await getPublicPromoters();
+  return [...new Set(promoters.filter((promoter) => promoter.active && promoter.regionCodes.length > 0).flatMap((promoter) => promoter.regionCodes))];
 }
 
 export async function setPromoterRegionMapping(code: string, regionCodes: string[]) {
@@ -69,4 +84,3 @@ export async function setPromoterRegionMapping(code: string, regionCodes: string
   await getDatabaseClient()`INSERT INTO public_promoter_regions (promoter_code, region_codes) VALUES (${promoterCode}, ${getDatabaseClient().json(values)}) ON CONFLICT (promoter_code) DO UPDATE SET region_codes=EXCLUDED.region_codes, updated_at=NOW()`;
   return { code: promoterCode, regionCodes: values };
 }
-import { databaseConfigured, getDatabaseClient } from '@/lib/article-store';

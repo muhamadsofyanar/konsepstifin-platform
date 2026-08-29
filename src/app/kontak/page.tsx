@@ -1,0 +1,7 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { PublicFooter, PublicHeader } from '../public-site-shell';
+import PublicInterestAction from '../public-interest-action';
+
+export const metadata: Metadata = { title: 'Kontak Konsep STIFIn | Konsep STIFIn', description: 'Hubungi Konsep STIFIn untuk kebutuhan Tes STIFIn, promotor, dan kerja sama wilayah.', alternates: { canonical: '/kontak' } };
+export default function ContactPage() { return <div className="public-site journey-site"><PublicHeader active="home" announcement="Hubungi Konsep STIFIn untuk kebutuhan layanan dan promotor" /><main className="trust-page"><section className="trust-hero"><span>KONTAK</span><h1>Sampaikan kota dan kebutuhan Anda.</h1><p>Tim akan membantu mencocokkan layanan, jadwal, dan promotor yang tersedia. Untuk permintaan awal, gunakan formulir minat agar informasi dapat ditindaklanjuti.</p><PublicInterestAction className="public-cta big" linkKey="previewPromotor" label="Hubungi tim layanan →" service="Kontak Konsep STIFIn" /></section><section className="trust-grid"><article><h2>Untuk peserta</h2><p>Pilih layanan Tes STIFIn, tuliskan kota pelaksanaan, jumlah peserta, dan waktu yang diinginkan.</p><Link href="/tes-stifin#layanan">Lihat layanan tes →</Link></article><article><h2>Untuk calon promotor</h2><p>Pelajari tahapan Preview, WSL 1, WSL 2, lalu proses aktivasi sesuai ketentuan jaringan.</p><Link href="/jadi-promotor">Lihat jalur promotor →</Link></article></section></main><PublicFooter /></div>; }

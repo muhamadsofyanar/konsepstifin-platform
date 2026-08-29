@@ -57,6 +57,11 @@ export function PublicFooter() {
       <Link href="/tes-stifin">Tes STIFIn</Link>
       <Link href="/edukasi">Edukasi</Link>
       <Link href="/jadi-promotor">Promotor</Link>
+      <Link href="/promotor">Cari Promotor</Link>
+      <Link href="/tentang">Tentang</Link>
+      <Link href="/kontak">Kontak</Link>
+      <Link href="/privasi">Privasi</Link>
+      <Link href="/ketentuan">Ketentuan</Link>
       <Link href="/affiliate">Affiliate</Link>
       <a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Masuk Affiliate ↗</a>
     </div>
