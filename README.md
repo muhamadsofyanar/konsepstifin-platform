@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi saat ini: **0.2.5 / National SEO Redesign** — wilayah layanan berbasis pemetaan promotor nyata, direktori promotor aman, funnel publik terpisah, dan halaman kepercayaan lengkap.
+Versi saat ini: **0.2.6 / Lead Operations Fix** — wilayah layanan berbasis pemetaan promotor nyata, funnel publik terpisah, serta dashboard tindak lanjut lead yang lengkap dan siap dibangun untuk deployment.
 
 Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 
@@ -25,6 +25,10 @@ Platform tes STIFIn dan pengembangan jaringan promotor Indonesia.
 - Harga katalog publik mengikuti harga yang tampil pada kartu produk SEJOLI.
 - Enam foto dokumentasi kegiatan nyata tampil di beranda dan halaman Tes STIFIn.
 - Tombol produk aktif membuka checkout SEJOLI; formulir minat dipisahkan sebagai bantuan memilih layanan.
+- Dashboard `/admin/leads` menampilkan lead formulir publik, filter status, penanggung jawab, dan catatan tindak lanjut.
+- Status lead tersedia dari baru, dihubungi, terkualifikasi, konversi, sampai ditutup.
+- Pencarian `/wilayah` selalu menampilkan 38 provinsi dengan status layanan terpetakan atau koordinasi nasional.
+- Halaman wilayah dan direktori promotor menggunakan header, footer, serta navigasi publik yang konsisten.
 - Content Intelligence native Next.js untuk menilai kesiapan artikel terhadap SEO, AEO, dan pencarian berbasis AI.
 - Peta pilar–cluster, deteksi potensi kanibalisasi, serta saran internal link pada `/admin/intelligence`.
 - Metadata keyword, search intent, topical cluster, evidence pengalaman nyata, reviewer, sumber, dan artikel terkait.
@@ -75,6 +79,10 @@ memakai `sejoliLinks`. Jika keduanya belum diisi, tombol tidak akan rusak dan
 website otomatis
 membuka formulir minat dan menyimpan permintaan ke PostgreSQL pada tabel
 `public_interest_leads`.
+
+Permintaan tersebut dapat dikelola melalui `/admin/leads`. Kolom penugasan,
+catatan admin, serta waktu pembaruan ditambahkan otomatis secara aman saat modul
+pertama kali dibuka. Data awal pengunjung tetap dipisahkan dari catatan internal.
 
 Saat upgrade versi 0.1.2 pertama kali dijalankan, migrasi katalog satu kali akan
 menyamakan harga dan link database dengan kartu produk SEJOLI yang disepakati.
@@ -136,6 +144,9 @@ promotor melalui `POST /api/admin/promotor` dengan body
 
 Repository ini sudah dilengkapi `Dockerfile` untuk deployment melalui Coolify.
 Port aplikasi: `3000`.
+
+Salin `.env.example` menjadi acuan Environment Variables di Coolify. Jangan
+mengunggah file `.env` yang berisi nilai produksi ke repository.
 
 Domain produksi: `https://konsepstifin.com`.
 

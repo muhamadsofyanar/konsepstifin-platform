@@ -5,10 +5,12 @@ import { updateLead, validateLeadAdminUpdate } from '@/lib/interest-store';
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   if (!await isAdminAuthenticated()) return NextResponse.json({ error: 'Akses ditolak.' }, { status: 401 });
   try {
-    const id = Number((await context.params).id);
-    const body = await request.json() as Record<string, unknown>;
-    const validated = validateLeadAdminUpdate(body);
-    const lead = await updateLead(id, validated, process.env.ADMIN_EMAIL || 'admin');
-    return NextResponse.json({ ok: true, lead });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Lead belum dapat diperbarui.' }, { status: 400 }); }
+    const { id } = await context.params;
+    const lead = await updateLead(Number(id), validateLeadAdminUpdate(await request.json()));
+    if (!lead) return NextResponse.json({ error: 'Lead tidak ditemukan.' }, { status: 404 });
+    return NextResponse.json({ lead });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Lead gagal diperbarui.';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

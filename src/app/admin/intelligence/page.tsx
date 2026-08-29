@@ -18,7 +18,7 @@ export default async function ContentIntelligencePage() {
   const intelligence = buildContentIntelligence(articles);
 
   return <div className="article-admin intelligence-admin">
-    <header className="article-admin-header"><Link href="/"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority /></Link><nav><span>Portal Tim</span><b>Content Intelligence</b></nav><div><Link href="/admin/artikel">Artikel & AI</Link><Link href="/admin/produk">Produk & Harga</Link><Link href="/admin/pustaka">Pustaka STIFIn</Link><Link href="/edukasi" target="_blank">Lihat edukasi ↗</Link></div></header>
+    <header className="article-admin-header"><Link href="/"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority /></Link><nav><span>Portal Tim</span><b>Content Intelligence</b></nav><div><Link href="/admin/leads">Lead</Link><Link href="/admin/artikel">Artikel & AI</Link><Link href="/admin/produk">Produk & Harga</Link><Link href="/admin/pustaka">Pustaka STIFIn</Link><Link href="/edukasi" target="_blank">Lihat edukasi ↗</Link></div></header>
     <main>
       <section className="intelligence-hero"><div><span>SEO · AEO · GEO READINESS</span><h1>Pusat kendali topical authority.</h1><p>Audit ini mengukur faktor yang dapat dikendalikan tim: intent, pilar–cluster, kedalaman, sumber, pengalaman nyata, reviewer, freshness, dan internal link. Nilai bukan jaminan ranking atau kutipan AI.</p><div><Link className="public-cta" href="/admin/artikel">Perbaiki artikel →</Link><a href="/sitemap.xml" target="_blank" rel="noreferrer">Periksa sitemap ↗</a></div></div><aside><small>SKOR KESIAPAN RATA-RATA</small><strong>{intelligence.metrics.averageScore}</strong><span>dari 100</span></aside></section>
 
