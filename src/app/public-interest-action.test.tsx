@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PublicInterestAction from './public-interest-action';
@@ -46,7 +46,8 @@ describe('PublicInterestAction dua funnel', () => {
     expect(screen.queryByRole('link', { name: /pembayaran/i })).not.toBeInTheDocument();
   });
 
-  it('mengirim attribution dan baru membuka checkout tes setelah lead tersimpan', async () => {
+  it('mengirim attribution dan baru mengarahkan checkout tes setelah lead tersimpan', async () => {
+    const navigateToCheckout = vi.fn();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
       ok: true,
       reference: 'KSF-42',
@@ -54,15 +55,14 @@ describe('PublicInterestAction dua funnel', () => {
       match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
       checkoutUrl: 'https://app.konsepstifin.com/product/tes-stifin-personal/',
     }), { status: 201 })));
-    render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" checkoutUrl="https://app.konsepstifin.com/product/tes-stifin-personal/" label="Pesan" service="Tes STIFIn Personal" requirePrecheckout />);
+    render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" checkoutUrl="https://app.konsepstifin.com/product/tes-stifin-personal/" label="Pesan" service="Tes STIFIn Personal" requirePrecheckout navigateToCheckout={navigateToCheckout} />);
     await userEvent.click(screen.getByRole('button', { name: 'Pesan' }));
     await fillRequiredFields();
     await userEvent.click(screen.getByRole('button', { name: 'Cari promotor & lanjut bayar' }));
 
-    expect(await screen.findByText('Promotor Aman')).toBeInTheDocument();
-    const checkout = screen.getByRole('link', { name: /lanjut ke pembayaran/i });
-    expect(checkout).toHaveAttribute('href', 'https://app.konsepstifin.com/product/tes-stifin-personal/');
-    expect(checkout).not.toHaveAttribute('target');
+    await waitFor(() => expect(navigateToCheckout).toHaveBeenCalledWith(
+      'https://app.konsepstifin.com/product/tes-stifin-personal/',
+    ));
     const request = vi.mocked(fetch).mock.calls[0];
     const body = JSON.parse(String((request[1] as RequestInit).body));
     expect(body).toMatchObject({
@@ -74,6 +74,24 @@ describe('PublicInterestAction dua funnel', () => {
       referrer: 'https://example.com/article',
       idempotencyKey: '123e4567-e89b-42d3-a456-426614174000',
     });
+  });
+
+  it('tidak mengarahkan calon promotor walau respons menyertakan checkout', async () => {
+    const navigateToCheckout = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true,
+      reference: 'KSF-44',
+      status: 'baru',
+      match: null,
+      checkoutUrl: 'https://app.konsepstifin.com/product/wsl-1/',
+    }), { status: 201 })));
+    render(<PublicInterestAction leadType="promoter_candidate" linkKey="wsl1" label="Konsultasi" service="WSL 1" navigateToCheckout={navigateToCheckout} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Konsultasi' }));
+    await fillRequiredFields({ share: false });
+    await userEvent.click(screen.getByRole('button', { name: 'Kirim permintaan →' }));
+
+    expect(await screen.findByText(/KSF-44/)).toBeInTheDocument();
+    expect(navigateToCheckout).not.toHaveBeenCalled();
   });
 
   it('tidak menampilkan checkout ketika penyimpanan gagal', async () => {

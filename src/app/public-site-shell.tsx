@@ -13,7 +13,7 @@ const navigation: Array<{ page: PublicPage; href: PublicHref; label: string }> =
   { page: 'test', href: '/tes-stifin', label: 'Tes STIFIn' },
   { page: 'location', href: '/wilayah', label: 'Cari Lokasi' },
   { page: 'education', href: '/edukasi', label: 'Edukasi' },
-  { page: 'promoter', href: '/jadi-promotor', label: 'Jadi Promotor' },
+  { page: 'promoter', href: '/jadi-promotor', label: 'Calon Promotor' },
   { page: 'affiliate', href: '/affiliate', label: 'Affiliate' },
 ];
 
@@ -21,7 +21,7 @@ export function PublicHeader({
   active,
   announcement,
   ctaHref = '/tes-stifin#layanan',
-  ctaLabel = 'Pilih layanan',
+  ctaLabel = 'Bandingkan layanan tes',
 }: {
   active: PublicPage;
   announcement: string;
@@ -57,7 +57,7 @@ export function PublicFooter() {
       <Link href="/">Beranda</Link>
       <Link href="/tes-stifin">Tes STIFIn</Link>
       <Link href="/edukasi">Edukasi</Link>
-      <Link href="/jadi-promotor">Promotor</Link>
+      <Link href="/jadi-promotor">Calon Promotor</Link>
       <Link href="/promotor">Cari Promotor</Link>
       <Link href="/tentang">Tentang</Link>
       <Link href="/kontak">Kontak</Link>
@@ -66,7 +66,7 @@ export function PublicFooter() {
       <Link href="/affiliate">Affiliate</Link>
       <a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Masuk Affiliate ↗</a>
     </div>
-    <p>Platform edukasi, layanan Tes STIFIn offline, dan pengembangan jaringan promotor Indonesia.</p>
+    <p>Edukasi, layanan Tes STIFIn offline, dan informasi jalur calon promotor di Indonesia.</p>
     <small>Informasi di website bersifat edukatif. Checkout, akun member, dan affiliate dikelola melalui app.konsepstifin.com. Harga, fasilitas, komisi, dan persyaratan final mengikuti SEJOLI. Tes STIFIn bukan diagnosis medis atau psikologis.</small>
   </footer>;
 }

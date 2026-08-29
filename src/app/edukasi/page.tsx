@@ -5,8 +5,9 @@ import { getPublishedArticles } from '@/lib/article-store';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Edukasi | Konsep STIFIn',
-  description: 'Artikel umum tentang pengembangan diri, komunikasi keluarga, proses belajar, dan kolaborasi yang lebih sadar.',
+  title: 'Artikel dan Edukasi STIFIn | Konsep STIFIn',
+  description: 'Baca materi tentang penggunaan hasil secara bertanggung jawab, komunikasi keluarga, proses belajar, dan kolaborasi.',
+  alternates: { canonical: '/edukasi' },
 };
 
 export default async function EducationPage() {
@@ -16,7 +17,7 @@ export default async function EducationPage() {
 
   return <main className="education-main">
     <section className="education-hero">
-      <div><span>PUSAT EDUKASI</span><h1>Belajar memahami diri, hubungan, dan cara bertumbuh.</h1><p>Artikel yang ringan, praktis, dan bertanggung jawab untuk keluarga, pembelajar, komunitas, serta tim.</p></div>
+      <div><span>PUSAT EDUKASI</span><h1>Cari bacaan sesuai pertanyaan yang sedang Anda hadapi.</h1><p>Pilih materi tentang penggunaan hasil, komunikasi keluarga, proses belajar, atau kolaborasi. Setiap artikel diposisikan sebagai bahan refleksi, bukan diagnosis atau keputusan tunggal.</p></div>
       <aside><b>Prinsip kami</b><p>Informasi menjadi pembuka percakapan dan refleksi, bukan label yang membatasi seseorang.</p></aside>
     </section>
 
@@ -33,6 +34,6 @@ export default async function EducationPage() {
       </article>)}</div>
     </section>
 
-    <section className="education-cta"><div><span>INGIN MEMULAI DARI LAYANAN?</span><h2>Pilih layanan sesuai kebutuhan Anda.</h2><p>Formulir minat tetap tersedia untuk membantu pencocokan produk, kota, promotor, dan jadwal.</p></div><Link className="public-cta big" href="/tes-stifin#layanan">Lihat pilihan layanan →</Link></section>
+    <section className="education-cta"><div><span>SUDAH SIAP MEMBANDINGKAN LAYANAN?</span><h2>Lihat paket tes tanpa meninggalkan konteks penggunaannya.</h2><p>Formulir layanan mencatat kebutuhan dan kota untuk pencocokan promotor. Jadwal tetap berdasarkan konfirmasi.</p></div><Link className="public-cta big" href="/tes-stifin#layanan">Bandingkan layanan tes →</Link></section>
   </main>;
 }

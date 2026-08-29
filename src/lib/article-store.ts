@@ -3,7 +3,7 @@ import { articles, type ArticleBlock, type ArticleTone } from '@/app/edukasi/art
 import { isOfficialSejoliUrl } from '@/app/site-config';
 import type { KnowledgeReference } from '@/lib/knowledge-store';
 
-export type ArticleStatus = 'draft' | 'review' | 'scheduled' | 'published';
+export type ArticleStatus = 'draft' | 'review' | 'scheduled' | 'published' | 'archived';
 export type ArticleContentType = 'education' | 'product' | 'affiliate';
 export type SearchIntent = 'informational' | 'commercial' | 'transactional' | 'navigational';
 export type ContentRole = 'pillar' | 'cluster' | 'supporting';
@@ -45,7 +45,7 @@ export type StoredArticle = {
 export type ArticleInput = Omit<StoredArticle, 'id' | 'publishedLabel' | 'createdAt' | 'updatedAt'>;
 
 const tones: ArticleTone[] = ['forest', 'leaf', 'sand', 'mint', 'charcoal'];
-const statuses: ArticleStatus[] = ['draft', 'review', 'scheduled', 'published'];
+const statuses: ArticleStatus[] = ['draft', 'review', 'scheduled', 'published', 'archived'];
 const contentTypes: ArticleContentType[] = ['education', 'product', 'affiliate'];
 const searchIntents: SearchIntent[] = ['informational', 'commercial', 'transactional', 'navigational'];
 const contentRoles: ContentRole[] = ['pillar', 'cluster', 'supporting'];
@@ -439,8 +439,12 @@ export async function deleteArticle(id: number) {
 export function validateArticleInput(value: unknown): ArticleInput {
   if (!value || typeof value !== 'object') throw new Error('Data artikel tidak valid.');
   const data = value as Record<string, unknown>;
+  const sanitizeText = (input: unknown) => String(input ?? '')
+    .replace(/<(script|style|iframe)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<\/?(script|style|iframe)\b[^>]*>/gi, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
   const text = (key: string, min: number, max: number) => {
-    const result = String(data[key] ?? '').trim();
+    const result = sanitizeText(data[key]).trim();
     if (result.length < min || result.length > max) throw new Error(`${key} harus berisi ${min}–${max} karakter.`);
     return result;
   };
@@ -466,8 +470,8 @@ export function validateArticleInput(value: unknown): ArticleInput {
     scheduledAt = parsed.toISOString();
   }
   if (status === 'scheduled' && !scheduledAt) throw new Error('Tentukan tanggal dan jam untuk artikel terjadwal.');
-  const productName = String(data.productName ?? '').trim().slice(0, 160);
-  const productUrlValue = String(data.productUrl ?? '').trim().slice(0, 1000);
+  const productName = sanitizeText(data.productName).trim().slice(0, 160);
+  const productUrlValue = sanitizeText(data.productUrl).trim().slice(0, 1000);
   let productUrl = '';
   if (productUrlValue) {
     let parsedUrl: URL;
@@ -503,16 +507,16 @@ export function validateArticleInput(value: unknown): ArticleInput {
     contentType,
     productName,
     productUrl,
-    ctaLabel: String(data.ctaLabel ?? 'Pilih layanan').trim().slice(0, 80) || 'Pilih layanan',
+    ctaLabel: sanitizeText(data.ctaLabel ?? 'Pilih layanan').trim().slice(0, 80) || 'Pilih layanan',
     scheduledAt,
-    primaryKeyword: String(data.primaryKeyword ?? '').trim().slice(0, 160),
+    primaryKeyword: sanitizeText(data.primaryKeyword).trim().slice(0, 160),
     secondaryKeywords: textArray(data.secondaryKeywords, 20, 100),
     searchIntent,
-    topicCluster: String(data.topicCluster ?? '').trim().slice(0, 120),
+    topicCluster: sanitizeText(data.topicCluster).trim().slice(0, 120),
     contentRole,
-    experienceEvidence: String(data.experienceEvidence ?? '').trim().slice(0, 4000),
-    reviewerName: String(data.reviewerName ?? '').trim().slice(0, 160),
-    reviewerRole: String(data.reviewerRole ?? '').trim().slice(0, 160),
+    experienceEvidence: sanitizeText(data.experienceEvidence).trim().slice(0, 4000),
+    reviewerName: sanitizeText(data.reviewerName).trim().slice(0, 160),
+    reviewerRole: sanitizeText(data.reviewerRole).trim().slice(0, 160),
     reviewedAt: reviewedAtValue,
     relatedSlugs: textArray(data.relatedSlugs, 12, 120)
       .filter((relatedSlug) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(relatedSlug) && relatedSlug !== slug),

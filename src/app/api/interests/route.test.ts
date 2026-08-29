@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { POST } from './route';
+import { POST, publicInterestErrorResponse } from './route';
 import { submitInterest } from '@/lib/interest-service';
 
 vi.mock('@/lib/interest-service', () => ({ submitInterest: vi.fn() }));
@@ -49,6 +49,20 @@ describe('POST /api/interests', () => {
     } as Awaited<ReturnType<typeof submitInterest>>);
     const response = await POST(request({ leadType: 'promoter_candidate' }));
     expect(await response.json()).toEqual({ ok: true, reference: 'KSF-43', status: 'baru', match: null });
+  });
+
+  it('menyembunyikan detail PostgreSQL dari respons publik', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = publicInterestErrorResponse(new Error(
+      'there is no unique or exclusion constraint matching the ON CONFLICT specification',
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ error: 'Permintaan belum dapat disimpan. Silakan coba kembali.' });
+    expect(JSON.stringify(body)).not.toMatch(/postgres|constraint|conflict|sql/i);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it('menolak bot cepat dan membatasi delapan permintaan per alamat', async () => {

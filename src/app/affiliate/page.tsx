@@ -8,7 +8,7 @@ import { platformLinks } from '../site-config';
 import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const metadata: Metadata = {
-  title: 'Affiliate Konsep STIFIn — Mulai Berbagi, Bangun Penghasilan',
+  title: 'Affiliate Konsep STIFIn — Cara Kerja dan Ketentuan',
   description: 'Kenali program Affiliate Umum dan Affiliate Promotor, manfaat, cara kerja, pencatatan transaksi, serta jalur pendaftarannya.',
   alternates: { canonical: '/affiliate' },
 };
@@ -47,7 +47,7 @@ export default async function AffiliateLandingPage() {
     <PublicHeader active="affiliate" announcement="Program rekomendasi layanan STIFIn · Pendaftaran, transaksi, dan komisi melalui app.konsepstifin.com" ctaHref={platformLinks.affiliateRegistration} ctaLabel="Daftar Affiliate" />
     <main>
       <section className="affiliate-hero">
-        <div><span className="eyebrow">PROGRAM AFFILIATE KONSEP STIFIn</span><h1>Mulai dari berbagi manfaat. Biarkan sistem membantu mencatat hasilnya.</h1><p>Rekomendasikan layanan yang memang relevan, gunakan tautan referral pribadi, lalu pantau transaksi valid melalui sistem SEJOLI.</p><div className="hub-actions"><Link className="public-cta big" href="#program">Pilih jalur affiliate →</Link><a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Sudah terdaftar? Masuk Affiliate ↗</a></div></div>
+        <div><span className="eyebrow">PROGRAM AFFILIATE KONSEP STIFIn</span><h1>Pahami cara kerja referral, pencatatan transaksi, dan komisi sebelum mendaftar.</h1><p>Affiliate merekomendasikan layanan melalui tautan pribadi. Transaksi dan komisi dicatat oleh SEJOLI sesuai program yang berlaku; tidak ada jaminan jumlah transaksi atau penghasilan.</p><div className="hub-actions"><Link className="public-cta big" href="#program">Bandingkan program affiliate →</Link><a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Sudah terdaftar? Masuk Affiliate ↗</a></div></div>
         <figure className="journey-hero-media affiliate-hero-media"><Image src="/images/hero-promotor-v3.webp" alt="Komunitas Muslim Indonesia belajar membangun komunikasi dan jaringan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload /><figcaption className="media-story-card"><small>ALUR SEDERHANA</small><b>Bagikan → Transaksi → Komisi</b><span>Edukasi yang baik lebih penting daripada sekadar menyebar tautan</span></figcaption></figure>
       </section>
 

@@ -9,8 +9,8 @@ import ActivityGallery from './activity-gallery';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Tes STIFIn dan Promotor di Indonesia | Konsep STIFIn',
-  description: 'Kenali Mesin Kecerdasan melalui Tes STIFIn offline, temukan promotor berdasarkan wilayah, dan pelajari jalur affiliate atau profesi.',
+  title: 'Tes STIFIn atau Jalur Calon Promotor | Konsep STIFIn',
+  description: 'Bandingkan layanan Tes STIFIn offline, cari promotor berdasarkan wilayah, atau pahami jalur calon promotor tanpa mencampurkan prosesnya.',
   alternates: { canonical: '/' },
 };
 
@@ -26,7 +26,7 @@ const journeys = [
     href: '/edukasi', action: 'Saya ingin belajar dulu', tone: 'mint',
   },
   {
-    number: '03', eyebrow: 'JALUR PROFESI', title: 'Jadi Promotor',
+    number: '03', eyebrow: 'JALUR CALON PROMOTOR', title: 'Calon Promotor',
     description: 'Ingin memahami peran promotor? Pelajari Preview, WSL, aktivasi, tanggung jawab layanan, dan kebutuhan biayanya sebelum berkomitmen.',
     href: '/jadi-promotor', action: 'Saya ingin mengenal profesinya', tone: 'sand',
   },
@@ -44,14 +44,14 @@ export default async function Home() {
   ]);
 
   return <div className="public-site journey-site">
-    <PublicHeader active="home" announcement="Tes STIFIn dilakukan offline bersama promotor · Tersedia untuk peserta di berbagai kota" />
+    <PublicHeader active="home" announcement="Layanan tes dan konsultasi calon promotor memakai formulir serta tindak lanjut yang berbeda" />
     <main>
       <section className="hub-hero">
         <div className="hub-hero-copy">
           <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
-          <h1>Pilih jalur Anda: ikut Tes STIFIn atau <em>pelajari peran promotor.</em></h1>
-          <p>Untuk konsumen, temukan layanan tes dan promotor berdasarkan cakupan wilayah. Untuk calon promotor, pahami tahap belajar, biaya, dan tanggung jawabnya sebelum mengambil keputusan.</p>
-          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Saya ingin ikut tes →</Link><Link href="/jadi-promotor">Saya ingin jadi promotor</Link></div>
+          <h1>Ingin menjalani Tes STIFIn, atau <em>sedang mempertimbangkan jalur promotor?</em></h1>
+          <p>Pilih sesuai tujuan Anda. Peserta tes dapat membandingkan layanan dan meminta pencocokan promotor. Calon promotor dapat memahami peran, tahap belajar, biaya, dan tanggung jawab sebelum mengambil keputusan.</p>
+          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Bandingkan layanan Tes STIFIn →</Link><Link href="/jadi-promotor">Pelajari jalur calon promotor</Link></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
@@ -79,7 +79,7 @@ export default async function Home() {
       </section>
 
       <section className="section home-catalog" aria-label="Ringkasan produk dan harga">
-        <div className="section-heading"><span>PRODUK & HARGA SEJOLI</span><h2>Lihat pilihannya dulu, lalu masuk ke halaman yang paling sesuai.</h2><p>Harga yang ditampilkan mengikuti angka pada kartu produk SEJOLI. Harga dan ketentuan final tetap terlihat kembali sebelum pembayaran.</p></div>
+        <div className="section-heading"><span>PILIHAN & HARGA</span><h2>Apa yang sedang Anda butuhkan sekarang?</h2><p>Bandingkan layanan tes, tahap calon promotor, atau program affiliate. Harga yang tampil berasal dari katalog dan diperiksa kembali sebelum transaksi.</p></div>
         <div className="journey-grid catalog-overview">
           <article className="journey-card forest"><header><span>LAYANAN TES</span><b>01</b></header><h2>Personal & Keluarga</h2><p>{publicProducts.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/tes-stifin">Lihat seluruh paket tes <span>→</span></Link></article>
           <article className="journey-card sand"><header><span>JALUR PROFESI</span><b>02</b></header><h2>Tahapan Promotor</h2><p>{promoterSteps.slice(1).map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/jadi-promotor">Lihat tahapan promotor <span>→</span></Link></article>
@@ -107,8 +107,8 @@ export default async function Home() {
       </section>}
 
       <section className="hub-final">
-        <div><span>LANGKAH PERTAMA</span><h2>Tidak harus memahami semuanya hari ini. Mulai saja dari pertanyaan yang sedang Anda bawa.</h2></div>
-        <div><Link className="public-cta big" href="/tes-stifin">Pilih layanan tes →</Link><Link href="/jadi-promotor">Kenali jalur promotor</Link></div>
+        <div><span>PILIH SATU LANGKAH</span><h2>Mulai dari tujuan Anda, lalu ikuti alur yang memang dibuat untuk tujuan itu.</h2></div>
+        <div><Link className="public-cta big" href="/tes-stifin">Bandingkan layanan tes →</Link><Link href="/jadi-promotor">Pelajari jalur calon promotor</Link></div>
       </section>
     </main>
     <PublicFooter />

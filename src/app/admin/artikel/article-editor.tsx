@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArticleContentType, ArticleInput, ContentRole, SearchIntent, StoredArticle } from '@/lib/article-store';
+import { filterAndPaginateArticles, type ArticleManagerStatus } from '@/lib/article-admin';
 import type { CommentStatus } from '@/lib/engagement-store';
 import type { KnowledgeSource } from '@/lib/knowledge-store';
+import ArticleAssistantPanel from './article-assistant-panel';
 
 type AdminComment = {
   id: number;
@@ -181,14 +183,15 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
   const [form, setForm] = useState<ArticleInput>(() => initialSelectedArticle ? articleToInput(initialSelectedArticle) : emptyArticle());
   const [editingId, setEditingId] = useState<number | null>(() => initialSelectedArticle && typeof initialSelectedArticle.id === 'number' ? initialSelectedArticle.id : null);
   const [query, setQuery] = useState('');
+  const [articleStatus, setArticleStatus] = useState<ArticleManagerStatus>('all');
+  const [articlePage, setArticlePage] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState(focusOptimization && initialSelectedArticle ? `Artikel “${initialSelectedArticle.title}” siap dioptimalkan dengan AI.` : '');
+  const [message, setMessage] = useState(focusOptimization && initialSelectedArticle ? `Artikel “${initialSelectedArticle.title}” siap masuk alur revisi AI.` : '');
   const [error, setError] = useState(initialError);
   const [panel, setPanel] = useState<'articles' | 'engagement'>('articles');
   const [showAi, setShowAi] = useState(false);
   const [aiForm, setAiForm] = useState(emptyAiForm);
   const [generating, setGenerating] = useState(false);
-  const [optimizingCurrent, setOptimizingCurrent] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');
   const [editorialNotes, setEditorialNotes] = useState('');
   const [engagement, setEngagement] = useState<EngagementData>(emptyEngagement);
@@ -229,12 +232,17 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
     }
   }, [databaseReady, router]);
 
-  const filtered = useMemo(() => articles.filter((article) => `${article.title} ${article.category}`.toLowerCase().includes(query.toLowerCase())), [articles, query]);
+  const articleList = useMemo(() => filterAndPaginateArticles(articles, {
+    query, status: articleStatus, page: articlePage,
+  }), [articles, articlePage, articleStatus, query]);
   const publishedCount = articles.filter((article) => article.status === 'published').length;
   const scheduledCount = articles.filter((article) => article.status === 'scheduled').length;
   const reviewCount = articles.filter((article) => article.status === 'review').length;
   const draftCount = articles.filter((article) => article.status === 'draft').length;
+  const archivedCount = articles.filter((article) => article.status === 'archived').length;
   const filteredComments = engagement.comments.filter((comment) => commentFilter === 'all' || comment.status === commentFilter);
+  const selectedStoredArticle = editingId === null ? undefined : articles.find((article) => article.id === editingId);
+  const assistantArticle = selectedStoredArticle ? { ...selectedStoredArticle, ...form } : undefined;
 
   function update<K extends keyof ArticleInput>(key: K, value: ArticleInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -363,71 +371,6 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
     }
   }
 
-  async function optimizeCurrentWithAi() {
-    if (!editingId || !databaseReady || !aiReady) {
-      setError('Pilih artikel tersimpan dan pastikan AI serta database sudah aktif.');
-      return;
-    }
-    if (!window.confirm('Buat pratinjau optimasi isi artikel ini? Hasil akan masuk ke form dan belum tersimpan sampai Anda menekan tombol Simpan.')) return;
-    setOptimizingCurrent(true);
-    setError('');
-    setMessage('');
-    setEditorialNotes('');
-    try {
-      const response = await fetch('/api/admin/ai/article', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: form.title,
-          audience: 'Pembaca Konsep STIFIn yang mencari jawaban edukatif, praktis, dan bertanggung jawab',
-          objective: 'Memperdalam artikel lama, memperjelas struktur jawaban, dan mempertahankan makna serta fakta yang sudah ada',
-          category: form.category,
-          keywords: form.secondaryKeywords.join(', '),
-          sourceNotes: `ARTIKEL LAMA YANG HARUS MENJADI DASAR. Jangan menambah klaim, pengalaman, angka, atau sumber yang tidak tersedia:\n\n${form.body.slice(0, 5400)}`,
-          primaryKeyword: form.primaryKeyword || form.title,
-          searchIntent: form.searchIntent,
-          topicCluster: form.topicCluster || form.category,
-          contentRole: form.contentRole,
-          experienceEvidence: form.experienceEvidence,
-          length: form.body.split(/\s+/).length >= 900 ? 'mendalam' : 'sedang',
-          tone: 'profesional',
-          contentType: form.contentType,
-          productName: form.productName,
-          productUrl: form.productUrl,
-          ctaLabel: form.ctaLabel,
-          variationNumber: 1,
-          variationTotal: 1,
-          avoidTitles: articles.filter((article) => article.slug !== form.slug).map((article) => article.title).slice(0, 20),
-          useKnowledge: form.sourceReferences.length > 0,
-          knowledgeSourceIds: [...new Set(form.sourceReferences.map((source) => source.sourceId))],
-        }),
-      });
-      if (response.status === 401) {
-        router.replace('/admin/login');
-        return;
-      }
-      const generated = await response.json();
-      if (!response.ok) throw new Error(generated.message || 'Optimasi AI gagal dibuat.');
-      setForm((current) => ({
-        ...current,
-        excerpt: generated.article.excerpt || current.excerpt,
-        body: generated.article.body || current.body,
-        takeaway: generated.article.takeaway || current.takeaway,
-        readTime: generated.article.readTime || current.readTime,
-        secondaryKeywords: generated.article.secondaryKeywords?.length
-          ? generated.article.secondaryKeywords : current.secondaryKeywords,
-        sourceReferences: Array.isArray(generated.sources) && generated.sources.length
-          ? generated.sources : current.sourceReferences,
-      }));
-      setEditorialNotes(generated.editorialNotes || 'Periksa kembali fakta, struktur, dan nada sebelum menyimpan.');
-      setMessage('Pratinjau optimasi AI sudah dimasukkan ke form. Periksa perubahan lalu klik Simpan jika disetujui.');
-    } catch (optimizationError) {
-      setError(optimizationError instanceof Error ? optimizationError.message : 'Optimasi AI gagal dibuat.');
-    } finally {
-      setOptimizingCurrent(false);
-    }
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -449,7 +392,8 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
       setMessage(form.status === 'published'
         ? 'Artikel berhasil diterbitkan.'
         : form.status === 'scheduled' ? 'Artikel berhasil dijadwalkan.'
-          : form.status === 'review' ? 'Artikel dikirim ke tahap review.' : 'Draf berhasil disimpan.');
+          : form.status === 'review' ? 'Artikel dikirim ke tahap review.'
+            : form.status === 'archived' ? 'Perubahan artikel arsip berhasil disimpan.' : 'Draf berhasil disimpan.');
       await loadArticles();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Artikel gagal disimpan.');
@@ -458,17 +402,21 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
     }
   }
 
-  async function remove(article: StoredArticle) {
-    if (typeof article.id !== 'number' || !window.confirm(`Hapus artikel “${article.title}”? Tindakan ini juga menghapus interaksi artikelnya.`)) return;
+  async function archive(article: StoredArticle) {
+    if (typeof article.id !== 'number' || article.status === 'archived' || !window.confirm(`Arsipkan artikel “${article.title}”? Artikel tidak akan tampil di website, tetapi data dan interaksinya tetap tersimpan.`)) return;
     setError('');
-    const response = await fetch(`/api/admin/articles/${article.id}`, { method: 'DELETE' });
+    const response = await fetch(`/api/admin/articles/${article.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...articleToInput(article), status: 'archived', scheduledAt: '' }),
+    });
     const result = await response.json();
     if (!response.ok) {
-      setError(result.message ?? 'Artikel gagal dihapus.');
+      setError(result.message ?? 'Artikel gagal diarsipkan.');
       return;
     }
-    if (editingId === article.id) startNew();
-    setMessage('Artikel berhasil dihapus.');
+    if (editingId === article.id) setForm(articleToInput(result.article));
+    setMessage('Artikel diarsipkan. Data dan interaksi tetap tersimpan.');
     await loadArticles();
   }
 
@@ -513,7 +461,7 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
   return <div className="article-admin">
     <header className="article-admin-header"><Link href="/"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority /></Link><nav><span>Portal Tim</span><b>Artikel & Edukasi</b></nav><div><Link href="/admin/intelligence">Content Intelligence</Link><Link href="/admin/produk">Produk & Harga</Link><Link href="/admin/pustaka">Pustaka STIFIn</Link><Link href="/edukasi" target="_blank">Lihat edukasi ↗</Link><button onClick={logout}>Keluar</button></div></header>
     <main>
-      <section className="article-admin-title"><div><span>DASHBOARD KONTEN</span><h1>{panel === 'articles' ? 'Kelola artikel edukasi' : 'Interaksi pembaca'}</h1><p>{panel === 'articles' ? 'Buat dengan AI, jadwalkan, tinjau, lalu terbitkan ke website.' : 'Pantau performa dan moderasi percakapan pembaca.'}</p></div><div className="article-admin-metrics">{panel === 'articles' ? <><span><small>Total</small><b>{articles.length}</b></span><span><small>Terbit</small><b>{publishedCount}</b></span><span><small>Review</small><b>{reviewCount}</b></span><span><small>Terjadwal</small><b>{scheduledCount}</b></span><span><small>Draf</small><b>{draftCount}</b></span></> : <><span><small>Dilihat</small><b>{engagement.metrics.views}</b></span><span><small>Bermanfaat</small><b>{engagement.metrics.likes}</b></span><span><small>Perlu diperiksa</small><b>{engagement.metrics.pendingComments}</b></span></>}</div></section>
+      <section className="article-admin-title"><div><span>DASHBOARD KONTEN</span><h1>{panel === 'articles' ? 'Kelola artikel edukasi' : 'Interaksi pembaca'}</h1><p>{panel === 'articles' ? 'Buat dengan AI, jadwalkan, tinjau, lalu terbitkan ke website.' : 'Pantau performa dan moderasi percakapan pembaca.'}</p></div><div className="article-admin-metrics">{panel === 'articles' ? <><span><small>Total</small><b>{articles.length}</b></span><span><small>Terbit</small><b>{publishedCount}</b></span><span><small>Review</small><b>{reviewCount}</b></span><span><small>Terjadwal</small><b>{scheduledCount}</b></span><span><small>Draf</small><b>{draftCount}</b></span><span><small>Arsip</small><b>{archivedCount}</b></span></> : <><span><small>Dilihat</small><b>{engagement.metrics.views}</b></span><span><small>Bermanfaat</small><b>{engagement.metrics.likes}</b></span><span><small>Perlu diperiksa</small><b>{engagement.metrics.pendingComments}</b></span></>}</div></section>
 
       {!databaseReady && <section className="admin-setup-warning"><b>Database belum dihubungkan</b><p>Tambahkan <code>DATABASE_URL</code> pada Environment Variables Coolify agar editor dan interaksi dapat disimpan.</p></section>}
       {message && <div className="admin-editor-message success">✓ {message}</div>}
@@ -543,15 +491,16 @@ export default function ArticleEditor({ databaseReady, aiReady, aiProvider, aiMo
         {editorialNotes && <section className="editorial-check"><b>Catatan pemeriksaan dari AI</b><p>{editorialNotes}</p></section>}
 
         <div className="article-admin-layout">
-          <aside className="article-manager"><div className="article-manager-head"><div><b>Daftar artikel</b><small>{articles.length} konten tersimpan</small></div><button onClick={startNew}>＋ Baru</button></div><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul atau kategori…" />
-            <div className="article-manager-list">{filtered.length ? filtered.map((article) => <article className={editingId === article.id ? 'active' : ''} key={article.id} onClick={() => edit(article)}><div><span className={`admin-tone ${article.tone}`}/><div><b>{article.title}</b><small>{article.category} · {article.status === 'scheduled' && article.scheduledAt ? formatAdminDate(article.scheduledAt) : article.publishedLabel}</small></div></div><footer><em className={article.status}>{article.status === 'published' ? 'Terbit' : article.status === 'scheduled' ? 'Terjadwal' : article.status === 'review' ? 'Review' : 'Draf'}</em><button onClick={(event) => { event.stopPropagation(); void remove(article); }} aria-label={`Hapus ${article.title}`}>×</button></footer></article>) : <p className="manager-empty">Belum ada artikel yang cocok.</p>}</div>
+          <aside className="article-manager"><div className="article-manager-head"><div><b>Daftar artikel</b><small>{articleList.total} dari {articles.length} konten</small></div><button onClick={startNew}>＋ Baru</button></div><div className="article-manager-filters"><input value={query} onChange={(event) => { setQuery(event.target.value); setArticlePage(1); }} placeholder="Cari judul atau kategori…" /><select value={articleStatus} onChange={(event) => { setArticleStatus(event.target.value as ArticleManagerStatus); setArticlePage(1); }} aria-label="Filter status artikel"><option value="all">Semua status</option><option value="draft">Draf</option><option value="review">Review</option><option value="scheduled">Terjadwal</option><option value="published">Terbit</option><option value="archived">Arsip</option></select></div>
+            <div className="article-manager-list">{articleList.items.length ? articleList.items.map((article) => <article className={editingId === article.id ? 'active' : ''} key={article.id} onClick={() => edit(article)}><div><span className={`admin-tone ${article.tone}`}/><div><b>{article.title}</b><small>{article.category} · {article.status === 'scheduled' && article.scheduledAt ? formatAdminDate(article.scheduledAt) : article.publishedLabel}</small></div></div><footer><em className={article.status}>{article.status === 'published' ? 'Terbit' : article.status === 'scheduled' ? 'Terjadwal' : article.status === 'review' ? 'Review' : article.status === 'archived' ? 'Arsip' : 'Draf'}</em>{article.status !== 'archived' && <button onClick={(event) => { event.stopPropagation(); void archive(article); }} aria-label={`Arsipkan ${article.title}`}>Arsipkan</button>}</footer></article>) : <p className="manager-empty">Belum ada artikel yang cocok.</p>}</div>
+            {articleList.pageCount > 1 && <nav className="article-manager-pagination" aria-label="Pagination artikel"><button type="button" disabled={articleList.page === 1} onClick={() => setArticlePage((page) => Math.max(1, page - 1))}>←</button><span>Halaman {articleList.page} dari {articleList.pageCount}</span><button type="button" disabled={articleList.page === articleList.pageCount} onClick={() => setArticlePage((page) => Math.min(articleList.pageCount, page + 1))}>→</button></nav>}
           </aside>
 
-          <form className="article-editor-form" onSubmit={submit}><div className="article-editor-head"><div><span>{editingId ? 'EDIT ARTIKEL' : 'ARTIKEL BARU'}</span><h2>{editingId ? 'Perbarui konten' : 'Tulis konten edukasi'}</h2></div><div className="editor-status"><button type="button" className={form.status === 'draft' ? 'active' : ''} onClick={() => update('status','draft')}>Draf</button><button type="button" className={form.status === 'review' ? 'active review' : ''} onClick={() => update('status','review')}>Review</button><button type="button" className={form.status === 'scheduled' ? 'active scheduled' : ''} onClick={() => setForm((current) => ({ ...current, status: 'scheduled', scheduledAt: current.scheduledAt || wibIsoFromLocal(defaultScheduleStart()) }))}>Jadwalkan</button><button type="button" className={form.status === 'published' ? 'active published' : ''} onClick={() => update('status','published')}>Terbitkan</button></div></div>
-            {editingId && <section className="article-ai-optimization-callout"><div><span>OPTIMASI ARTIKEL TERPILIH</span><b>Perdalam struktur dan isi dengan AI</b><small>Hasil masuk sebagai pratinjau. Bukti nyata dan reviewer tidak akan dibuat oleh AI.</small></div><button type="button" onClick={optimizeCurrentWithAi} disabled={optimizingCurrent || !aiReady || !databaseReady}>{optimizingCurrent ? 'Mengoptimalkan…' : '✨ Optimalkan dengan AI →'}</button></section>}
+          <form className="article-editor-form" onSubmit={submit}><div className="article-editor-head"><div><span>{editingId ? 'EDIT ARTIKEL' : 'ARTIKEL BARU'}</span><h2>{editingId ? 'Perbarui konten' : 'Tulis konten edukasi'}</h2></div><div className="editor-status"><button type="button" className={form.status === 'draft' ? 'active' : ''} onClick={() => update('status','draft')}>Draf</button><button type="button" className={form.status === 'review' ? 'active review' : ''} onClick={() => update('status','review')}>Review</button><button type="button" className={form.status === 'scheduled' ? 'active scheduled' : ''} onClick={() => setForm((current) => ({ ...current, status: 'scheduled', scheduledAt: current.scheduledAt || wibIsoFromLocal(defaultScheduleStart()) }))}>Jadwalkan</button><button type="button" className={form.status === 'published' ? 'active published' : ''} onClick={() => update('status','published')}>Terbitkan</button>{form.status === 'archived' && <button type="button" className="active archived" onClick={() => update('status','archived')}>Arsip</button>}</div></div>
+            {assistantArticle && <ArticleAssistantPanel article={assistantArticle} allArticles={articles} enabled={aiReady && databaseReady} onApplied={(savedArticle) => { setForm(articleToInput(savedArticle)); setEditorialNotes('Revisi AI tersimpan sebagai Review. Periksa fakta, bukti, reviewer, dan konflik sebelum menerbitkan.'); setMessage('Revisi tersimpan ke tahap Review dan belum diterbitkan.'); void loadArticles(); }} />}
             <div className="editor-grid"><label className="wide">Judul artikel<input value={form.title} onChange={(event) => { const title = event.target.value; update('title', title); if (!editingId) update('slug', slugify(title)); }} placeholder="Contoh: Cara Membangun Komunikasi yang Lebih Sadar" required /></label><label>Slug/alamat artikel<input value={form.slug} onChange={(event) => update('slug', slugify(event.target.value))} placeholder="alamat-artikel" required /></label><label>Kategori<select value={form.category} onChange={(event) => update('category', event.target.value)}>{categoryOptions.map((category) => <option key={category}>{category}</option>)}</select></label><label>Jenis artikel<select value={form.contentType} onChange={(event) => update('contentType', event.target.value as ArticleContentType)}>{(Object.keys(contentTypeLabels) as ArticleContentType[]).map((type) => <option key={type} value={type}>{contentTypeLabels[type]}</option>)}</select></label><label>Tanggal terbit<input type="date" value={form.publishedAt} onChange={(event) => update('publishedAt', event.target.value)} required /></label>{form.status === 'scheduled' && <label className="schedule-editor-field">Jadwal terbit (WIB)<input type="datetime-local" value={wibLocalFromIso(form.scheduledAt)} min={defaultScheduleStart()} onChange={(event) => { const scheduledAt = wibIsoFromLocal(event.target.value); setForm((current) => ({ ...current, scheduledAt, publishedAt: wibDateFromIso(scheduledAt) })); }} required /></label>}<label>Durasi baca<input value={form.readTime} onChange={(event) => update('readTime', event.target.value)} placeholder="5 menit baca" required /></label><label>Warna sampul<select value={form.tone} onChange={(event) => update('tone', event.target.value as ArticleInput['tone'])}><option value="forest">Hijau utama</option><option value="mint">Hijau muda</option><option value="leaf">Hijau daun</option><option value="sand">Cokelat hangat</option><option value="charcoal">Hijau gelap</option></select></label><label className="checkbox-label"><input type="checkbox" checked={form.featured} onChange={(event) => update('featured', event.target.checked)} /> Jadikan artikel pilihan</label>{form.contentType !== 'education' && <div className="editor-product-fields wide"><b>Produk SEJOLI</b><label>Nama produk<input value={form.productName} onChange={(event) => update('productName', event.target.value)} required /></label><label>URL produk/checkout<input type="url" value={form.productUrl} onChange={(event) => update('productUrl', event.target.value)} required /></label><label>Teks tombol<input value={form.ctaLabel} onChange={(event) => update('ctaLabel', event.target.value)} /></label>{form.contentType === 'affiliate' && <p>Artikel publik akan menampilkan keterangan bahwa tautan ini bersifat affiliate.</p>}</div>}<label className="wide">Ringkasan<textarea rows={3} value={form.excerpt} onChange={(event) => update('excerpt', event.target.value)} placeholder="Ringkasan singkat yang tampil pada kartu artikel." required /></label><label className="wide body-field">Isi artikel<textarea rows={18} value={form.body} onChange={(event) => update('body', event.target.value)} required /><small>Gunakan <code>## Judul bagian</code> untuk subjudul dan <code>- Poin</code> untuk daftar.</small></label><label className="wide">Inti artikel<textarea rows={3} value={form.takeaway} onChange={(event) => update('takeaway', event.target.value)} placeholder="Satu kesimpulan utama untuk pembaca." required /></label>{form.sourceReferences.length > 0 && <section className="editor-source-references wide"><header><b>Sumber pustaka yang dipakai</b><small>Hanya terlihat oleh admin.</small></header><div>{form.sourceReferences.map((source) => <a key={`${source.sourceId}-${source.pageNumber}`} href={`/api/admin/knowledge/${source.sourceId}/file`} target="_blank" rel="noreferrer"><span>{source.title}</span><small>Halaman {source.pageNumber} · {source.category}</small></a>)}</div></section>}</div>
-            <section className="content-intelligence-editor"><header><div><span>CONTENT INTELLIGENCE</span><h3>Intent, bukti, reviewer, dan hubungan artikel</h3></div><div className="content-intelligence-actions">{editingId && <button type="button" onClick={optimizeCurrentWithAi} disabled={optimizingCurrent || !aiReady || !databaseReady}>{optimizingCurrent ? 'Mengoptimalkan…' : '✨ Optimalkan isi dengan AI'}</button>}<Link href="/admin/intelligence">Buka audit lengkap →</Link></div></header><div className="intelligence-editor-grid"><label>Keyword utama<input value={form.primaryKeyword} onChange={(event) => update('primaryKeyword', event.target.value)} placeholder="Contoh: tes STIFIn untuk keluarga" /></label><label>Keyword sekunder<input value={form.secondaryKeywords.join(', ')} onChange={(event) => update('secondaryKeywords', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="komunikasi keluarga, mesin kecerdasan" /></label><label>Search intent<select value={form.searchIntent} onChange={(event) => update('searchIntent', event.target.value as SearchIntent)}><option value="informational">Informasional</option><option value="commercial">Pertimbangan layanan</option><option value="transactional">Transaksional</option><option value="navigational">Navigasional</option></select></label><label>Cluster topik<input value={form.topicCluster} onChange={(event) => update('topicCluster', event.target.value)} placeholder="Contoh: STIFIn untuk Keluarga" /></label><label>Peran konten<select value={form.contentRole} onChange={(event) => update('contentRole', event.target.value as ContentRole)}><option value="pillar">Pilar utama</option><option value="cluster">Artikel cluster</option><option value="supporting">Artikel pendukung</option></select></label><label>Tanggal review<input type="date" value={form.reviewedAt} onChange={(event) => update('reviewedAt', event.target.value)} /></label><label>Nama reviewer<input value={form.reviewerName} onChange={(event) => update('reviewerName', event.target.value)} placeholder="Nama pemeriksa manusia" /></label><label>Peran reviewer<input value={form.reviewerRole} onChange={(event) => update('reviewerRole', event.target.value)} placeholder="Contoh: Promotor STIFIn / Editor" /></label><label className="wide">Bukti atau pengalaman nyata<textarea rows={4} value={form.experienceEvidence} onChange={(event) => update('experienceEvidence', event.target.value)} placeholder="Tuliskan konteks kegiatan, lokasi, tanggal, atau pengalaman yang benar-benar terjadi. Hindari identitas dan data pribadi peserta." /></label><fieldset className="wide related-article-picker"><legend>Internal link terkait <small>pilih 2–6 artikel</small></legend><div>{articles.filter((article) => article.slug !== form.slug && article.status === 'published').map((article) => { const selected = form.relatedSlugs.includes(article.slug); return <label key={article.slug}><input type="checkbox" checked={selected} onChange={() => update('relatedSlugs', selected ? form.relatedSlugs.filter((slug) => slug !== article.slug) : [...form.relatedSlugs, article.slug].slice(0, 6))} /><span><b>{article.title}</b><small>{article.topicCluster || article.category}</small></span></label>; })}</div></fieldset></div></section>
-            <div className="article-editor-actions"><button type="button" onClick={startNew}>Bersihkan form</button>{editingId && form.status === 'published' && <Link href={`/edukasi/${form.slug}`} target="_blank">Lihat artikel ↗</Link>}<button className="save" type="submit" disabled={saving || !databaseReady}>{saving ? 'Menyimpan…' : form.status === 'published' ? 'Simpan & terbitkan →' : form.status === 'scheduled' ? 'Simpan jadwal →' : form.status === 'review' ? 'Kirim ke review →' : 'Simpan draf →'}</button></div>
+            <section className="content-intelligence-editor"><header><div><span>CONTENT INTELLIGENCE</span><h3>Intent, bukti, reviewer, dan hubungan artikel</h3></div><div className="content-intelligence-actions"><Link href="/admin/intelligence">Buka audit lengkap →</Link></div></header><div className="intelligence-editor-grid"><label>Keyword utama<input value={form.primaryKeyword} onChange={(event) => update('primaryKeyword', event.target.value)} placeholder="Contoh: tes STIFIn untuk keluarga" /></label><label>Keyword sekunder<input value={form.secondaryKeywords.join(', ')} onChange={(event) => update('secondaryKeywords', event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="komunikasi keluarga, mesin kecerdasan" /></label><label>Search intent<select value={form.searchIntent} onChange={(event) => update('searchIntent', event.target.value as SearchIntent)}><option value="informational">Informasional</option><option value="commercial">Pertimbangan layanan</option><option value="transactional">Transaksional</option><option value="navigational">Navigasional</option></select></label><label>Cluster topik<input value={form.topicCluster} onChange={(event) => update('topicCluster', event.target.value)} placeholder="Contoh: STIFIn untuk Keluarga" /></label><label>Peran konten<select value={form.contentRole} onChange={(event) => update('contentRole', event.target.value as ContentRole)}><option value="pillar">Pilar utama</option><option value="cluster">Artikel cluster</option><option value="supporting">Artikel pendukung</option></select></label><label>Tanggal review<input type="date" value={form.reviewedAt} onChange={(event) => update('reviewedAt', event.target.value)} /></label><label>Nama reviewer<input value={form.reviewerName} onChange={(event) => update('reviewerName', event.target.value)} placeholder="Nama pemeriksa manusia" /></label><label>Peran reviewer<input value={form.reviewerRole} onChange={(event) => update('reviewerRole', event.target.value)} placeholder="Contoh: Promotor STIFIn / Editor" /></label><label className="wide">Bukti atau pengalaman nyata<textarea rows={4} value={form.experienceEvidence} onChange={(event) => update('experienceEvidence', event.target.value)} placeholder="Tuliskan konteks kegiatan, lokasi, tanggal, atau pengalaman yang benar-benar terjadi. Hindari identitas dan data pribadi peserta." /></label><fieldset className="wide related-article-picker"><legend>Internal link terkait <small>pilih 2–6 artikel</small></legend><div>{articles.filter((article) => article.slug !== form.slug && article.status === 'published').map((article) => { const selected = form.relatedSlugs.includes(article.slug); return <label key={article.slug}><input type="checkbox" checked={selected} onChange={() => update('relatedSlugs', selected ? form.relatedSlugs.filter((slug) => slug !== article.slug) : [...form.relatedSlugs, article.slug].slice(0, 6))} /><span><b>{article.title}</b><small>{article.topicCluster || article.category}</small></span></label>; })}</div></fieldset></div></section>
+            <div className="article-editor-actions"><button type="button" onClick={startNew}>Bersihkan form</button>{editingId && form.status === 'published' && <Link href={`/edukasi/${form.slug}`} target="_blank">Lihat artikel ↗</Link>}<button className="save" type="submit" disabled={saving || !databaseReady}>{saving ? 'Menyimpan…' : form.status === 'published' ? 'Simpan & terbitkan →' : form.status === 'scheduled' ? 'Simpan jadwal →' : form.status === 'review' ? 'Kirim ke review →' : form.status === 'archived' ? 'Simpan arsip →' : 'Simpan draf →'}</button></div>
           </form>
         </div>
       </> : <section className="engagement-dashboard">

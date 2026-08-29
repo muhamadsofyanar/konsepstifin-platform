@@ -46,7 +46,7 @@ export const articles: Article[] = [
         paragraphs: ['Secara umum, perjalanan peserta berlangsung melalui tahapan berikut.'],
         bullets: [
           'Memilih layanan yang sesuai untuk personal, keluarga, atau kelompok.',
-          'Mengonfirmasi kota, promotor, serta jadwal yang tersedia.',
+          'Mengonfirmasi kota, promotor, serta jadwal layanan.',
           'Mengikuti pemindaian sidik jari secara offline.',
           'Menerima hasil dan pembahasan sesuai fasilitas pada paket yang dipilih.',
         ],

@@ -9,7 +9,7 @@ import ActivityGallery from '../activity-gallery';
 import JsonLd from '../json-ld';
 
 export const metadata: Metadata = {
-  title: 'Tes STIFIn Offline — Kenali Mesin Kecerdasan Anda',
+  title: 'Tes STIFIn Offline — Pilihan Layanan dan Prosesnya',
   description: 'Kenali Mesin Kecerdasan melalui pemindaian sepuluh sidik jari dan pembahasan langsung bersama promotor STIFIn.',
   alternates: { canonical: '/tes-stifin' },
   openGraph: {
@@ -52,7 +52,7 @@ export default async function TestLandingPage() {
     <PublicHeader active="test" announcement="Tes dilakukan offline · Pemesanan dan pembayaran diarahkan melalui SEJOLI" />
     <main>
       <section className="hero test-hero">
-        <div className="hero-copy"><div className="eyebrow">TES STIFIn · OFFLINE</div><h1>Ingin memahami hasil tes tanpa berhenti pada sebuah label?</h1><p>Mulai dari pemindaian sepuluh sidik jari, lalu bahas hasilnya bersama promotor agar Anda mempunyai bahasa awal untuk merefleksikan cara belajar, bekerja, dan berkomunikasi.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Lihat pilihan layanan <span>→</span></Link><Link href="#proses">Bagaimana proses tesnya?</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>berdasarkan konfirmasi</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
+        <div className="hero-copy"><div className="eyebrow">LAYANAN TES STIFIn · OFFLINE</div><h1>Sebelum memilih paket, pahami dulu proses dan batas penggunaan hasilnya.</h1><p>Tes dimulai dari pemindaian sepuluh sidik jari secara langsung. Hasil kemudian dibahas bersama promotor sebagai bahan refleksi untuk belajar, bekerja, dan berkomunikasi—bukan sebagai diagnosis atau keputusan tunggal.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Bandingkan layanan tes <span>→</span></Link><Link href="#proses">Lihat alur dari formulir hingga tes</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>berdasarkan konfirmasi</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
         <figure className="journey-hero-media test-hero-media">
           <Image src="/images/hero-tes-v3.webp" alt="Peserta Muslim menerima penjelasan langsung dari promotor perempuan" width={1586} height={992} sizes="(max-width: 900px) 90vw, 45vw" preload />
           <figcaption className="media-story-card test-story-card"><small>TIDAK BERHENTI DI HASIL</small><b>Dibahas bersama promotor</b><span>Offline · Personal · Lebih mudah dipahami</span></figcaption>
@@ -67,7 +67,7 @@ export default async function TestLandingPage() {
         <p className="story-bridge">Tes bukan jawaban untuk semua hal. Namun hasilnya dapat menjadi awal percakapan yang lebih jernih—tentang cara belajar, bekerja, dan saling memahami.</p>
       </section>
 
-      <section className="section test-benefits"><div className="section-heading"><span>YANG AKAN ANDA PAHAMI</span><h2>Bukan hanya mendapat hasil. Anda pulang dengan bahasa yang lebih mudah untuk memahami diri.</h2><p>Promotor membantu menjelaskan arti hasil dan menghubungkannya dengan situasi yang sedang Anda hadapi—dalam belajar, bekerja, berkomunikasi, maupun bertumbuh.</p></div><div className="benefit-grid">{[
+      <section className="section test-benefits"><div className="section-heading"><span>SETELAH HASIL DITERIMA</span><h2>Gunakan pembahasan untuk menyusun pertanyaan yang lebih tepat tentang diri Anda.</h2><p>Promotor membantu menjelaskan istilah pada hasil dan menghubungkannya dengan situasi yang Anda ceritakan—dalam belajar, bekerja, berkomunikasi, maupun bertumbuh.</p></div><div className="benefit-grid">{[
         ['01', 'Mesin Kecerdasan dominan', 'Kenali kecenderungan Sensing, Thinking, Intuiting, Feeling, atau Insting yang terdeteksi melalui tes.'],
         ['02', 'Cara alami Anda bergerak', 'Pahami pola dasar saat menyerap informasi, merespons keadaan, dan menjalankan aktivitas.'],
         ['03', 'Bahasa untuk memahami perbedaan', 'Lihat mengapa cara pasangan, anak, rekan, atau anggota tim tidak selalu sama dengan cara Anda.'],
@@ -84,7 +84,7 @@ export default async function TestLandingPage() {
 
       <section className="section faq-section"><div className="section-heading"><span>PERTANYAAN UMUM</span><h2>Sebelum Anda memesan.</h2></div><div className="faq-list">{testFaq.map(([question, answer], index) => <details key={question} open={index === 0}><summary>{question}<span>＋</span></summary><p>{answer}</p></details>)}</div></section>
 
-      <section className="final-cta"><div><span>MASIH PENASARAN DENGAN CARA ALAMI ANDA?</span><h2>Mulai dari satu tes, lalu bicarakan hasilnya dengan orang yang tepat.</h2><p>Pilih layanan dan kota pelaksanaan. Tim akan membantu mencocokkan promotor serta jadwal yang tersedia.</p></div><div><Link className="public-cta big" href="#layanan">Lihat pilihan layanan →</Link><Link href="/edukasi">Saya ingin belajar dulu</Link></div></section>
+      <section className="final-cta"><div><span>SIAP MEMBANDINGKAN PILIHAN?</span><h2>Pilih berdasarkan jumlah peserta dan kebutuhan pembahasan.</h2><p>Kirim kota pelaksanaan agar sistem dapat mencari promotor berdasarkan cakupan. Jadwal tetap berdasarkan konfirmasi.</p></div><div><Link className="public-cta big" href="#layanan">Bandingkan layanan tes →</Link><Link href="/edukasi">Baca materi sebelum memilih</Link></div></section>
     </main>
     <PublicFooter />
   </div>;

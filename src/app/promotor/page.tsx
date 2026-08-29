@@ -38,8 +38,8 @@ function hasDirectoryQuery(searchParams: DirectorySearchParams) {
 export function directoryMetadata(searchParams: DirectorySearchParams): Metadata {
   const filtered = hasDirectoryQuery(searchParams);
   return {
-    title: 'Jaringan Promotor STIFIn | Konsep STIFIn',
-    description: 'Cari promotor aktif berdasarkan nama, KodeID, cabang, provinsi, atau kabupaten/kota.',
+    title: 'Direktori Promotor STIFIn Aktif | Konsep STIFIn',
+    description: 'Cari data promotor aktif berdasarkan nama, KodeID, cabang, provinsi, atau kabupaten/kota. Jadwal berdasarkan konfirmasi.',
     alternates: { canonical: '/promotor' },
     robots: { index: !filtered, follow: true },
   };
@@ -97,8 +97,8 @@ export function PromoterDirectoryView({
     <nav className="region-breadcrumb"><Link href="/">Beranda</Link><span> / Jaringan Promotor</span></nav>
     <header className="region-hero promoter-directory-hero">
       <span>JARINGAN PROMOTOR STIFIN</span>
-      <h1>Temukan promotor aktif di wilayah Anda</h1>
-      <p>Cari berdasarkan nama, KodeID, cabang, provinsi, atau kabupaten/kota. Kontak pribadi tidak ditampilkan; jadwal dikoordinasikan setelah permintaan dikirim.</p>
+      <h1>Cari data promotor aktif tanpa membuka kontak pribadi.</h1>
+      <p>Gunakan nama, KodeID, cabang, provinsi, atau kabupaten/kota. Hasil menunjukkan identitas layanan yang aman; penugasan dan jadwal baru dikonfirmasi setelah permintaan dikirim.</p>
     </header>
 
     <section className="region-section promoter-directory-workspace">
@@ -116,7 +116,7 @@ export function PromoterDirectoryView({
           <input name="branch" defaultValue={query.branch} placeholder="BDG-CAB-1" />
         </label>
         <div className="promoter-search-actions">
-          <button type="submit">Cari promotor</button>
+          <button type="submit">Tampilkan hasil</button>
           <Link href="/promotor">Reset</Link>
         </div>
         <FilterOptions regions={regions} />
@@ -140,7 +140,7 @@ export function PromoterDirectoryView({
             <div><dt>Wilayah</dt><dd>{[promoter.area, promoter.province].filter(Boolean).join(', ') || 'Belum tersedia'}</dd></div>
           </dl>
           <small>Jadwal berdasarkan konfirmasi</small>
-          <Link className="promoter-card-action" href={`/tes-stifin?province=${encodeURIComponent(promoter.province)}&regency=${encodeURIComponent(promoter.area)}&promoter=${encodeURIComponent(promoter.code)}`}>Ajukan koordinasi tes →</Link>
+          <Link className="promoter-card-action" href={`/tes-stifin?province=${encodeURIComponent(promoter.province)}&regency=${encodeURIComponent(promoter.area)}&promoter=${encodeURIComponent(promoter.code)}`}>Ajukan kebutuhan tes →</Link>
         </article>)}
       </div> : !error ? <div className="promoter-directory-empty"><h3>Promotor belum ditemukan</h3><p>Ubah kata kunci atau hapus salah satu filter untuk memperluas hasil.</p></div> : null}
 

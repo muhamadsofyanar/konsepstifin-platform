@@ -7,7 +7,7 @@ import { faqItems } from '../site-config';
 import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const metadata: Metadata = {
-  title: 'Jadi Promotor STIFIn — Dari Manfaat Pribadi Menjadi Jalan Profesi',
+  title: 'Calon Promotor STIFIn — Peran, Tahap, dan Biaya',
   description: 'Kenali peran Promotor STIFIn dan ikuti tahap Preview, WSL 1, WSL 2, hingga aktivasi ID dan alat sesuai ketentuan.',
   alternates: { canonical: '/jadi-promotor' },
   openGraph: {
@@ -42,10 +42,10 @@ export default async function PromoterLandingPage() {
     : 0;
 
   return <div className="public-site journey-site promoter-landing">
-    <PublicHeader active="promoter" announcement="Dari memahami diri, mendampingi orang lain, hingga membangun layanan STIFIn" ctaHref="#tahapan" ctaLabel="Lihat tahapan" />
+    <PublicHeader active="promoter" announcement="Jalur calon promotor terpisah dari pemesanan layanan tes" ctaHref="#tahapan" ctaLabel="Bandingkan tahapan" />
     <main>
       <section className="promoter-hero">
-        <div><span className="eyebrow">JALUR CALON PROMOTOR STIFIn</span><h1>Pahami perannya sebelum Anda berkomitmen pada tahap belajar berikutnya.</h1><p>Promotor menjalankan tes, menjelaskan hasil, menjaga data peserta, dan merapikan layanan. Halaman ini membantu Anda melihat urutan tahap dan biaya yang tercatat di katalog.</p><div className="hub-actions"><Link className="public-cta big" href="#tahapan">Saya ingin tahu tahapannya →</Link><Link href="/affiliate">Belum siap? Pelajari affiliate</Link></div></div>
+        <div><span className="eyebrow">JALUR CALON PROMOTOR STIFIn</span><h1>Sebelum mendaftar, lihat pekerjaan, tahap belajar, dan komitmen biayanya.</h1><p>Promotor menjalankan tes, menjelaskan hasil, menjaga data peserta, serta mengelola tindak lanjut layanan. Bandingkan tahapannya lebih dulu; formulir di halaman ini masuk ke antrean konsultasi dan tidak menuju checkout layanan tes.</p><div className="hub-actions"><Link className="public-cta big" href="#tahapan">Bandingkan tahap calon promotor →</Link><Link href="/affiliate">Belum siap menjalankan tes? Lihat affiliate</Link></div></div>
         <figure className="journey-hero-media promoter-hero-media">
           <Image src="/images/hero-promotor-v3.webp" alt="Fasilitator Muslim Indonesia memandu kelompok belajar kecil" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 42vw" preload />
           <figcaption className="media-story-card promoter-story-card"><small>PETA PERJALANAN</small><b>Preview → WSL 1 → WSL 2</b><span>Lanjutkan ke ID & alat saat sudah siap</span></figcaption>
@@ -89,7 +89,7 @@ export default async function PromoterLandingPage() {
 
       <section className="section faq-section"><div className="section-heading"><span>PERTANYAAN UMUM</span><h2>Sebelum memilih jalur.</h2></div><div className="faq-list">{promoterFaq.map(([question, answer], index) => <details key={question} open={index === 0}><summary>{question}<span>＋</span></summary><p>{answer}</p></details>)}</div></section>
 
-      <section className="final-cta"><div><span>LANGKAH PERTAMA TIDAK HARUS BESAR</span><h2>Datang ke Preview, dengarkan penjelasannya, lalu putuskan dengan tenang.</h2><p>Anda akan mengenal peran, tahapan belajar, kebutuhan biaya, dan ketentuan terbaru sebelum menentukan langkah berikutnya.</p></div><div><PublicInterestAction leadType="promoter_candidate" captureLead className="public-cta big" linkKey="previewPromotor" label="Ikuti Preview →" service="Preview Calon Promotor" /><Link href="/edukasi">Pelajari STIFIn lebih dulu</Link></div></section>
+      <section className="final-cta"><div><span>MULAI DARI INFORMASI, BUKAN TRANSAKSI</span><h2>Minta penjelasan Preview dan tahapan berikutnya sebelum berkomitmen.</h2><p>Permintaan Anda masuk ke pipeline calon promotor. Tim menindaklanjuti peran, proses belajar, biaya, dan ketentuan yang berlaku tanpa mengarahkan ke checkout layanan tes.</p></div><div><PublicInterestAction leadType="promoter_candidate" captureLead className="public-cta big" linkKey="previewPromotor" label="Minta informasi Preview →" service="Preview Calon Promotor" /><Link href="/edukasi">Pelajari STIFIn lebih dulu</Link></div></section>
     </main>
     <PublicFooter />
   </div>;

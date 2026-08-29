@@ -1,6 +1,6 @@
 # Konsep STIFIn Platform
 
-Versi **0.5.0** adalah website Next.js untuk `konsepstifin.com`: direktori promotor nasional yang aman, dua funnel lead terpisah, halaman lokal berbasis bukti, dan dashboard operasional.
+Versi **0.5.1** adalah website Next.js untuk `konsepstifin.com`: direktori promotor nasional yang aman, dua funnel lead terpisah, halaman lokal berbasis bukti, dashboard operasional, serta alur editorial review-first.
 
 Source ini tidak mencakup dan tidak mengubah WordPress/SEJOLI di `app.konsepstifin.com`. Domain tersebut tetap menjadi tujuan checkout, member area, dan affiliate.
 
@@ -15,7 +15,18 @@ Source ini tidak mencakup dan tidak mengubah WordPress/SEJOLI di `app.konsepstif
 - Dashboard `/admin/leads` untuk pipeline, assignment, atribusi, pembayaran layanan tes, margin, catatan, dan riwayat.
 - Halaman `/tes-stifin/[kota]`, `/promotor-stifin/[kota]`, dan `/promotor/[slug-promotor]` dengan aturan index/noindex berbasis bukti.
 - Sitemap stabil yang hanya memuat wilayah indexable dan memakai waktu pembaruan sumber yang tersimpan.
-- Dashboard artikel, produk, pustaka, dan Content Intelligence yang telah ada tetap dipertahankan.
+- Asisten artikel satu klik yang menampilkan revisi sebelum–sesudah dan selalu menyimpan hasil ke status Review, bukan langsung terbit.
+- Daftar artikel admin dengan filter status, pagination 20 baris, sanitasi konten, dan arsip non-destruktif.
+
+## Perubahan produksi v0.5.1
+
+- Query idempotency lead kini cocok dengan partial unique index PostgreSQL, sehingga lead dapat disimpan tanpa error `ON CONFLICT`.
+- Error database internal tidak dikirim ke browser; pengunjung menerima pesan netral dan dapat mencoba kembali.
+- Lead Tes STIFIn yang berhasil langsung melanjutkan ke URL checkout terverifikasi di `app.konsepstifin.com`.
+- Lead calon promotor tetap masuk pipeline konsultasi dan tidak pernah masuk checkout layanan tes.
+- Entry point kedua funnel, copy publik seluruh route, serta pengelolaan artikel telah diperjelas.
+
+Setelah redeploy, uji satu pengiriman Tes STIFIn sampai redirect checkout dan satu pengiriman calon promotor sampai muncul di tab pipeline yang tepat. Jangan menganggap healthcheck saja cukup untuk membuktikan koneksi PostgreSQL serta alur form bekerja.
 
 ## Menjalankan secara lokal
 

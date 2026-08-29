@@ -14,6 +14,15 @@ async function resolveTestCheckout(productKey: string) {
   return product.checkoutUrl;
 }
 
+export function publicInterestErrorResponse(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Permintaan belum dapat disimpan.';
+  const status = /belum|perlu|minimal|valid|lengkap|pilih|persetujuan|sesuai|checkout/i.test(message) ? 400 : 500;
+  if (status === 500) console.error('Gagal menyimpan formulir minat.', message);
+  return NextResponse.json({
+    error: status === 400 ? message : 'Permintaan belum dapat disimpan. Silakan coba kembali.',
+  }, { status });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rate = checkRateLimit(request, 'public-interest', 8, 15 * 60 * 1000);
@@ -47,9 +56,6 @@ export async function POST(request: NextRequest) {
       ...(checkoutUrl ? { checkoutUrl } : {}),
     }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Permintaan belum dapat disimpan.';
-    const status = /belum|perlu|minimal|valid|lengkap|pilih|persetujuan|sesuai|checkout/i.test(message) ? 400 : 500;
-    if (status === 500) console.error('Gagal menyimpan formulir minat.', error);
-    return NextResponse.json({ error: message }, { status });
+    return publicInterestErrorResponse(error);
   }
 }

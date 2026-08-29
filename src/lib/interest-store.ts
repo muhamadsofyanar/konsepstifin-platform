@@ -460,7 +460,7 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
       ${match?.assignedPromoterCode ?? ''}, ${interest.leadType === 'promoter_candidate' ? '' : ''},
       ${match?.matchMethod ?? 'none'}, ${match?.matchedPromoterName ?? ''}, ${match?.matchedBranchCode ?? ''},
       ${transaction.json(candidates)}, ${idempotencyKey}
-    ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING *`;
+    ) ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING RETURNING *`;
     const rows = inserted.length
       ? inserted
       : await transaction`SELECT * FROM public_interest_leads WHERE idempotency_key=${idempotencyKey} LIMIT 1`;

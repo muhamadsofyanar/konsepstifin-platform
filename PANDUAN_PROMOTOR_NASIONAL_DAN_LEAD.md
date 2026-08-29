@@ -1,6 +1,6 @@
 # Panduan Promotor Nasional dan Lead
 
-Dokumen ini adalah runbook deployment dan operasi `konsepstifin.com` versi 0.5.0. Source WordPress/SEJOLI pada `app.konsepstifin.com` tidak termasuk ruang lingkup deployment ini.
+Dokumen ini adalah runbook deployment dan operasi `konsepstifin.com` versi 0.5.1. Source WordPress/SEJOLI pada `app.konsepstifin.com` tidak termasuk ruang lingkup deployment ini.
 
 ## Checklist fokus copy publik
 
@@ -172,6 +172,8 @@ Urutan aman:
 4. Tunggu healthcheck hijau.
 5. Jalankan smoke test berikut dari mesin yang dapat mengakses domain.
 
+Versi 0.5.1 memperbaiki inferensi partial unique index idempotency PostgreSQL. Tidak ada migrasi destruktif, tetapi backup tetap wajib karena pengujian form menyentuh database produksi.
+
 ```bash
 curl -fsS https://konsepstifin.com/api/health
 curl -fsS 'https://konsepstifin.com/api/promotor?page=1'
@@ -193,6 +195,8 @@ Smoke test browser:
 - `/admin/promotor` menampilkan status upstream lengkap.
 - Form Tes menyimpan lead, melakukan matching, lalu hanya menawarkan checkout domain app.
 - Form calon promotor menyimpan lead tanpa checkout.
+- Pengulangan request Tes dengan idempotency key yang sama tidak membuat lead duplikat.
+- Error penyimpanan tidak menampilkan SQL, nama constraint, atau detail PostgreSQL di browser.
 - `/admin/leads` memisahkan kedua tab dan statusnya.
 - Satu kota berbukti indexable; satu kota tanpa bukti noindex dan tidak ada di sitemap.
 - Tidak ada kontak pribadi promotor pada HTML atau JSON publik.

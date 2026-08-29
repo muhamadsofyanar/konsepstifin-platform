@@ -178,6 +178,9 @@ export default function PublicInterestAction({
     if (trackLead) window.fbq?.('track', 'Lead', { content_name: selectedService, content_category: effectiveLeadType });
     setResult(responseResult);
     setState('sent');
+    if (effectiveLeadType === 'test_service' && responseResult.checkoutUrl) {
+      navigate(responseResult.checkoutUrl);
+    }
   }
 
   const serviceOptions = effectiveLeadType === 'test_service' ? testServices : promoterServices;

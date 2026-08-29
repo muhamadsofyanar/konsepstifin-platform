@@ -33,8 +33,8 @@ export default function LocalCityPage({ data, intent }: { data: LocalPageData; i
     <header className="region-hero">
       <span>{isTest ? 'LAYANAN TES BERDASARKAN WILAYAH' : 'JARINGAN PROMOTOR AKTIF'}</span>
       <h1>{title}</h1>
-      <p>{isTest ? `Mulai dari kebutuhan Anda, lalu tim membantu mencocokkan promotor dan mengonfirmasi jadwal layanan di ${data.regency.name}.` : `Lihat promotor aktif dengan cakupan ${data.regency.name}. Kontak pribadi tidak ditampilkan dan jadwal dikoordinasikan setelah permintaan dikirim.`}</p>
-      <PublicInterestAction leadType="test_service" captureLead linkKey="tesPersonal" label={isTest ? 'Ajukan layanan tes →' : 'Minta koordinasi promotor →'} service="Tes STIFIn Personal" className="public-cta big" provinceCode={data.province.code} provinceName={data.province.name} regencyCode={data.regency.code} regencyName={data.regency.name} />
+      <p>{isTest ? `Bandingkan layanan, kirim kebutuhan, lalu sistem mencari promotor berdasarkan cakupan ${data.regency.name}. Jadwal dan lokasi pertemuan tetap berdasarkan konfirmasi.` : `Periksa promotor aktif yang mempunyai cakupan ${data.regency.name}. Kontak pribadi tidak ditampilkan; kirim kebutuhan tes untuk memulai pencocokan dan konfirmasi jadwal.`}</p>
+      <PublicInterestAction leadType="test_service" captureLead linkKey="tesPersonal" label={isTest ? 'Ajukan kebutuhan tes →' : 'Ajukan kebutuhan kepada promotor →'} service="Tes STIFIn Personal" className="public-cta big" provinceCode={data.province.code} provinceName={data.province.name} regencyCode={data.regency.code} regencyName={data.regency.name} />
     </header>
 
     <section className="region-section local-proof">
@@ -54,6 +54,6 @@ export default function LocalCityPage({ data, intent }: { data: LocalPageData; i
     ]).map(([number, heading, body]) => <article key={number}><b>{number}</b><h3>{heading}</h3><p>{body}</p></article>)}</div></section>
 
     <section className="region-section region-faq"><span>PERTANYAAN UMUM</span><h2>Informasi untuk {data.regency.name}</h2><div>{faqs.map((faq) => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></section>
-    <section className="region-section region-cta"><h2>Butuh bantuan menentukan layanan?</h2><p>Tim akan mencatat kebutuhan, mencocokkan cakupan, dan membantu konfirmasi langkah berikutnya.</p><PublicInterestAction leadType="test_service" captureLead linkKey="tesPersonal" label="Kirim kebutuhan →" service="Bantuan memilih layanan STIFIn" className="dark-button" provinceCode={data.province.code} provinceName={data.province.name} regencyCode={data.regency.code} regencyName={data.regency.name} /></section>
+    <section className="region-section region-cta"><h2>Belum yakin paket mana yang sesuai?</h2><p>Sampaikan jumlah peserta, kota, dan kebutuhan pembahasan. Tim mencatat permintaan dan membantu pencocokan tanpa menjanjikan jadwal sebelum promotor mengonfirmasi.</p><PublicInterestAction leadType="test_service" captureLead linkKey="tesPersonal" label="Minta bantuan memilih layanan →" service="Bantuan memilih layanan STIFIn" className="dark-button" provinceCode={data.province.code} provinceName={data.province.name} regencyCode={data.regency.code} regencyName={data.regency.name} /></section>
   </main>;
 }
