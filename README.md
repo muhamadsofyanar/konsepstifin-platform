@@ -1,5 +1,50 @@
 # Konsep STIFIn — Paket Implementasi 01: Access Policy
 
+## Status terbaru — Log 011, 14 September 2026
+
+Paket diperbarui dengan `src/lib/identity/session.ts` dan `tests/session.test.mjs`.
+Resolver menerima token opaque 64 karakter hex, menghitung SHA-256 untuk pencarian,
+memeriksa masa berlaku/pencabutan sesi serta akun aktif, lalu membentuk principal
+dari data server. Data peran dibaca ulang, bukan dipercaya dari cookie. Kegagalan
+storage diteruskan sebagai error; integrasi wajib menolak akses tanpa fallback admin.
+
+Hasil aktual terbaru: **45 tes unit lulus, 0 gagal** (29 policy + 16 sesi).
+Jalankan seluruhnya dengan `node --test tests/*.test.mjs` pada Node 24.
+Tes sesi ditulis sebelum implementasi, dijalankan terhadap stub yang mengembalikan
+null (3 gagal, 13 lulus), lalu dijalankan kembali setelah implementasi (16 lulus).
+Tes penolakan yang sudah lulus pada stub bukan bukti individual red-green.
+
+### Batas implementasi yang harus dipahami AI berikutnya
+
+- `SessionReader` adalah kontrak adapter, BELUM adapter PostgreSQL. Tes memakai
+  repository double deterministik, bukan database sungguhan.
+- Belum ada penerbitan token, penyimpanan akun/password, login/logout, aktivasi,
+  reset password, cookie, CSRF, migrasi SQL atau query CRM scoped.
+- `expiresAt`/`revokedAt` memakai epoch UTC milidetik. Adapter wajib mengonversi
+  timestamp database, membaca akun/peran terkini, dan tidak menyimpan token mentah.
+- Integrasi login harus menghasilkan token acak kriptografis 32 byte menjadi hex;
+  jangan menggunakan token fixture tes. Penerbitan sesi hanya setelah autentikasi.
+- Jangan memasukkan resolver ini ke client bundle. Impor tipe `.ts` memerlukan
+  pemeriksaan konfigurasi TypeScript saat integrasi; tes Node bukan typecheck.
+- Belum menjalankan typecheck/lint/build Next.js, pengujian SQL atau browser.
+- Fase 1 masih parsial dan Fase 2 belum selesai. Tidak ada perubahan produksi.
+
+### Urutan kelanjutan konkret
+
+1. Siapkan dependensi source Next.js dan database khusus tes; baca dokumentasi
+   lokal Next.js sesuai AGENTS.md sebelum perubahan framework.
+2. Buat migrasi aditif akun/peran/pemetaan promotor/sesi dan adapter PostgreSQL
+   untuk SessionReader. Uji expiry, revocation, deactivate dan role change di DB.
+3. Implementasikan penerbitan sesi setelah verifikasi password, logout/revoke,
+   cookie HttpOnly/Secure, perlindungan CSRF dan rate limit bersama.
+4. Integrasikan principal ke query daftar/count/detail CRM dengan scope pada SQL,
+   bukan filter browser; mutasi harus memakai transaksi, locking dan audit.
+5. Uji lintas promotor, pagination >500 lead, admin legacy dan halaman publik.
+
+Bagian di bawah dan master handoff merupakan riwayat tahap sebelumnya; Log 011
+ini menjadi rujukan status implementasi terbaru. Jangan menganggap rencana telah
+diimplementasikan. Tidak perlu mengulang pertanyaan keputusan bisnis.
+
 Status: modul TypeScript murni sudah dibuat dan diuji, BELUM terintegrasi ke Next.js.
 Ini paket tambahan untuk developer/AI, bukan ZIP website lengkap dan bukan plugin WordPress.
 
