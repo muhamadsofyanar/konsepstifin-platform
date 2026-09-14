@@ -21,7 +21,7 @@ export default function LoginForm() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message ?? 'Login gagal.');
-      router.replace('/admin/artikel');
+      router.replace('/admin/leads');
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Login gagal.');
@@ -37,4 +37,3 @@ export default function LoginForm() {
     <button type="submit" disabled={loading}>{loading ? 'Memeriksa…' : 'Masuk ke dashboard →'}</button>
   </form>;
 }
-

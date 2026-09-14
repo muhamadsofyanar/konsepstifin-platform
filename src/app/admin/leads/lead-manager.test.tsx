@@ -74,9 +74,20 @@ const promoterLead = lead({
 describe('LeadManager', () => {
   afterEach(() => cleanup());
 
+  it('memisahkan klien selesai dan promotor jaringan dari calon', async () => {
+    render(<LeadManager databaseReady initialLeads={[testLead, promoterLead, lead({ id: 50, name: 'Klien Selesai', status: 'selesai' }), lead({ ...promoterLead, id: 51, name: 'Promotor Aktif', status: 'selesai' })]} initialError="" />);
+    expect(screen.queryByText('Klien Selesai')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: /^Klien / }));
+    expect(screen.getByText('Klien Selesai')).toBeInTheDocument();
+    expect(screen.queryByText('Budi Tes')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: /Promotor Jaringan/ }));
+    expect(screen.getByText('Promotor Aktif')).toBeInTheDocument();
+    expect(screen.queryByText('Calon WSL')).not.toBeInTheDocument();
+  });
+
   it('memisahkan tab dan pilihan status untuk kedua pipeline', async () => {
     render(<LeadManager databaseReady initialLeads={[testLead, promoterLead]} initialError="" initialHistories={{ 43: [] }} />);
-    expect(screen.getByRole('tab', { name: /Tes/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Calon Klien/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByText('Calon WSL')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('tab', { name: /Calon Promotor/ }));

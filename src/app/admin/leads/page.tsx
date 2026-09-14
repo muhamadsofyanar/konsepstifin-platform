@@ -4,7 +4,7 @@ import { databaseConfigured } from '@/lib/article-store';
 import { getLeads } from '@/lib/interest-store';
 import LeadManager from './lead-manager';
 
-export const metadata = { title: 'Koordinasi Lead | Konsep STIFIn' };
+export const metadata = { title: 'Klien & Promotor | Konsep STIFIn' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminLeadsPage() {

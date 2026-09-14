@@ -29,10 +29,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const body = await request.json() as Record<string, unknown>;
     const lead = await updateLead(id, {
+      name: body.name == null ? undefined : String(body.name),
+      phone: body.phone == null ? undefined : String(body.phone),
+      email: body.email == null ? undefined : String(body.email),
+      city: body.city == null ? undefined : String(body.city),
       status: String(body.status ?? '') as LeadStatus,
       assignedPromoterCode: body.assignedPromoterCode == null ? undefined : String(body.assignedPromoterCode),
       pic: body.pic == null ? undefined : String(body.pic),
-      scheduledAt: body.scheduledAt ? String(body.scheduledAt) : null,
+      scheduledAt: body.scheduledAt === undefined ? undefined : body.scheduledAt ? String(body.scheduledAt) : null,
       internalNotes: body.internalNotes == null ? undefined : String(body.internalNotes),
       paymentStatus: body.paymentStatus == null ? undefined : String(body.paymentStatus) as PaymentStatus,
       sejoliOrderId: body.sejoliOrderId == null ? undefined : String(body.sejoliOrderId),

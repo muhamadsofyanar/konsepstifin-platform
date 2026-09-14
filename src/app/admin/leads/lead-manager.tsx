@@ -9,6 +9,8 @@ import {
   type PaymentStatus,
 } from '@/lib/lead-domain';
 import type { LeadHistoryEntry, StoredLead } from '@/lib/interest-store';
+import { crmGroup, crmGroups, crmLabels, crmType, type CrmGroup } from '@/lib/crm-domain';
+import ContactCreate from './contact-create';
 
 const labels: Record<LeadStatus, string> = {
   baru: 'Baru', mencari_promotor: 'Mencari promotor', ditawarkan: 'Ditawarkan', diklaim: 'Diklaim',
@@ -58,7 +60,9 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
   initialHistories?: Record<number, LeadHistoryEntry[]>;
 }) {
   const [leads, setLeads] = useState(initialLeads);
-  const [activeType, setActiveType] = useState<LeadType>('test_service');
+  const [activeGroup, setActiveGroup] = useState<CrmGroup>('prospect');
+  const activeType = crmType(activeGroup);
+  const [creating, setCreating] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [draft, setDraft] = useState<StoredLead | null>(null);
@@ -66,7 +70,7 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
   const [error, setError] = useState(initialError);
   const [saving, setSaving] = useState(false);
 
-  const typeLeads = useMemo(() => leads.filter((lead) => lead.leadType === activeType), [activeType, leads]);
+  const typeLeads = useMemo(() => leads.filter((lead) => crmGroup(lead) === activeGroup), [activeGroup, leads]);
   const shown = useMemo(() => typeLeads.filter((lead) => {
     const haystack = `${lead.id} ${lead.name} ${lead.phone} ${lead.email} ${lead.assignedPromoterCode} ${lead.pic}`.toLocaleLowerCase('id-ID');
     const created = lead.createdAt.slice(0, 10);
@@ -90,8 +94,8 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((current) => ({ ...current, [key]: value, ...(key === 'province' ? { regency: '' } : {}) }));
   }
-  function selectType(type: LeadType) {
-    setActiveType(type); setFilters(emptyFilters); setSelectedId(null); setDraft(null);
+  function selectGroup(group: CrmGroup) {
+    setActiveGroup(group); setFilters(emptyFilters); setSelectedId(null); setDraft(null);
   }
   async function openLead(lead: StoredLead) {
     setSelectedId(lead.id); setDraft({ ...lead }); setError('');
@@ -112,6 +116,7 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
     if (!draft) return;
     setSaving(true); setError('');
     const payload = {
+      name: draft.name, phone: draft.phone, email: draft.email, city: draft.city,
       status: draft.status, assignedPromoterCode: draft.assignedPromoterCode, pic: draft.pic,
       scheduledAt: draft.scheduledAt, internalNotes: draft.internalNotes, paymentStatus: draft.paymentStatus,
       sejoliOrderId: draft.sejoliOrderId, saleAmount: draft.saleAmount,
@@ -123,9 +128,18 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
       });
       const result = await response.json() as { lead?: StoredLead; error?: string };
       if (!response.ok) throw new Error(result.error || 'Perubahan belum tersimpan.');
-      const updated = result.lead || { ...draft, margin: draft.saleAmount - draft.promoterPayout - draft.otherCost };
+      if (!result.lead) throw new Error('Respons penyimpanan tidak lengkap. Muat ulang sebelum mencoba lagi.');
+      const updated = result.lead;
       setLeads((items) => items.map((item) => item.id === updated.id ? updated : item));
       setDraft(updated);
+      setActiveGroup(crmGroup(updated));
+      setFilters(emptyFilters);
+      setHistories(current => { const next = { ...current }; delete next[updated.id]; return next; });
+      try {
+        const historyResponse = await fetch(`/api/admin/leads/${updated.id}`);
+        const historyResult = await historyResponse.json();
+        if (historyResponse.ok && historyResult.history) setHistories(current => ({ ...current, [updated.id]: historyResult.history }));
+      } catch { /* Riwayat dapat dimuat ulang saat detail dibuka lagi. */ }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Perubahan belum tersimpan.');
     } finally { setSaving(false); }
@@ -136,14 +150,19 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
   const filteredRegencies = typeLeads.filter((lead) => !filters.province || lead.provinceName === filters.province);
 
   return <main className="lead-admin">
-    <header><div><span>PUSAT LAYANAN NASIONAL</span><h1>Pipeline lead</h1><p>Dua funnel terpisah untuk layanan tes dan pengembangan calon promotor.</p></div><nav><a href="/admin/promotor">Promotor</a><a href="/admin/artikel">Artikel</a></nav></header>
+    <header><div><span>PORTAL TIM · CRM</span><h1>Klien & Promotor</h1><p>Kelola relasi, tindak lanjut, dan perkembangan jaringan dalam satu dashboard.</p></div><nav><a href="/admin/promotor">Direktori nasional</a><a href="/admin/artikel">Artikel & AI</a><a href="https://app.konsepstifin.com/member-area/" target="_blank" rel="noreferrer">Transaksi Sejoli ↗</a></nav></header>
     {!databaseReady && <p className="interest-error">DATABASE_URL belum dikonfigurasi.</p>}
     {error && <p className="interest-error" role="alert">{error}</p>}
 
     <div className="lead-tabs" role="tablist" aria-label="Jenis pipeline">
-      <button role="tab" aria-selected={activeType === 'test_service'} onClick={() => selectType('test_service')}>Tes STIFIn <b>{leads.filter((lead) => lead.leadType === 'test_service').length}</b></button>
-      <button role="tab" aria-selected={activeType === 'promoter_candidate'} onClick={() => selectType('promoter_candidate')}>Calon Promotor <b>{leads.filter((lead) => lead.leadType === 'promoter_candidate').length}</b></button>
+      {crmGroups.map(group => <button key={group} role="tab" aria-selected={activeGroup === group} onClick={() => selectGroup(group)}>{crmLabels[group]} <b>{leads.filter(lead => crmGroup(lead) === group).length}</b></button>)}
     </div>
+    <div className="crm-toolbar"><p>Klien = tes selesai. Promotor Jaringan = proses aktivasi selesai. Status pembayaran dicatat terpisah dan belum tersinkron otomatis dengan Sejoli.</p><button type="button" disabled={!databaseReady} onClick={() => setCreating(true)}>+ Tambah data</button></div>
+    {leads.length >= 500 && <p className="crm-toolbar">Menampilkan maksimal 500 data terbaru; ringkasan dan pencarian hanya mencakup data yang dimuat.</p>}
+    {creating && <ContactCreate onClose={() => setCreating(false)} onCreated={lead => {
+      setLeads(current => [lead, ...current.filter(item => item.id !== lead.id)]);
+      selectGroup(crmGroup(lead)); setCreating(false); void openLead(lead);
+    }} />}
 
     <section className="lead-metrics" aria-label="Ringkasan pipeline">
       <article><b>{metrics.baru}</b><span>Baru</span></article><article className={metrics.terlambat ? 'warning' : ''}><b>{metrics.terlambat}</b><span>Lewat SLA</span></article>
@@ -172,6 +191,12 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
       {draft && <aside className="lead-detail" aria-label={`Detail Ref. KSF-${draft.id}`}>
         <div className="lead-detail-head"><div><small>Ref. KSF-{draft.id}</small><h2>{draft.name}</h2><p>{draft.phone}{draft.email ? ` · ${draft.email}` : ''}</p></div><button type="button" aria-label="Tutup detail" onClick={() => { setSelectedId(null); setDraft(null); }}>×</button></div>
         <section className="lead-detail-section"><h3>Pipeline dan penanggung jawab</h3>
+          <label>Nama lengkap<input value={draft.name} onChange={event => updateDraft('name', event.target.value)} /></label>
+          <label>Nomor WhatsApp<input value={draft.phone} onChange={event => updateDraft('phone', event.target.value)} /></label>
+          <label>Email<input type="email" value={draft.email} onChange={event => updateDraft('email', event.target.value)} /></label>
+          <label>Domisili<input value={draft.city} onChange={event => updateDraft('city', event.target.value)} /></label>
+          <p className="lead-note">Catatan awal: {draft.notes || '—'}</p>
+          <p className="lead-note">Status Selesai memindahkan data ke {draft.leadType === 'test_service' ? 'Klien' : 'Promotor Jaringan'}. Gunakan Ditutup untuk prospek yang tidak berlanjut. Perubahan domisili menghapus kode wilayah lama; periksa kembali penugasan promotor.</p>
           <label>Status<select value={draft.status} onChange={(event) => updateDraft('status', event.target.value as LeadStatus)}>{statusesFor(draft.leadType).map((status) => <option key={status} value={status}>{labels[status]}</option>)}</select></label>
           {draft.leadType === 'test_service' ? <><label>Promotor ditugaskan<input value={draft.assignedPromoterCode} onChange={(event) => updateDraft('assignedPromoterCode', event.target.value)} /></label><label>Jadwal<input type="datetime-local" value={asDateInput(draft.scheduledAt)} onChange={(event) => updateDraft('scheduledAt', event.target.value ? new Date(event.target.value).toISOString() : null)} /></label><div className="lead-candidates"><b>Kandidat hasil matching</b><small>Metode: {draft.matchMethod} · Cabang: {draft.matchedBranchCode || '—'}</small>{draft.promoterCandidates.length ? <ul>{draft.promoterCandidates.map((candidate) => <li key={candidate.code}><strong>{candidate.name}</strong><span>{candidate.code} · {candidate.branchCode} · {candidate.area}</span><button type="button" onClick={() => updateDraft('assignedPromoterCode', candidate.code)}>Tugaskan</button></li>)}</ul> : <p>Belum ada kandidat.</p>}</div></> : <><label>PIC<input value={draft.pic} onChange={(event) => updateDraft('pic', event.target.value)} /></label><p className="lead-note">Funnel calon promotor tidak masuk checkout layanan tes.</p></>}
         </section>

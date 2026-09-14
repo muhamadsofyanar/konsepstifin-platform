@@ -107,6 +107,7 @@ export type LeadMatchSnapshot = {
 };
 
 export type CreateInterestLeadCommand = {
+  actor?: string;
   interest: InterestInput;
   idempotencyKey: string;
   status?: LeadStatus;
@@ -114,6 +115,10 @@ export type CreateInterestLeadCommand = {
 };
 
 export type LeadAdminUpdate = {
+  name?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
   leadType: LeadType;
   status: LeadStatus;
   assignedPromoterCode?: string;
@@ -272,6 +277,7 @@ export function validateLeadAdminUpdate(value: unknown): LeadAdminUpdate {
   return {
     leadType,
     status,
+    ...validateContactUpdate(data),
     assignedPromoterCode: compact(data.assignedPromoterCode, 80),
     pic: compact(data.pic, 120),
     scheduledAt,
@@ -281,7 +287,28 @@ export function validateLeadAdminUpdate(value: unknown): LeadAdminUpdate {
     saleAmount: nonNegativeNumber(data.saleAmount, 'Nilai penjualan'),
     promoterPayout: nonNegativeNumber(data.promoterPayout, 'Bagian promotor'),
     otherCost: nonNegativeNumber(data.otherCost, 'Biaya lain'),
-  };
+};
+}
+
+export function validateContactUpdate(data: Record<string, unknown>) {
+  const contact: { name?: string; phone?: string; email?: string; city?: string } = {};
+  if (data.name !== undefined) {
+    contact.name = compact(data.name, 120);
+    if (contact.name.length < 3) throw new Error('Nama lengkap minimal 3 karakter.');
+  }
+  if (data.phone !== undefined) {
+    contact.phone = normalizePhone(data.phone);
+    if (!/^\d{10,15}$/.test(contact.phone)) throw new Error('Nomor WhatsApp belum valid.');
+  }
+  if (data.email !== undefined) {
+    contact.email = compact(data.email, 160).toLowerCase();
+    if (contact.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) throw new Error('Email belum valid.');
+  }
+  if (data.city !== undefined) {
+    contact.city = compact(data.city, 100);
+    if (contact.city.length < 2) throw new Error('Domisili perlu diisi.');
+  }
+  return contact;
 }
 
 export async function initializeInterestSchema() {
@@ -468,7 +495,7 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
     if (inserted.length) {
       await transaction`INSERT INTO lead_status_history (
         lead_id, old_status, new_status, note, actor, event_type, details
-      ) VALUES (${rows[0].id}, NULL, ${status}, 'Lead dibuat dari formulir publik', 'system', 'created', ${transaction.json({ leadType: interest.leadType, productKey: interest.productKey })})`;
+      ) VALUES (${rows[0].id}, NULL, ${status}, ${command.actor ? 'Data dibuat manual oleh admin; persetujuan dikonfirmasi admin' : 'Lead dibuat dari formulir publik'}, ${command.actor ? compact(command.actor, 160) : 'system'}, 'created', ${transaction.json({ leadType: interest.leadType, productKey: interest.productKey })})`;
     }
     return mapLead(rows[0] as Record<string, unknown>);
   });
@@ -530,8 +557,12 @@ export async function updateLead(id: number, input: Omit<LeadAdminUpdate, 'leadT
   if (!Number.isInteger(id) || id < 1) throw new Error('Perubahan lead tidak valid.');
   const current = await getLeadById(id);
   if (!current) throw new Error('Lead tidak ditemukan.');
-  const update = validateLeadAdminUpdate({ ...input, leadType: current.leadType });
+  const update = validateLeadAdminUpdate({ ...current, ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)), leadType: current.leadType });
   const details = Object.fromEntries(Object.entries({
+    name: changed(current.name, update.name),
+    phone: changed(current.phone, update.phone),
+    email: changed(current.email, update.email),
+    city: changed(current.city, update.city),
     status: changed(current.status, update.status),
     assignedPromoterCode: changed(current.assignedPromoterCode, update.assignedPromoterCode || ''),
     pic: changed(current.pic, update.pic || ''),
@@ -546,6 +577,10 @@ export async function updateLead(id: number, input: Omit<LeadAdminUpdate, 'leadT
   const sql = getDatabaseClient();
   await sql.begin(async (transaction) => {
     await transaction`UPDATE public_interest_leads SET
+      name=${update.name ?? current.name}, phone=${update.phone ?? current.phone}, email=${update.email ?? current.email},
+      city=${update.city ?? current.city},
+      province_code=${update.city !== current.city ? '' : current.provinceCode}, province_name=${update.city !== current.city ? '' : current.provinceName},
+      regency_code=${update.city !== current.city ? '' : current.regencyCode}, regency_name=${update.city !== current.city ? '' : current.regencyName},
       status=${update.status}, assigned_promoter_code=${update.assignedPromoterCode || ''}, pic=${update.pic || ''},
       scheduled_at=${update.scheduledAt || null}, internal_notes=${update.internalNotes || ''},
       payment_status=${update.paymentStatus || 'belum_dicek'}, sejoli_order_id=${update.sejoliOrderId || ''},
