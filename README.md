@@ -1,90 +1,45 @@
-# Konsep STIFIn Platform
+# Konsep STIFIn — Paket Implementasi 01: Access Policy
 
-Versi **0.5.1** adalah website Next.js untuk `konsepstifin.com`: direktori promotor nasional yang aman, dua funnel lead terpisah, halaman lokal berbasis bukti, dashboard operasional, serta alur editorial review-first.
+Status: modul TypeScript murni sudah dibuat dan diuji, BELUM terintegrasi ke Next.js.
+Ini paket tambahan untuk developer/AI, bukan ZIP website lengkap dan bukan plugin WordPress.
 
-Source ini tidak mencakup dan tidak mengubah WordPress/SEJOLI di `app.konsepstifin.com`. Domain tersebut tetap menjadi tujuan checkout, member area, dan affiliate.
+## Isi
 
-## Fitur utama
+- `src/lib/identity/access-policy.ts`: resolver scope, pemeriksaan lead, proyeksi field aman, validasi perubahan promotor.
+- `tests/access.test.mjs`: 29 tes memakai runner bawaan Node, tanpa dependensi eksternal.
+- `KONSEPSTIFIN_MASTER_ROADMAP_AI_HANDOFF.md`: salinan konteks sebelum paket implementasi ini. Catatan status di README ini lebih baru.
 
-- Direktori `/promotor` dengan pencarian nama/KodeID, filter wilayah/cabang, pagination 24 kartu, dan tanpa kontak pribadi.
-- Adapter promotor nasional dengan sanitizer allowlist, cache fresh 15 menit, serta stale fallback maksimal 24 jam.
-- Pemetaan wilayah otomatis dan override PostgreSQL manual.
-- Dashboard `/admin/promotor` untuk status upstream, mapping, CSV, dan bukti cakupan layanan.
-- Funnel `test_service` untuk konsumen Tes STIFIn: matching promotor, consent berbagi terbatas, lalu pre-checkout.
-- Funnel `promoter_candidate` untuk calon promotor: antrean konsultasi dan PIC tanpa checkout layanan tes.
-- Dashboard `/admin/leads` untuk pipeline, assignment, atribusi, pembayaran layanan tes, margin, catatan, dan riwayat.
-- Halaman `/tes-stifin/[kota]`, `/promotor-stifin/[kota]`, dan `/promotor/[slug-promotor]` dengan aturan index/noindex berbasis bukti.
-- Sitemap stabil yang hanya memuat wilayah indexable dan memakai waktu pembaruan sumber yang tersimpan.
-- Asisten artikel satu klik yang menampilkan revisi sebelum–sesudah dan selalu menyimpan hasil ke status Review, bukan langsung terbit.
-- Daftar artikel admin dengan filter status, pagination 20 baris, sanitasi konten, dan arsip non-destruktif.
+## Pengujian
 
-## Perubahan produksi v0.5.1
+Dari folder paket, pada Node 24 (lingkungan verifikasi: 24.19.0):
 
-- Query idempotency lead kini cocok dengan partial unique index PostgreSQL, sehingga lead dapat disimpan tanpa error `ON CONFLICT`.
-- Error database internal tidak dikirim ke browser; pengunjung menerima pesan netral dan dapat mencoba kembali.
-- Lead Tes STIFIn yang berhasil langsung melanjutkan ke URL checkout terverifikasi di `app.konsepstifin.com`.
-- Lead calon promotor tetap masuk pipeline konsultasi dan tidak pernah masuk checkout layanan tes.
-- Entry point kedua funnel, copy publik seluruh route, serta pengelolaan artikel telah diperjelas.
-
-Setelah redeploy, uji satu pengiriman Tes STIFIn sampai redirect checkout dan satu pengiriman calon promotor sampai muncul di tab pipeline yang tepat. Jangan menganggap healthcheck saja cukup untuk membuktikan koneksi PostgreSQL serta alur form bekerja.
-
-## Menjalankan secara lokal
-
-```bash
-npm ci
-cp .env.example .env.local
-npm run dev
+```sh
+node --test tests/access.test.mjs
 ```
 
-Aplikasi berjalan di `http://localhost:3000`.
+Hasil aktual: 29 lulus, 0 gagal. Tes mula-mula gagal karena modul belum tersedia, lalu lulus setelah implementasi. Belum menjalankan pemeriksaan TypeScript, lint/build Next.js, database, browser atau integrasi gateway. Tidak memakai credentials/data produksi.
 
-Verifikasi pengembangan:
+## Kontrak integrasi wajib
 
-```bash
-npm test
-npm run lint
-npx tsc --noEmit
-npm run build
-```
+1. Salin modul ke path yang sama pada source Next.js setelah memeriksa bahwa tidak ada file pengguna yang tertimpa.
+2. Principal hanya dibentuk dari sesi dan akun yang telah diverifikasi SERVER. active/sessionValid bukan bukti kriptografis dan tidak boleh diterima dari body request.
+3. `accessScope` mengembalikan none/all/assigned. Store SQL wajib menegakkan scope untuk daftar, count, detail, history dan mutation SEBELUM data dibaca/diubah. Tidak boleh membaca semua lead dan memfilternya di browser.
+4. Scope assigned memerlukan kecocokan kode promotor dan consent berbagi. Reassignment dan pencabutan consent harus menghapus akses pada request berikutnya.
+5. `projectPromoterLead` membatasi field yang dikirim. Jangan mengirim objek row mentah atau history admin, yang dapat mengandung data internal/keuangan.
+6. `validatePromoterPatch` hanya memvalidasi payload, bukan memberikan izin. Daftar status harus ditentukan server berdasarkan funnel dan transisi yang sah. Pemeriksaan assignment, status saat ini, perubahan dan audit dilakukan dalam satu transaksi dengan locking.
+7. Jangan mengganti arti `isAdminAuthenticated()` menjadi semua user login; API konten/pustaka/produk masih bergantung pada fungsi itu sebagai batas admin.
+8. Test di paket menggunakan Node native TS stripping; test ini sengaja berekstensi .mjs dan dijalankan terpisah dari suite Vitest lama. Pada integrasi final tambahkan adaptor tes Vitest atau command test terpisah yang terdokumentasi di CI.
 
-Test integrasi PostgreSQL otomatis di-skip bila `TEST_DATABASE_URL` tidak tersedia.
+## Langkah AI berikutnya — langsung teknis, jangan kembali bertanya bisnis
 
-## Environment promotor nasional
+- Baca Bagian 34 handoff dan source terbaru. Terapkan paket ini hanya sebagai pure policy module.
+- Implementasikan penyimpanan akun/sesi, aktivasi, pencabutan sesi dan resolver principal; uji dengan database khusus testing.
+- Integrasikan scoped queries dan DTO ke endpoint/halaman CRM, disertai uji penolakan URL langsung dan injection field.
+- Tambah pagination server-side; pertahankan empat kelompok dan checkout SEJOLI.
+- Jalankan unit/integration, typecheck, lint, build dan browser tests sebelum rilis.
 
-Konfigurasi produksi utama:
+## Log 010
 
-```env
-STIFIN_API_BASE=https://apro.stifin.id/api
-STIFIN_PROMOTER_MODE=national
-STIFIN_PROMOTER_NATIONAL_PATH=/proGet/pro/PRO
-STIFIN_API_TIMEOUT_MS=15000
-```
-
-Mode `national` tidak membutuhkan kode cabang. Contoh mode `branch` dan `manual` tersedia di `.env.example`. Nilai autentikasi dan kredensial database harus disimpan sebagai secret di Coolify, bukan di repository.
-
-## Kontrak data publik
-
-`GET /api/promotor?q=&province=&regency=&branch=&page=` mengembalikan maksimal 24 item per halaman. Field promotor publik hanya:
-
-```text
-code, name, branchCode, area, province, active, regionCodes
-```
-
-Email, telepon, PassID, tanggal lahir, saldo, alamat pribadi, identitas akun, konfigurasi upstream, dan error internal tidak boleh muncul pada respons publik.
-
-## Deployment
-
-Deployment produksi memakai `Dockerfile`, port `3000`, dan healthcheck `/api/health`. Domain utama adalah `https://konsepstifin.com`; transaksi tetap diarahkan ke `https://app.konsepstifin.com`.
-
-Panduan environment Coolify, pemantauan API, mapping CSV, pipeline lead, rollback, sitemap, dan smoke test ada di [PANDUAN_PROMOTOR_NASIONAL_DAN_LEAD.md](./PANDUAN_PROMOTOR_NASIONAL_DAN_LEAD.md).
-
-## Batas klaim publik
-
-Tes STIFIn disajikan sebagai layanan edukasi dan refleksi, bukan diagnosis medis atau psikologis. Website tidak menjanjikan hasil belajar, karier, usaha, atau penghasilan. Jadwal layanan selalu menggunakan keterangan **“Jadwal berdasarkan konfirmasi”**.
-
-## Keamanan
-
-- Jangan commit password, token, API key, dump lead, atau data peserta.
-- Gunakan HTTPS untuk seluruh sumber eksternal dan checkout.
-- Jangan menulis payload PII atau header autentikasi ke log.
-- Pastikan izin dokumentasi foto peserta telah tersedia sebelum publikasi.
+Tanggal 14 September 2026. Implementasi pertama: access policy. 29 tes unit lulus.
+Fase 1 parsial; Fase 2 belum selesai. Tidak mengubah arsip asli, route Next.js, login lama, database, repository remote, SEJOLI atau produksi.
+Dependensi Next.js belum terpasang pada ekstraksi; paket tidak memakai API framework, sehingga tidak memerlukan perubahan Next.js pada tahap ini.
