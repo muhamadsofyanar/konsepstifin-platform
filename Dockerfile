@@ -22,7 +22,8 @@ COPY --from=builder /app/src/lib/identity ./src/lib/identity
 COPY --from=builder /app/src/lib/network-domain.ts /app/src/lib/network-service.ts ./src/lib/
 COPY --from=builder /app/src/lib/voucher-domain.ts /app/src/lib/voucher-api.ts /app/src/lib/voucher-service.ts ./src/lib/
 COPY --from=deps /app/node_modules/postgres ./node_modules/postgres
-RUN mkdir -p /app/storage/stifin-sources && chown -R node:node /app
+COPY --from=builder /app/src/lib/learning-service.ts ./src/lib/
+RUN mkdir -p /app/storage/learning /app/storage/stifin-sources && chown -R node:node /app
 USER node
 EXPOSE 3000
 ENV PORT=3000

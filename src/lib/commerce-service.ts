@@ -3,7 +3,7 @@ import { CommerceError, calculateLines, paymentStatus, validateMoney, type Comme
 export interface CommerceQuery { query(text:string,params?:unknown[]):Promise<Record<string,unknown>[]> }
 export interface CommerceDatabase extends CommerceQuery { transaction<T>(fn:(tx:CommerceQuery)=>Promise<T>):Promise<T> }
 export type LedgerEntry={id:number;kind:string;amount:number;reversesId:number|null;reason:string;reference:string;actor:string;createdAt:string};
-export type CommerceOrder={id:number;number:string;leadId:number|null;customerName:string;customerPhone:string;customerEmail:string;state:string;lines:CommerceLine[];total:number;balance:number;paymentStatus:string;createdAt:string;ledger:LedgerEntry[];audit:Record<string,unknown>[]};
+export type CommerceOrder={id:number;number:string;leadId:number|null;customerName:string;customerPhone:string;customerEmail:string;state:string;lines:CommerceLine[];total:number;balance:number;paymentStatus:string;createdAt:string;isSimulation?:boolean;ledger:LedgerEntry[];audit:Record<string,unknown>[]};
 export type OrderCommand={action:'issue'|'cancel'|'update'|'receipt'|'refund'|'correction';key:string;lines?:unknown;amount?:unknown;reason?:string;reference?:string;entryId?:number};
 function id(value:unknown){ if(typeof value!=='number'||!Number.isSafeInteger(value)||value<1) throw new CommerceError('ID tidak valid.'); return value; }
 function text(value:unknown,max:number,label:string){if(typeof value!=='string'||!value.trim()||value.length>max)throw new CommerceError(`${label} wajib diisi (maksimum ${max} karakter).`);return value.trim();}
@@ -26,7 +26,7 @@ export class CommerceService {
   const ledger=await tx.query('SELECT * FROM commerce_ledger WHERE order_id=$1 ORDER BY id',[orderId]);
   const balance=ledger.reduce((sum,entry)=>sum+Number(entry.amount),0);
   const audit=await tx.query('SELECT action,actor,created_at,payload FROM commerce_audit WHERE order_id=$1 ORDER BY id',[orderId]);
-  return {id:Number(row.id),number:String(row.number),leadId:row.lead_id===null?null:Number(row.lead_id),customerName:String(row.customer_name),customerPhone:String(row.customer_phone),customerEmail:String(row.customer_email),state:String(row.state),lines:row.lines as CommerceLine[],total:Number(row.total),balance,paymentStatus:paymentStatus(Number(row.total),balance),createdAt:date(row.created_at),ledger:ledger.map(e=>({id:Number(e.id),kind:String(e.kind),amount:Number(e.amount),reversesId:e.reverses_id?Number(e.reverses_id):null,reason:String(e.reason),reference:String(e.reference),actor:String(e.actor),createdAt:date(e.created_at)})),audit:audit.map(e=>({...e,created_at:date(e.created_at)}))};
+  return {id:Number(row.id),number:String(row.number),leadId:row.lead_id===null?null:Number(row.lead_id),customerName:String(row.customer_name),customerPhone:String(row.customer_phone),customerEmail:String(row.customer_email),state:String(row.state),lines:row.lines as CommerceLine[],total:Number(row.total),balance,paymentStatus:paymentStatus(Number(row.total),balance),createdAt:date(row.created_at),isSimulation:row.is_simulation===true,ledger:ledger.map(e=>({id:Number(e.id),kind:String(e.kind),amount:Number(e.amount),reversesId:e.reverses_id?Number(e.reverses_id):null,reason:String(e.reason),reference:String(e.reference),actor:String(e.actor),createdAt:date(e.created_at)})),audit:audit.map(e=>({...e,created_at:date(e.created_at)}))};
   });
  }
  async command(orderId:number,input:OrderCommand,actor:string){
@@ -61,5 +61,5 @@ export class CommerceService {
   return {orders:await Promise.all(rows.map(row=>this.get(Number(row.id)))),total,page,pageSize:25};
  }
  async leadOrders(leadId:number){const rows=await this.db.query('SELECT id FROM commerce_orders WHERE lead_id=$1 ORDER BY id DESC',[id(leadId)]);return Promise.all(rows.map(row=>this.get(Number(row.id))));}
- async summary(){const rows=await this.db.query("SELECT count(*) FILTER(WHERE state='issued' AND balance<total) AS awaiting,COALESCE(sum(total-balance) FILTER(WHERE state='issued'),0) AS outstanding,COALESCE(sum(balance),0) AS received FROM (SELECT o.*,COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance FROM commerce_orders o) q");return {awaitingPayment:Number(rows[0].awaiting),outstanding:Number(rows[0].outstanding),received:Number(rows[0].received)};}
+ async summary(){const rows=await this.db.query("SELECT count(*) FILTER(WHERE state='issued' AND balance<total) AS awaiting,COALESCE(sum(total-balance) FILTER(WHERE state='issued'),0) AS outstanding,COALESCE(sum(balance),0) AS received FROM (SELECT o.*,COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance FROM commerce_orders o WHERE o.is_simulation=false) q");return {awaitingPayment:Number(rows[0].awaiting),outstanding:Number(rows[0].outstanding),received:Number(rows[0].received)};}
 }

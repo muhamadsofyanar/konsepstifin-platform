@@ -2,8 +2,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-const contentPaths=['/admin/konten','/admin/artikel','/admin/pustaka','/admin/intelligence','/admin/produk'];
-const contentLinks=[['/admin/artikel','Artikel & AI'],['/admin/pustaka','Pustaka'],['/admin/intelligence','Pemeriksaan SEO'],['/admin/produk','Layanan & Harga']];
+const contentPaths=['/admin/konten','/admin/artikel','/admin/pustaka','/admin/intelligence','/admin/produk','/admin/kelas'];
+const contentLinks=[['/admin/artikel','Artikel & AI'],['/admin/pustaka','Pustaka'],['/admin/intelligence','Pemeriksaan SEO'],['/admin/produk','Layanan & Harga'],['/admin/kelas','Kelas & Komisi']];
 export default function PortalNavigation({email}:{email:string}){
  const path=usePathname(),router=useRouter();const [busy,setBusy]=useState(false),[error,setError]=useState('');
  if(path==='/admin/login'||!email)return null;

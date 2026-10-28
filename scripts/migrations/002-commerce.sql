@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS commerce_orders (
  create_key TEXT UNIQUE NOT NULL,
  create_payload TEXT NOT NULL,
  created_by TEXT NOT NULL,
+ is_simulation BOOLEAN NOT NULL DEFAULT false,
  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

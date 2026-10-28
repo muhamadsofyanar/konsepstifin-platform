@@ -20,7 +20,7 @@ const check=(v,message)=>{if(!v)throw new Error(message);};
 try{
  await cp(app+'/.next/standalone',image,{recursive:true});await cp(app+'/public',image+'/public',{recursive:true});await mkdir(image+'/.next',{recursive:true});await cp(app+'/.next/static',image+'/.next/static',{recursive:true});await cp(app+'/scripts',image+'/scripts',{recursive:true});await mkdir(image+'/src/lib',{recursive:true});await cp(app+'/src/lib/identity',image+'/src/lib/identity',{recursive:true});await cp(app+'/node_modules/postgres',image+'/node_modules/postgres',{recursive:true});
  await command(['scripts/identity-admin.mjs','migrate']);
- for(const file of ['network-domain.ts','network-service.ts','voucher-domain.ts','voucher-api.ts','voucher-service.ts'])await cp(app+'/src/lib/'+file,image+'/src/lib/'+file);
+ for(const file of ['network-domain.ts','network-service.ts','voucher-domain.ts','voucher-api.ts','voucher-service.ts','learning-service.ts'])await cp(app+'/src/lib/'+file,image+'/src/lib/'+file);
  const credentials={email:'admin@konsepstifin.com',password:'SyntheticOnly-'+randomUUID(),roles:['super_admin']};
  await command(['scripts/identity-admin.mjs','provision'],JSON.stringify(credentials));
  await command(['scripts/identity-admin.mjs','verify'],JSON.stringify(credentials));
@@ -58,7 +58,7 @@ try{
   throw new Error('Unexpected external request');
  };
  `);
- env.NODE_OPTIONS='--import '+image+'/smoke-api.mjs';
+ env.NODE_OPTIONS=(process.env.NODE_OPTIONS?process.env.NODE_OPTIONS+' ':'')+'--import '+image+'/smoke-api.mjs';
  server=spawn(process.execPath,['scripts/start-with-worker.mjs'],{cwd:image,env,stdio:['ignore','pipe','pipe']});server.stdout.pipe(logs,{end:false});server.stderr.pipe(logs,{end:false});
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(origin+'/api/health')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,200));}check(ready,'Standalone server not ready');
  const cross=await fetch(origin+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://evil.test'},body:JSON.stringify(credentials)});check(cross.status===403,'Cross-origin mutation was not blocked');
@@ -107,6 +107,52 @@ try{
  const receipt={action:'receipt',amount:650000,reason:'Mutasi sintetis terverifikasi',reference:'QA-ONLY',key:randomUUID()};await api('/api/admin/orders/'+id,'POST',receipt);const repeated=await api('/api/admin/orders/'+id,'POST',receipt);check(repeated.order.balance===650000&&repeated.order.ledger.length===1,'Duplicate payment counted');
  const invoice=await privatePage('/admin/pesanan/'+id,'Rincian pesanan');check(invoice.includes('123456'),'Missing transfer details');
  await privatePage('/admin/leads?leadId='+lead.lead.id,'Klien &amp; Promotor');await privatePage('/admin/pengaturan','Atur operasional platform');await privatePage('/admin/konten','Kelola materi dan penawaran');
+
+ // Learning upgrade: real HTTP + packaged worker, synthetic users and local files only.
+ await privatePage('/admin/kelas','Kelas, peserta, dan komisi.');
+ const lp=(await api('/api/learning','POST',{action:'product.save',title:'Kelas Uji',slug:'kelas-uji',description:'Sintetis untuk QA',kind:'course',price:100000,state:'published',accessDays:30,commissionBps:1000,attributionEnabled:true})).result;
+ await mkdir(image+'/storage/learning',{recursive:true});await writeFile(image+'/storage/learning/worksheet.txt','SYNTHETIC WORKSHEET');
+ const ll=(await api('/api/learning','POST',{action:'lesson.save',productId:lp.id,title:'Worksheet Uji',module:'Modul 1',kind:'file',filePath:'worksheet.txt',body:'Materi uji aman',required:true,position:1,unlockDays:0,state:'published'})).result;
+ const memberCredentials={email:'learner@example.test',password:'Learner-'+randomUUID()};
+ const register=await fetch(origin+'/api/account/register',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(memberCredentials)});check(register.ok,'Learner registration failed '+register.status);
+ const memberLogin=await fetch(origin+'/api/account/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(memberCredentials)});check(memberLogin.ok,'Learner login failed');const memberCookie=memberLogin.headers.get('set-cookie').split(';')[0];
+ const memberApi=async(endpoint,method='GET',body)=>{const r=await fetch(origin+endpoint,{method,headers:{Cookie:memberCookie+'; '+refCookie,Origin:origin,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const json=await r.json();check(r.ok,endpoint+' learner HTTP '+r.status+' '+JSON.stringify(json));return json;};
+ check((await fetch(origin+'/api/learning?view=admin',{headers:{Cookie:memberCookie}})).status===403,'Learner can read admin learning data');
+ const checkoutInput={action:'checkout',productId:lp.id,key:randomUUID(),name:'Peserta Sintetis',phone:'0812345678'};
+ const lo=(await memberApi('/api/learning','POST',checkoutInput)).result;
+ check((await memberApi('/api/learning','POST',checkoutInput)).result.id===lo.id,'Learning checkout not idempotent');
+ check((await fetch(origin+'/api/learning/files/'+ll.id,{headers:{Cookie:memberCookie}})).status===400,'Unpaid learner can download');
+ await api('/api/admin/orders/'+lo.id,'POST',{action:'receipt',amount:50000,reason:'Bank Uji',reference:'LEARN-P1',key:randomUUID()});
+ check((await memberApi('/api/learning?view=dashboard')).grants.length===0,'Partial payment opened class');
+ await api('/api/admin/orders/'+lo.id,'POST',{action:'receipt',amount:50000,reason:'Bank Uji',reference:'LEARN-P2',key:randomUUID()});
+ let learningDash=await memberApi('/api/learning?view=dashboard');check(learningDash.grants.length===1,'Paid class access missing');
+ const learnerId=learningDash.grants[0].user_id;
+ const download=await fetch(origin+'/api/learning/files/'+ll.id,{headers:{Cookie:memberCookie}});check(download.ok&&(await download.text())==='SYNTHETIC WORKSHEET','Protected worksheet download failed');
+ check((await fetch(origin+'/api/learning/files/'+ll.id)).status===401,'Anonymous file access allowed');
+ check((await fetch(origin+'/api/learning/files/'+ll.id,{headers:{Cookie:promoterCookie}})).status===400,'Unrelated account can download file');
+ await memberApi('/api/learning','POST',{action:'complete',id:ll.id});await memberApi('/api/learning','POST',{action:'complete',id:ll.id});
+ learningDash=await memberApi('/api/learning?view=dashboard');check(learningDash.progress.length===1,'Progress duplicate');
+ const cert=(await api('/api/learning','POST',{action:'certificate.issue',userId:learnerId,productId:lp.id,name:'Peserta Sintetis'})).result;
+ const verify=await fetch(origin+'/sertifikat/'+cert.code);const certHtml=await verify.text();check(verify.ok&&certHtml.includes('Peserta Sintetis')&&!certHtml.includes('learner@example.test'),'Public certificate failed or exposed email');
+ // A new paid order survives loss of request-side fulfillment; native worker recovers it.
+ const second=(await memberApi('/api/learning','POST',{...checkoutInput,key:randomUUID()})).result;
+ await db.query("INSERT INTO commerce_ledger(order_id,kind,amount,reason,reference,actor) VALUES($1,'receipt',100000,'Worker recovery','LEARN-WORKER','smoke')",[second.id]);
+ let learned=false;for(let i=0;i<80;i++){if((await memberApi('/api/learning?view=dashboard')).grants.length===2){learned=true;break;}await new Promise(r=>setTimeout(r,200));}check(learned,'Packaged learning worker recovery failed');
+ const partnerCommission=await partnerApi('/api/learning?view=partner');check(partnerCommission.commissions.length===2,'Referral commission snapshot missing');const commissionId=partnerCommission.commissions[0].id;
+ await api('/api/learning','POST',{action:'commission',id:commissionId,state:'approved',reason:'QA approval'});await api('/api/learning','POST',{action:'commission',id:commissionId,state:'available',reason:'QA release'});
+ const payout=(await partnerApi('/api/learning','POST',{action:'payout.request',key:randomUUID(),details:'Bank sintetis'})).result;
+ await api('/api/learning','POST',{action:'payout',id:payout.id,state:'approved',reason:'QA approved'});await api('/api/learning','POST',{action:'payout',id:payout.id,state:'paid',reason:'SYNTHETIC-TRANSFER'});
+ check((await partnerApi('/api/learning?view=partner')).available===0,'Paid payout retained balance');
+ await api('/api/learning','POST',{action:'product.save',id:lp.id,title:'Kelas Uji',slug:'kelas-uji',description:'Sintetis untuk QA',kind:'course',price:150000,state:'published',accessDays:30,commissionBps:0,attributionEnabled:false});
+ check((await memberApi('/api/learning?view=dashboard')).purchases.some(p=>p.total===100000||p.total==='100000'),'Original order price changed');
+ const summary=await api('/api/admin/orders','GET');check(Boolean(summary),'Order endpoint unavailable after upgrade');
+ await api('/api/admin/orders/'+lo.id,'POST',{action:'refund',amount:100000,reason:'Synthetic refund',reference:'LEARN-RF',key:randomUUID()});
+ check((await memberApi('/api/learning?view=dashboard')).grants.some(g=>g.status==='suspended'),'Refund did not suspend original grant');
+ if(process.env.LEARNING_VISUAL_QA_MODULE){
+  const {chromium}=await import(process.env.LEARNING_VISUAL_QA_MODULE);const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+  try{const page=await browser.newPage({viewport:{width:1440,height:1000}});await page.context().addCookies([{name:memberCookie.split('=')[0],value:memberCookie.split('=')[1],url:origin}]);await page.goto(origin+'/belajar');await page.getByText('Kelas Uji',{exact:true}).first().waitFor();await page.screenshot({path:process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png',fullPage:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:(process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png').replace('.png','-mobile.png'),fullPage:true});}finally{await browser.close();}
+ }
+ console.log('PASS: learning registration, checkout snapshot/idempotency, partial/full payment, protected file ownership, progress, public certificate privacy, native learning worker recovery, referral commission and manual payout.');
  await api('/api/admin/logout','POST',{});check((await fetch(origin+'/api/admin/orders',{headers:{Cookie:cookie}})).status===401,'Revoked session still accepted');
  console.log('PASS: standalone operators, network import/idempotency, 10 pending promoters+owner, one-use activation, promoter login/scoped leads/admin denial, referral aliases/attribution, own voucher balance, checkout idempotency, payment-triggered test fulfillment, native worker recovery, voucher ownership/SSR, privacy headers, admin login, CSRF, settings, CRM, order issue/payment dedupe, private SSR pages, logout.');
  console.log('Synthetic PostgreSQL wire server only; does not use DATABASE_URL supplied by your environment. No Docker/browser/real PostgreSQL concurrency claim.');

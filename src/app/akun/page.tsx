@@ -10,8 +10,8 @@ export default async function PromoterPortalPage() {
   catch { return <main className="portal-shell"><section className="portal-card"><h1>Layanan akun belum tersedia</h1><p>Silakan coba kembali setelah layanan akun terhubung.</p><Link href="/akun/login">Kembali ke halaman masuk</Link></section></main>; }
   if (!principal || !principal.active || !principal.sessionValid) redirect('/akun/login');
   const isAdmin = principal.roles.some(role => role === 'admin' || role === 'super_admin');
-  const header = <header className="portal-header"><Link className="portal-brand" href="/">Konsep STIFIn</Link><nav>{isAdmin && <Link href="/admin">Dashboard pengelola</Link>}<Link href="/akun/tautan">Tautan saya</Link><Link href="/akun/voucher">Voucher</Link><LogoutButton/></nav></header>;
-  if (!principal.roles.includes('promoter') && !isAdmin) return <main className="portal-shell">{header}<section className="portal-card"><h1>Akses promotor diperlukan</h1><p>Akun ini belum memiliki akses promotor. Hubungi kepala cabang untuk memeriksa akun Anda.</p></section></main>;
+  const header = <header className="portal-header"><Link className="portal-brand" href="/">Konsep STIFIn</Link><nav>{isAdmin && <Link href="/admin">Dashboard pengelola</Link>}<Link href="/belajar">Kelas saya</Link><Link href="/akun/komisi">Komisi</Link><Link href="/akun/tautan">Tautan saya</Link><Link href="/akun/voucher">Voucher</Link><LogoutButton/></nav></header>;
+  if (!principal.roles.includes('promoter') && !isAdmin) return <main className="portal-shell">{header}<section className="portal-card"><h1>Selamat datang di akun Anda</h1><p>Lihat kelas, progres, pembelian, dan sertifikat Anda.</p><Link href="/belajar">Buka ruang belajar →</Link></section></main>;
   let portal;
   try { portal = await getPromoterPortal(principal.userId); }
   catch { return <main className="portal-shell">{header}<section className="portal-card"><h1>Data cabang belum tersedia</h1><p>Hubungi kepala cabang untuk memeriksa konfigurasi dan impor jaringan.</p></section></main>; }

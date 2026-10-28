@@ -1,3 +1,7 @@
+# Rilis terbaru: 0.9.0
+
+Baca `docs/UPGRADE-0.9.md` sebelum deployment. Admin kelas: `/admin/kelas`. Ruang peserta: `/belajar`. Komisi: `/akun/komisi`.
+
 # KonsepSTIFIn: panduan unggah dan deploy
 
 Pembaruan terbaru **0.8.0** menambah tautan referral pribadi, pembelian voucher, dan antrean pengisian melalui API STIFIn. Untuk upgrade dari 0.7.0 yang sudah berjalan, ikuti **MITRA-DAN-VOUCHER.md**. Jangan provision ulang akun aktif. Migrasi sekarang juga mencakup `005-referrals.sql` dan `006-vouchers.sql` (lihat nama file aktual pada folder migrasi).

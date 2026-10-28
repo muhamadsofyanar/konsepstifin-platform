@@ -56,11 +56,12 @@ export function PublicFooter() {
       <Link href="/">Beranda</Link>
       <Link href="/tes-stifin">Tes STIFIn</Link>
       <Link href="/edukasi">Edukasi</Link>
+      <Link href="/belajar">Kelas &amp; Produk Digital</Link>
       <Link href="/jadi-promotor">Calon Promotor</Link>
       <Link href="/promotor">Cari Promotor</Link>
       <Link href="/tentang">Tentang</Link>
       <Link href="/kontak">Kontak</Link>
-      <a href="/akun/login">Masuk Promotor</a>
+      <a href="/akun/login">Masuk Akun</a>
       <Link href="/privasi">Privasi</Link>
       <Link href="/ketentuan">Ketentuan</Link>
       <Link href="/affiliate">Affiliate</Link>

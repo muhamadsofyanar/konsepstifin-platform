@@ -10,7 +10,7 @@ export default defineConfig({
     maxWorkers: 2,
     testTimeout: 20000,
     hookTimeout: 20000,
-    exclude: ['**/node_modules/**', '**/.git/**', 'tests/identity/**', 'tests/*.test.mjs', 'tests/network/**/*.test.mjs'],
+    exclude: ['**/.next/**', '**/coverage/**', '**/node_modules/**', '**/.git/**', 'tests/identity/**', 'tests/*.test.mjs', 'tests/network/**/*.test.mjs'],
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     clearMocks: true,

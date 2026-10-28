@@ -1,0 +1,15 @@
+KonsepSTIFIn 0.9.0
+
+1. Baca docs/UPGRADE-0.9.md.
+2. Backup database dan volume lama.
+3. Unggah isi folder source ke repository GitHub aplikasi yang sama.
+4. Tambahkan volume persisten /app/storage/learning; pertahankan ENV/volume lama.
+5. Redeploy dengan Dockerfile bawaan.
+6. Jalankan di terminal container:
+   IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+7. Buka /admin/kelas dan /belajar.
+
+Produk, masa akses, aturan atribusi dan komisi ditentukan pengelola.
+Transfer tetap diverifikasi manual dari menu Pesanan & Pembayaran.
+Tidak ada gateway/kanal notifikasi eksternal yang dipilih otomatis.
+Paket ini merupakan source siap diuji dan diunggah; bukan bukti deployment produksi.

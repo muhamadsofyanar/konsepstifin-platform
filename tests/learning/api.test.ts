@@ -1,0 +1,13 @@
+import { beforeEach, it, expect, vi } from 'vitest';
+const account = vi.hoisted(() => vi.fn());
+const service = vi.hoisted(() => ({ saveProduct: vi.fn(), checkout: vi.fn(), catalog: vi.fn(), material: vi.fn() }));
+vi.mock('@/lib/identity/server', () => ({ getAccountPrincipal: account }));
+vi.mock('@/lib/learning-store', () => ({ getLearningService: () => service }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
+import { GET, POST } from '../../src/app/api/learning/route';
+beforeEach(() => { process.env.PLATFORM_ORIGIN = 'https://example.test'; account.mockResolvedValue(null); });
+const req = (body: object, origin = 'https://example.test') => new Request('https://example.test/api/learning', { method: 'POST', headers: { origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+it('requires session for checkout and rejects cross origin', async () => { expect((await POST(req({ action: 'checkout' }))).status).toBe(401); account.mockResolvedValue({ userId: 'u', active: true, sessionValid: true, roles: ['member'] }); expect((await POST(req({ action: 'checkout' }, 'https://evil.test'))).status).toBe(403); expect(service.checkout).not.toHaveBeenCalled(); });
+it('member cannot edit products or read admin data', async () => { account.mockResolvedValue({ userId: 'u', active: true, sessionValid: true, roles: ['member'] }); expect((await POST(req({ action: 'product.save', title: 'Changed' }))).status).toBe(403); expect((await GET(new Request('https://example.test/api/learning?view=admin'))).status).toBe(403); expect(service.saveProduct).not.toHaveBeenCalled(); });
+it('checkout gets user and referral from verified session, never supplied identity', async () => { account.mockResolvedValue({ userId: 'trusted', active: true, sessionValid: true, roles: ['member'] }); service.checkout.mockResolvedValue({ id: 1 }); const result = await POST(req({ action: 'checkout', productId: 1, key: 'x', name: 'A', phone: '08', userId: 'victim', referral: 'fake' })); expect(result.status).toBe(200); expect(service.checkout.mock.calls[0][0]).toBe('trusted'); expect(service.checkout.mock.calls[0][2]).toBeNull(); });
+it('does not expose raw database errors', async () => { service.catalog.mockRejectedValue(new Error('secret-db-password')); const result = await GET(new Request('https://example.test/api/learning?view=catalog')); expect(result.status).toBe(503); expect(await result.text()).not.toContain('secret-db-password'); });

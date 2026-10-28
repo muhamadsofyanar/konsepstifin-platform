@@ -1,3 +1,9 @@
+# KonsepSTIFIn 0.9.0
+
+Upgrade e-course dan affiliate di atas fondasi 0.8. Mulai dari [panduan upgrade 0.9](docs/UPGRADE-0.9.md), [hasil pengujian](docs/HASIL-PENGUJIAN-0.9.md), dan [spesifikasi sumber](docs/Spesifikasi-Pengembangan-KonsepSTIFIn-dari-Averion.md).
+
+Dokumentasi historis 0.8 di bawah tetap disertakan untuk referensi. Ikuti panduan 0.9 untuk fitur baru.
+
 # KonsepSTIFIn 0.8.0
 
 Portal admin satu pintu pada aplikasi Next.js yang sama: ringkasan, CRM, pesanan/pembayaran manual, konten/layanan, dan pengaturan. Pemesanan baru tidak bergantung pada SEJOLI. Akun admin memakai sesi PostgreSQL yang dapat dicabut.

@@ -12,7 +12,7 @@ export function normalizeReferralAlias(value: unknown) {
  return alias;
 }
 export function referralDestination(value: string | null) {
- return value === '/jadi-promotor' ? value : '/tes-stifin';
+ return value === '/jadi-promotor' || value === '/belajar' ? value : '/tes-stifin';
 }
 export type ReferralSource = { userId: string; promoterCode: string; alias: string; name: string; branchCode: string; area: string };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');

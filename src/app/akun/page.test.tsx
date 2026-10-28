@@ -15,7 +15,7 @@ it('requests only the session owner portal and describes empty leads and links t
  vi.mocked(getPromoterPortal).mockResolvedValue({profile:{userId:'member',promoterCode:'CODE',name:'Anggota Uji',email:'member@example.test',area:'Area Uji',branchCode:'BRANCH',branchName:'Cabang Uji',isManager:false},leads:[],total:0});
  const html=renderToStaticMarkup(await Page());expect(getPromoterPortal).toHaveBeenCalledWith('member');expect(html).toContain('Belum ada lead yang ditugaskan');expect(html).toContain('/akun/voucher');expect(html).toContain('/akun/tautan');expect(html).toContain('RUANG MITRA');
 });
-it('never loads promoter data for unrelated roles',async()=>{vi.mocked(getAccountPrincipal).mockResolvedValue({...principal,roles:['customer']});const html=renderToStaticMarkup(await Page());expect(html).toContain('Akses promotor diperlukan');expect(getPromoterPortal).not.toHaveBeenCalled();});
+it('never loads promoter data for unrelated roles',async()=>{vi.mocked(getAccountPrincipal).mockResolvedValue({...principal,roles:['member']});const html=renderToStaticMarkup(await Page());expect(html).toContain('Selamat datang di akun Anda');expect(html).toContain('/belajar');expect(getPromoterPortal).not.toHaveBeenCalled();});
 it('explains when the scoped preview is smaller than the total',async()=>{
  vi.mocked(getPromoterPortal).mockResolvedValue({profile:{userId:'member',promoterCode:'CODE',name:'Anggota Uji',email:'member@example.test',area:'Area Uji',branchCode:'BRANCH',branchName:'Cabang Uji',isManager:false},leads:[{id:1,name:'Lead Uji',phone:'',email:'',city:'',status:'new'}],total:101});
  expect(renderToStaticMarkup(await Page())).toContain('Menampilkan 1 lead terbaru dari 101 lead.');
