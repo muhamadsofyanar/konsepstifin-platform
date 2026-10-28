@@ -2,6 +2,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { verifyPassword } from './password.ts';
 import type { SessionReader, SessionRecord } from './session.ts';
+import { NETWORK_BRANCH } from '../network-domain.ts';
 export type Query = (text: string, values: (string | number | null)[]) => Promise<Record<string, unknown>[]>;
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -13,7 +14,7 @@ export class IdentityStore implements SessionReader {
   constructor(query: Query) { this.query = query; }
 
   /** Trusted provisioning only; never expose this directly to public registration. */
-  async createAccount(email: string, passwordHash: string, roles: string[], promoterCode: string | null = null) {
+  async createAccount(email: string, passwordHash: string, roles: string[], promoterCode: string | null = null, referralToken: string | null = null) {
     email = normalizeEmail(email);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254
       || !/^scrypt\$32768\$8\$1\$[a-f0-9]{32}\$[a-f0-9]{128}$/.test(passwordHash)
@@ -22,14 +23,25 @@ export class IdentityStore implements SessionReader {
     const id = randomUUID();
     // One statement: duplicate role/mapping/email failure rolls back the entire account.
     // Cast serialized JSON through text so postgres.js does not JSON-encode the string again.
+    const referralHash = referralToken && /^[a-f0-9]{64}$/.test(referralToken) ? digest(referralToken) : null;
     await this.query(`WITH account AS (
       INSERT INTO platform_users(id,email,password_hash) VALUES($1,$2,$3) RETURNING id
     ), roles AS (
       INSERT INTO platform_user_roles(user_id,role)
       SELECT id,jsonb_array_elements_text($4::text::jsonb) FROM account
-    ) INSERT INTO platform_promoter_accounts(user_id,promoter_code)
+    ) ${referralHash ? `, referral AS (
+      INSERT INTO platform_referral_registrations(user_id,partner_user_id,alias,attribution_expires_at)
+      SELECT account.id,u.id,v.alias,v.expires_at FROM account
+      CROSS JOIN platform_referral_visits v JOIN platform_referral_aliases a ON a.alias=v.alias
+      JOIN platform_users u ON u.id=a.user_id
+      WHERE v.token_hash=$6 AND v.expires_at>now() AND u.active=true
+      AND u.id<>account.id AND lower(u.email)<>$2
+      AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role IN ('promoter','affiliate'))
+      AND (EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='affiliate')
+        OR EXISTS(SELECT 1 FROM platform_promoter_profiles p WHERE p.user_id=u.id AND p.branch_code=$7))
+    )` : ''} INSERT INTO platform_promoter_accounts(user_id,promoter_code)
       SELECT id,$5 FROM account WHERE $5::text IS NOT NULL`,
-      [id, email, passwordHash, JSON.stringify([...new Set(roles)]), promoterCode]);
+      [id, email, passwordHash, JSON.stringify([...new Set(roles)]), promoterCode, ...(referralHash ? [referralHash, NETWORK_BRANCH.code] : [])]);
     return id;
   }
   async consumeLoginAttempt(email: string): Promise<boolean> {

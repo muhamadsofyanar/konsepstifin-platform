@@ -11,6 +11,7 @@ export async function GET(request: NextRequest, {params}: {params: Promise<{alia
  response.headers.set('Referrer-Policy','same-origin');
  try {
   const result=await getReferralService().visit((await params).alias,request.cookies.get(REFERRAL_COOKIE)?.value);
+  if(!result.valid)return new NextResponse('<!doctype html><html lang="id"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tautan referral tidak aktif</title><main style="font:16px/1.7 system-ui;max-width:560px;margin:15vh auto;padding:24px"><h1>Tautan referral tidak aktif</h1><p>Minta pengirim memeriksa tautannya melalui akun mitra. Kunjungan ini belum dicatat sebagai referral.</p><a href="/belajar?tab=catalog">Lihat katalog KonsepSTIFIn</a></main></html>',{status:404,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','X-Robots-Tag':'noindex'}});
   if(result.token)response.cookies.set(REFERRAL_COOKIE,result.token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:REFERRAL_MAX_AGE});
  } catch { return new Response('Tautan sementara tidak tersedia. Silakan coba kembali.',{status:503,headers:{'Cache-Control':'no-store'}}); }
  return response;

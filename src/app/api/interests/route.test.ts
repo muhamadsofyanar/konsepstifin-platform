@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST, publicInterestErrorResponse } from './route';
 import { submitInterest } from '@/lib/interest-service';
 
-const referral = vi.hoisted(()=>({resolveToken:vi.fn()}));
+const referral = vi.hoisted(()=>({resolveToken:vi.fn(),resolveRegistered:vi.fn()}));
+vi.mock('@/lib/identity/server',()=>({getAccountPrincipal:vi.fn().mockResolvedValue(null)}));
 vi.mock('@/lib/referral-store',()=>({getReferralService:()=>referral}));
 
 vi.mock('@/lib/interest-service', () => ({ submitInterest: vi.fn() }));
@@ -92,4 +93,13 @@ it('resolves attribution from the HttpOnly cookie rather than body fields',async
  const req=new NextRequest('http://localhost/api/interests',{method:'POST',headers:{'content-type':'application/json',cookie:`konsepstifin_referral=${'a'.repeat(64)}`},body:JSON.stringify({startedAt:Date.now()-2000,sourcePartnerCode:'FORGED'})});
  const response=await POST(req);expect(response.status).toBe(201);
  expect(referral.resolveToken).toHaveBeenCalledWith('a'.repeat(64));expect(vi.mocked(submitInterest).mock.calls.at(-1)?.[1].referralSource).toEqual(source);
+});
+it('uses the authenticated registration referral when a buyer submits a service request from another browser',async()=>{
+ const {getAccountPrincipal}=await import('@/lib/identity/server');
+ vi.mocked(getAccountPrincipal).mockResolvedValueOnce({userId:'buyer',active:true,sessionValid:true,roles:['member'],email:'buyer@example.test',promoterCode:null});
+ const source={userId:'partner',promoterCode:'REAL',alias:'original',name:'Mitra',branchCode:'JML-CAB-62',area:''};
+ referral.resolveRegistered.mockResolvedValueOnce(source);
+ vi.mocked(submitInterest).mockResolvedValue({lead:{id:2,leadType:'test_service',status:'baru'},reference:'KSF-2',status:'baru',match:null} as Awaited<ReturnType<typeof submitInterest>>);
+ const req=new NextRequest('http://localhost/api/interests',{method:'POST',headers:{'content-type':'application/json',cookie:'konsepstifin_account='+ 'b'.repeat(64),'x-forwarded-for':'198.51.100.210'},body:JSON.stringify({startedAt:Date.now()-2000,sourcePartnerCode:'FORGED'})});
+ expect((await POST(req)).status).toBe(201);expect(referral.resolveRegistered).toHaveBeenCalledWith('buyer');expect(vi.mocked(submitInterest).mock.calls.at(-1)?.[1].referralSource).toEqual(source);
 });

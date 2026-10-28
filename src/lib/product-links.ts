@@ -8,6 +8,7 @@ export function oldProductPath(identifier: string, kind?: string) {
 export function safeReturnPath(value: unknown) {
   if(typeof value !== 'string' || value.length > 600 || /[\\\r\n]/.test(value)) return '/akun';
   if(/^\/produk\/(?:layanan\/)?[a-zA-Z0-9-]+$/.test(value)) return value;
-  if(/^\/akun\/mitra(?:\?tab=(?:products|commissions|links))?$/.test(value)) return value;
+  if(/^\/akun\/mitra(?:\?tab=(?:products|commissions|links|activity))?$/.test(value)) return value;
+  if(/^\/belajar\/kelas\/[1-9][0-9]*(?:\?materi=[1-9][0-9]*)?$/.test(value)) return value;
   return /^\/belajar(?:\?tab=(?:classes|orders|catalog|support|certificates))?$/.test(value) ? value : '/akun';
 }

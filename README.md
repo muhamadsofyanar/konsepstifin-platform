@@ -1,10 +1,16 @@
-# Rilis terkini: KonsepSTIFIn 0.10.2
+# Rilis terkini: KonsepSTIFIn 0.10.3
+
+Pendaftaran peserta kini terhubung ke affiliate, dengan tab Aktivitas referral dan pemeriksaan asal pendaftaran untuk admin. Materi/video dipindahkan ke halaman ruang belajar tersendiri. Tautan, formulir daftar, menu, akses ponsel, dan navigasi kembali juga diperbaiki.
+
+**WAJIB migrasi 009**, termasuk untuk pengguna 0.10.2. Baca [panduan upgrade 0.10.3](docs/UPGRADE-0.10.3.md) dan [audit 0.10.3](docs/AUDIT-0.10.3.md). Pertahankan database dan akun lama. Pendaftar yang sebelumnya belum mempunyai sumber referral tidak dihubungkan secara otomatis. Dokumentasi di bawah adalah riwayat versi sebelumnya.
+
+# Riwayat: KonsepSTIFIn 0.10.2
 
 Penyegaran landing page, navigasi publik, harga, informasi affiliate, bantuan akun, font lokal, dan metadata produk. Versi health mengikuti package.json.
 
 Mulai dari [panduan upgrade 0.10.2](docs/UPGRADE-0.10.2.md) dan [audit 0.10.2](docs/AUDIT-0.10.2.md). Tidak ada migrasi baru jika database sudah sampai migrasi 008. Harga, akun, dan transaksi yang tersimpan tetap dipertahankan. Dokumentasi di bawah merupakan riwayat.
 
-# Rilis terkini: KonsepSTIFIn 0.10.1
+# Riwayat: KonsepSTIFIn 0.10.1
 
 Video di dalam materi, desain sertifikat siap cetak, halaman detail produk yang sama dari landing page/katalog/affiliate, serta satu pusat mitra dan satu editor produk admin.
 

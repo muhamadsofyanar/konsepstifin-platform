@@ -12,7 +12,7 @@ export function normalizeReferralAlias(value: unknown) {
  return alias;
 }
 export function referralDestination(value: string | null) {
- return value === '/jadi-promotor' || value === '/belajar' ? value : '/tes-stifin';
+ return value === '/jadi-promotor' || value === '/belajar' || value === '/akun/daftar' ? value : '/tes-stifin';
 }
 export type ReferralSource = { userId: string; promoterCode: string; alias: string; name: string; branchCode: string; area: string };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -59,6 +59,32 @@ export class ReferralService {
   if(!token||!/^[a-f0-9]{64}$/.test(token))return null;
   const [row]=await this.query(`SELECT u.id,a.promoter_code,p.name,p.branch_code,p.service_area,v.alias FROM platform_referral_visits v JOIN platform_referral_aliases x ON x.alias=v.alias JOIN platform_users u ON u.id=x.user_id LEFT JOIN platform_promoter_accounts a ON a.user_id=u.id LEFT JOIN platform_promoter_profiles p ON p.user_id=u.id WHERE v.token_hash=$1 AND v.expires_at>now() AND u.active=true AND ((p.branch_code=$2 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='promoter')) OR EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='affiliate'))`,[digest(token),NETWORK_BRANCH.code]);
   return row?{userId:String(row.id),promoterCode:String(row.promoter_code ?? ''),alias:String(row.alias),name:String(row.name ?? 'Mitra'),branchCode:String(row.branch_code ?? ''),area:String(row.service_area ?? '')}:null;
+ }
+ async resolveRegistered(userId: string): Promise<ReferralSource|null> {
+  const [row]=await this.query(`SELECT u.id,a.promoter_code,p.name,p.branch_code,p.service_area,r.alias
+    FROM platform_referral_registrations r JOIN platform_users u ON u.id=r.partner_user_id
+    LEFT JOIN platform_promoter_accounts a ON a.user_id=u.id LEFT JOIN platform_promoter_profiles p ON p.user_id=u.id
+    WHERE r.user_id=$1 AND r.attribution_expires_at>now() AND u.active=true
+    AND ((p.branch_code=$2 AND EXISTS(SELECT 1 FROM platform_user_roles roles WHERE roles.user_id=u.id AND roles.role='promoter'))
+      OR EXISTS(SELECT 1 FROM platform_user_roles roles WHERE roles.user_id=u.id AND roles.role='affiliate'))`,[userId,NETWORK_BRANCH.code]);
+  return row?{userId:String(row.id),promoterCode:String(row.promoter_code??''),alias:String(row.alias),name:String(row.name??'Mitra'),branchCode:String(row.branch_code??''),area:String(row.service_area??'')}:null;
+ }
+ async activity(userId: string) {
+  return this.transaction(async q=>{
+   await this.member(q,userId);
+   const [counts]=await q(`SELECT
+    (SELECT count(*) FROM platform_referral_visits v JOIN platform_referral_aliases a ON a.alias=v.alias WHERE a.user_id=$1) AS visits,
+    (SELECT count(*) FROM platform_referral_registrations WHERE partner_user_id=$1) AS registrations,
+    (SELECT count(*) FROM public_interest_leads WHERE source_partner_user_id=$1) AS requests,
+    (SELECT count(*) FROM learning_purchases WHERE partner_user_id=$1) AS purchases`,[userId]);
+   const registrations=await q(`SELECT 'Peserta '||left(replace(user_id::text,'-',''),8) AS participant,alias,created_at
+    FROM platform_referral_registrations WHERE partner_user_id=$1 ORDER BY created_at DESC,user_id LIMIT 100`,[userId]);
+   const purchases=await q(`SELECT p.id,p.snapshot->>'title' AS product_title,p.created_at,o.number,o.total,o.state AS order_state,
+    EXISTS(SELECT 1 FROM commerce_ledger r WHERE r.order_id=o.id AND r.kind='refund') AS has_refund,
+    COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance
+    FROM learning_purchases p LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE p.partner_user_id=$1 ORDER BY p.id DESC LIMIT 100`,[userId]);
+   return {counts:Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,Number(v)])),registrations,purchases};
+  });
  }
  async visit(value: string,existingToken?: string) {
   // Existing valid first touch is never extended or replaced.

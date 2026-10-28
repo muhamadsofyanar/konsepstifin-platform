@@ -1,0 +1,25 @@
+KonsepSTIFIn 0.10.3 | source lengkap
+
+Perbaikan pendaftaran affiliate dan ruang belajar dengan halaman materi terpisah.
+Baca docs/UPGRADE-0.10.3.md dan docs/AUDIT-0.10.3.md.
+
+1. Backup database dan volume file yang saat ini dipakai.
+2. Unggah isi folder source ke root repository aplikasi yang sama dan redeploy.
+3. WAJIB jalankan migrasi baru 009 di terminal container versi baru:
+
+IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+
+4. Refresh paksa browser. /api/health harus menampilkan version 0.10.3.
+5. Periksa kesiapan modul di admin dan uji referral dengan email peserta baru.
+
+Pusat affiliate: /akun/mitra
+Aktivitas referral: /akun/mitra?tab=activity
+Tautan pendaftaran: /akun/mitra?tab=links
+Daftar akses peserta: /belajar?tab=classes
+Ruang belajar: /belajar/kelas/ID_PRODUK
+Admin asal pendaftaran: /admin/kelas?section=students
+
+Pertahankan DATABASE_URL, PLATFORM_ORIGIN, password, alias dan volume lama.
+Tidak perlu provision akun atau import ulang promotor.
+Pendaftaran sebelum perbaikan tidak dihubungkan ke affiliate secara otomatis.
+Tidak ada perubahan harga, transaksi lama, atau transfer otomatis.

@@ -1,3 +1,5 @@
+import { getAccountPrincipal } from '@/lib/identity/server';
+import { ACCOUNT_COOKIE } from '@/lib/identity/http';
 import { getReferralService } from '@/lib/referral-store';
 import { REFERRAL_COOKIE } from '@/lib/referral-service';
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,8 +33,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Formulir dikirim terlalu cepat. Silakan coba kembali.' }, { status: 400 });
     }
 
+    const principal = request.cookies.has(ACCOUNT_COOKIE) ? await getAccountPrincipal() : null;
+    const registeredSource = principal?.active && principal.sessionValid ? await getReferralService().resolveRegistered(principal.userId) : null;
+    const referralSource = registeredSource ?? (request.cookies.get(REFERRAL_COOKIE)?.value ? await getReferralService().resolveToken(request.cookies.get(REFERRAL_COOKIE)?.value) : null);
     const result = await submitInterest(body, {
-      referralSource: request.cookies.get(REFERRAL_COOKIE)?.value ? await getReferralService().resolveToken(request.cookies.get(REFERRAL_COOKIE)?.value) : null,
+      referralSource,
       findPromoters: getPromotersForRegion,
       createLead: createInterestLead,
     });

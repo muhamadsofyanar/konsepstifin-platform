@@ -170,8 +170,16 @@ export class LearningService {
                 price = Math.max(0, price - Number(cp.discount));
             }
             let ref: Row | undefined;
-            if (p.attribution_enabled === true && referralToken) {
-                ref = (await q.query(`SELECT a.user_id,v.alias FROM platform_referral_visits v JOIN platform_referral_aliases a ON a.alias=v.alias JOIN platform_users u ON u.id=a.user_id WHERE v.token_hash=$1 AND v.expires_at>now() AND u.active=true AND u.id<>$2 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role IN ('promoter','affiliate'))`, [createHash('sha256').update(referralToken).digest('hex'), user]))[0];
+            if (p.attribution_enabled === true) {
+                ref = (await q.query(`WITH candidates AS (
+                  SELECT partner_user_id AS user_id,alias,0 AS priority FROM platform_referral_registrations
+                    WHERE user_id=$2 AND attribution_expires_at>now()
+                  UNION ALL
+                  SELECT a.user_id,v.alias,1 FROM platform_referral_visits v JOIN platform_referral_aliases a ON a.alias=v.alias
+                    WHERE v.token_hash=$1 AND v.expires_at>now()
+                ) SELECT c.user_id,c.alias FROM candidates c JOIN platform_users u ON u.id=c.user_id
+                  WHERE u.active=true AND u.id<>$2 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role IN ('promoter','affiliate'))
+                  ORDER BY c.priority LIMIT 1`, [referralToken ? createHash('sha256').update(referralToken).digest('hex') : null, user]))[0];
             }
             const required = (await q.query("SELECT id FROM learning_lessons WHERE product_id=$1 AND state='published' AND required=true ORDER BY position,id", [productId])).map(r => Number(r.id));
             const snapshot = { title: p.title, kind: p.kind, price, listPrice: Number(p.price), accessDays: p.access_days, commissionBps: Number(p.commission_bps), attribution: 'first-touch-30-days-per-checkout; self-excluded', required };
@@ -353,8 +361,8 @@ await q.query('SELECT * FROM affiliate_payouts WHERE user_id=$1 ORDER BY id DESC
     async revokeCertificate(code: string, reason: string, actor: string) { text(reason, 1000); await this.db.transaction(async (q) => { await q.query('UPDATE learning_certificates SET revoked_at=now(),reason=$1 WHERE code=$2', [reason, text(code, 100)]); await this.audit(q, actor, 'certificate.revoke', code, { reason }); }); }
     async ticket(user: string, subject: string, message: string) { return (await this.db.query('INSERT INTO learning_tickets(user_id,subject,message) VALUES($1,$2,$3) RETURNING id', [user, text(subject), text(message, 5000)]))[0]; }
     async searchUsers(term:string){if(typeof term!=='string'||term.trim().length<2||term.length>254)throw new LearningError('Ketik 2–254 karakter email untuk mencari akun.');return this.db.query('SELECT id,email,active FROM platform_users WHERE email ILIKE $1 ORDER BY email LIMIT 50',['%'+term.trim()+'%']);}
-    async readiness(){const rows=await this.db.query("SELECT name,to_regclass('public.'||name) AS relation FROM (VALUES ('learning_products'),('learning_lessons'),('learning_coupons'),('learning_purchases'),('learning_grants'),('learning_progress'),('learning_jobs'),('affiliate_payouts'),('affiliate_entries'),('learning_audit'),('learning_notifications'),('learning_certificates'),('learning_tickets')) AS expected(name)");const missing=rows.filter(r=>!r.relation).map(r=>String(r.name));const columns=await this.db.query("SELECT column_name FROM information_schema.columns WHERE table_name='learning_products' AND column_name IN ('source_product_key','price_note')");if(columns.length<2)missing.push('catalog_0_10');return {ready:missing.length===0,missing};}
-    async adminData() { return this.db.transaction(async q=>{ const [products, lessons, grants, commissions, payouts, jobs, tickets, coupons, users] = [await q.query('SELECT * FROM learning_products ORDER BY id DESC LIMIT 200'),
+    async readiness(){const rows=await this.db.query("SELECT name,to_regclass('public.'||name) AS relation FROM (VALUES ('learning_products'),('learning_lessons'),('learning_coupons'),('learning_purchases'),('learning_grants'),('learning_progress'),('learning_jobs'),('affiliate_payouts'),('affiliate_entries'),('learning_audit'),('learning_notifications'),('learning_certificates'),('learning_tickets'),('platform_referral_registrations')) AS expected(name)");const missing=rows.filter(r=>!r.relation).map(r=>String(r.name));const columns=await this.db.query("SELECT column_name FROM information_schema.columns WHERE table_name='learning_products' AND column_name IN ('source_product_key','price_note')");if(columns.length<2)missing.push('catalog_0_10');return {ready:missing.length===0,missing};}
+    async adminData() { return this.db.transaction(async q=>{ const [products, lessons, grants, commissions, payouts, jobs, tickets, coupons, users, registrations] = [await q.query('SELECT * FROM learning_products ORDER BY id DESC LIMIT 200'),
 await q.query('SELECT * FROM learning_lessons ORDER BY product_id,position,id LIMIT 1000'),
 await q.query('SELECT g.*,u.email,p.title,(SELECT count(*) FROM learning_progress pr JOIN learning_lessons ll ON ll.id=pr.lesson_id WHERE pr.user_id=g.user_id AND ll.product_id=g.product_id) AS completed_count FROM learning_grants g JOIN platform_users u ON u.id=g.user_id JOIN learning_products p ON p.id=g.product_id ORDER BY g.id DESC LIMIT 200'),
 await q.query('SELECT e.*,u.email FROM affiliate_entries e JOIN platform_users u ON u.id=e.user_id ORDER BY e.id DESC LIMIT 200'),
@@ -362,7 +370,8 @@ await q.query('SELECT * FROM affiliate_payouts ORDER BY id DESC LIMIT 100'),
 await q.query('SELECT * FROM learning_jobs ORDER BY updated_at LIMIT 100'),
 await q.query('SELECT * FROM learning_tickets ORDER BY id DESC LIMIT 100'),
 await q.query('SELECT * FROM learning_coupons ORDER BY code'),
-await q.query('SELECT id,email,active FROM platform_users ORDER BY created_at DESC LIMIT 300')]; return { products, lessons, grants, commissions, payouts, jobs, tickets, coupons, users }; }); }
+await q.query('SELECT id,email,active FROM platform_users ORDER BY created_at DESC LIMIT 300'),
+await q.query('SELECT u.email AS participant_email,p.email AS partner_email,r.alias,r.created_at,r.attribution_expires_at FROM platform_referral_registrations r JOIN platform_users u ON u.id=r.user_id JOIN platform_users p ON p.id=r.partner_user_id ORDER BY r.created_at DESC LIMIT 200')]; return { products, lessons, grants, commissions, payouts, jobs, tickets, coupons, users, registrations }; }); }
     async replyTicket(id: number, reply: string, actor: string) { text(reply, 5000); await this.db.transaction(async (q) => { await q.query("UPDATE learning_tickets SET reply=$1,state='closed' WHERE id=$2", [reply, positive(id)]); await this.audit(q, actor, 'ticket.reply', id); }); }
     async logDownload(user: string, id: number) { await this.audit(this.db, user, 'file.download', id); }
 }

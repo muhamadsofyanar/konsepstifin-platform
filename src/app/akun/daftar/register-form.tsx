@@ -3,14 +3,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Input, Notice } from '../../belajar/ui';
 import '../../belajar/learning.css';
-export default function RegisterForm({next}:{next:string}) { const [busy, setBusy] = useState(false), [message, setMessage] = useState(''); return <main className="learning-app"><nav><strong>KonsepSTIFIn</strong><Link href="/belajar">Katalog kelas</Link><Link href={'/akun/login?next='+encodeURIComponent(next)}>Masuk</Link></nav><section className="lr-card"><h1>Daftar peserta.</h1><p>Sudah punya akun promotor atau peserta? Gunakan akun yang sama melalui halaman masuk.</p><form onSubmit={async (e) => { e.preventDefault(); if (busy)
-    return; const d = Object.fromEntries(new FormData(e.currentTarget)); setBusy(true); try {
-    const r = await fetch('/api/account/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
-    setMessage((await r.json()).message);
+export default function RegisterForm({next}:{next:string}) {
+ const [busy,setBusy]=useState(false),[success,setSuccess]=useState(false),[message,setMessage]=useState('');
+ const login='/akun/login?next='+encodeURIComponent(next);
+ return <main className="learning-app"><header className="lr-topbar"><Link className="lr-brand" href="/">KonsepSTIFIn</Link><Link href={login}>Sudah punya akun? Masuk</Link></header><section className="lr-card lr-auth-card"><span className="lr-eyebrow">SATU AKUN UNTUK BELAJAR</span><h1>{success?'Akun Anda sudah dibuat.':'Mulai perjalanan Anda.'}</h1><p>{success?'Masuk untuk melanjutkan ke halaman yang Anda pilih.':'Gunakan email aktif untuk mengakses kelas, ebook, dan pembelian Anda.'}</p><Notice message={message} error={!success}/>{success?<Link className="lr-button" href={login}>Masuk dan lanjutkan →</Link>:<form onSubmit={async e=>{e.preventDefault();if(busy)return;const d=Object.fromEntries(new FormData(e.currentTarget));setBusy(true);setMessage('');try{const response=await fetch('/api/account/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const result=await response.json();if(!response.ok)throw new Error(result.message||'Pendaftaran belum berhasil.');setSuccess(true);setMessage(result.message);}catch(error){setMessage(error instanceof Error?error.message:'Pendaftaran belum berhasil. Coba lagi.');}finally{setBusy(false);}}}><Input name="email" label="Email" type="email" maxLength={254}/><label>Kata sandi (minimal 12 karakter)<input type="password" name="password" minLength={12} maxLength={1024} required autoComplete="new-password"/></label><p className="lr-muted">Jika Anda datang melalui tautan mitra, asal referral yang valid dicatat bersama pendaftaran. Baca <Link href="/privasi">kebijakan privasi</Link> untuk penggunaan data Anda.</p><button disabled={busy} type="submit">{busy?'Menyimpan…':'Buat akun peserta'}</button></form>}<p className="lr-muted" style={{marginTop:22}}>Sudah memiliki akun peserta atau promotor? <Link href={login}>Masuk dengan akun yang sama</Link>.</p></section></main>;
 }
-catch {
-    setMessage('Pendaftaran belum berhasil.');
-}
-finally {
-    setBusy(false);
-} }}><Input name="email" label="Email" type="email" maxLength={254}/><label>Kata sandi (minimal 12 karakter)<input type="password" name="password" minLength={12} maxLength={1024} required autoComplete="new-password"/></label><Notice message={message}/><button disabled={busy}>{busy ? 'Menyimpan…' : 'Daftar'}</button></form><p><Link href={'/akun/login?next='+encodeURIComponent(next)}>Masuk ke akun →</Link></p></section></main>; }
