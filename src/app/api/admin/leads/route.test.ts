@@ -1,3 +1,4 @@
+vi.mock('@/lib/voucher-store',()=>({processVoucherOrder:vi.fn()}));
 import { NextRequest } from 'next/server';
 import { beforeEach, expect, it, vi } from 'vitest';
 vi.mock('@/lib/admin-auth',()=>({getAdminPrincipal:vi.fn()}));

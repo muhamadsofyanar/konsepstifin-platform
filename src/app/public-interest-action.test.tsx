@@ -30,14 +30,14 @@ describe('PublicInterestAction dua funnel', () => {
     expect(screen.queryByRole('option', { name: 'WSL 1' })).not.toBeInTheDocument();
   });
 
-  it('tidak meminta consent berbagi atau menawarkan checkout pada calon promotor', async () => {
+  it('menawarkan consent berbagi opsional tanpa checkout pada calon promotor', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
       ok: true, reference: 'KSF-41', status: 'baru', match: null,
     }), { status: 201 })));
     render(<PublicInterestAction leadType="promoter_candidate" linkKey="wsl1" checkoutUrl="https://app.konsepstifin.com/product/wsl-1/" label="WSL" service="WSL 1" />);
     await userEvent.click(screen.getByRole('button', { name: 'WSL' }));
 
-    expect(screen.queryByText(/dibagikan kepada promotor yang ditugaskan/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Opsional: Saya setuju data kontak/i)).not.toBeRequired();
     expect(screen.queryByRole('option', { name: 'Tes STIFIn Personal' })).not.toBeInTheDocument();
     await fillRequiredFields({ share: false });
     await userEvent.click(screen.getByRole('button', { name: 'Kirim permintaan →' }));
@@ -115,4 +115,13 @@ describe('PublicInterestAction dua funnel', () => {
     expect(screen.getByRole('button', { name: 'Kirim permintaan →' })).toBeEnabled();
   });
 
+});
+
+it('sends only explicit optional referral-sharing consent for promoter registrations',async()=>{
+ const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({reference:'KSF-90'}),{status:201}));vi.stubGlobal('fetch',fetcher);
+ render(<PublicInterestAction leadType="promoter_candidate" linkKey="wsl1" label="Daftar" service="WSL 1"/>);
+ await userEvent.click(screen.getByRole('button',{name:'Daftar'}));await fillRequiredFields({share:false});
+ const sharing=screen.getByLabelText(/Opsional: Saya setuju data kontak/i);expect(sharing).not.toBeChecked();await userEvent.click(sharing);
+ await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));await screen.findByText(/KSF-90/);
+ const body=JSON.parse(String(fetcher.mock.calls[0][1].body));expect(body.consentToShare).toBe(true);expect(body).not.toHaveProperty('sourcePartnerCode');expect(body).not.toHaveProperty('referralToken');
 });

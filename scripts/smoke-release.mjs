@@ -3,7 +3,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {PGLiteSocketServer} from '@electric-sql/pglite-socket';
 import {spawn} from 'node:child_process';
 import {createWriteStream} from 'node:fs';
-import {cp,mkdir,mkdtemp,rm,readFile} from 'node:fs/promises';
+import {cp,mkdir,mkdtemp,rm,readFile,writeFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
@@ -12,7 +12,7 @@ const app=process.cwd(),image=await mkdtemp(path.join(tmpdir(),'konsep-smoke-'))
 const freePort=await new Promise((resolve,reject)=>{const s=createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
 const db=await PGlite.create(),socket=new PGLiteSocketServer({db,port:0,host:'127.0.0.1',maxConnections:20});await socket.start();
 const origin='http://127.0.0.1:'+freePort;
-const env={...process.env,DATABASE_URL:'postgresql://postgres:postgres@'+socket.getServerConn()+'/postgres',PLATFORM_ORIGIN:origin,PORT:String(freePort),HOSTNAME:'127.0.0.1',NODE_ENV:'production',STIFIN_PROMOTER_MODE:'manual',STIFIN_PROMOTERS_JSON:'[]',IDENTITY_ADMIN_CONFIRM:'yes'};
+const env={...process.env,DATABASE_URL:'postgresql://postgres:postgres@'+socket.getServerConn()+'/postgres',PLATFORM_ORIGIN:origin,PORT:String(freePort),HOSTNAME:'127.0.0.1',NODE_ENV:'production',STIFIN_PROMOTER_MODE:'manual',STIFIN_PROMOTERS_JSON:'[]',IDENTITY_ADMIN_CONFIRM:'yes',STIFIN_VOUCHER_MODE:'test',STIFIN_VOUCHER_USER_ID:'synthetic-only'};
 const logs=createWriteStream(path.join(image,'smoke.log'));
 function command(args,input){return new Promise((resolve,reject)=>{const child=spawn(process.execPath,args,{cwd:image,env,stdio:['pipe','pipe','pipe']});let output='';child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>logs.write(d));child.on('exit',code=>code===0?resolve(output):reject(new Error('Operator command failed: '+args.join(' '))));child.stdin.end(input||'');});}
 let server;
@@ -20,7 +20,7 @@ const check=(v,message)=>{if(!v)throw new Error(message);};
 try{
  await cp(app+'/.next/standalone',image,{recursive:true});await cp(app+'/public',image+'/public',{recursive:true});await mkdir(image+'/.next',{recursive:true});await cp(app+'/.next/static',image+'/.next/static',{recursive:true});await cp(app+'/scripts',image+'/scripts',{recursive:true});await mkdir(image+'/src/lib',{recursive:true});await cp(app+'/src/lib/identity',image+'/src/lib/identity',{recursive:true});await cp(app+'/node_modules/postgres',image+'/node_modules/postgres',{recursive:true});
  await command(['scripts/identity-admin.mjs','migrate']);
- for(const file of ['network-domain.ts','network-service.ts'])await cp(app+'/src/lib/'+file,image+'/src/lib/'+file);
+ for(const file of ['network-domain.ts','network-service.ts','voucher-domain.ts','voucher-api.ts','voucher-service.ts'])await cp(app+'/src/lib/'+file,image+'/src/lib/'+file);
  const credentials={email:'admin@konsepstifin.com',password:'SyntheticOnly-'+randomUUID(),roles:['super_admin']};
  await command(['scripts/identity-admin.mjs','provision'],JSON.stringify(credentials));
  await command(['scripts/identity-admin.mjs','verify'],JSON.stringify(credentials));
@@ -46,7 +46,20 @@ try{
  `;
  const network=JSON.parse(await command(['--input-type=module','-e',importCode]));
  check(network.created===10&&network.total===11&&network.invitations.length===10,'Incorrect network import');
- server=spawn(process.execPath,['server.js'],{cwd:image,env,stdio:['ignore','pipe','pipe']});server.stdout.pipe(logs,{end:false});server.stderr.pipe(logs,{end:false});
+ // All official voucher reads are synthetic. Any refill POST fails this smoke test.
+ await writeFile(image+'/smoke-api.mjs',`
+ const original=globalThis.fetch;
+ globalThis.fetch=async(input,init)=>{
+  const url=new URL(String(input));
+  if(url.hostname!=='apro.stifin.id')return original(input,init);
+  if(init?.method==='POST')throw new Error('Real refill forbidden in smoke');
+  if(url.pathname.includes('/proGetCab/pro/'))return new Response(JSON.stringify({data:[{KodeID:'BKS-HRA-40',Sub:'JML-CAB-62',Aktif:'1'},...Array.from({length:10},(_,i)=>({KodeID:'KHU-ABU-'+String(i+1).padStart(2,'0'),Sub:'JML-CAB-62',Aktif:'1'}))]}));
+  if(url.pathname.includes('/voucherGet/getTotVoucher/'))return new Response(JSON.stringify({Pesan:'OK',totalF:2,totalV:3}));
+  throw new Error('Unexpected external request');
+ };
+ `);
+ env.NODE_OPTIONS='--import '+image+'/smoke-api.mjs';
+ server=spawn(process.execPath,['scripts/start-with-worker.mjs'],{cwd:image,env,stdio:['ignore','pipe','pipe']});server.stdout.pipe(logs,{end:false});server.stderr.pipe(logs,{end:false});
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(origin+'/api/health')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,200));}check(ready,'Standalone server not ready');
  const cross=await fetch(origin+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://evil.test'},body:JSON.stringify(credentials)});check(cross.status===403,'Cross-origin mutation was not blocked');
  const login=await fetch(origin+'/api/admin/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(credentials)});check(login.ok,'Synthetic login failed: '+login.status+' '+await login.text());const cookie=login.headers.get('set-cookie')?.split(';')[0];check(Boolean(cookie),'Missing session cookie');
@@ -68,13 +81,34 @@ try{
  await db.query('UPDATE public_interest_leads SET assigned_promoter_code=$1 WHERE id=$2',[invite.promoterCode,lead.lead.id]);
  const ownLeads=await fetch(origin+'/api/account/leads',{headers:{Cookie:promoterCookie}});const scoped=await ownLeads.json();check(scoped.total===1&&scoped.items.length===1,'Promoter scoped leads incorrect');
  const promoterPage=await fetch(origin+'/akun',{headers:{Cookie:promoterCookie}});const portalHtml=await promoterPage.text();check(promoterPage.status===200&&portalHtml.includes('Synthetic Promoter 0')&&portalHtml.includes('Klien Uji'),'Promoter portal SSR incorrect');
+ const partnerApi=async(endpoint,method='GET',body)=>{const response=await fetch(origin+endpoint,{method,headers:{Cookie:promoterCookie,Origin:origin,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const json=await response.json();check(response.ok,endpoint+' partner HTTP '+response.status+' '+JSON.stringify(json));return json;};
+ await partnerApi('/api/account/referral','PATCH',{alias:'synthetic-partner'});
+ const ref=await fetch(origin+'/r/synthetic-partner',{redirect:'manual'});check(ref.status===302&&ref.headers.get('set-cookie'),'Referral visit failed');
+ const oldRef=await fetch(origin+'/r/'+invite.promoterCode.toLowerCase(),{redirect:'manual'});check(oldRef.status===302&&oldRef.headers.get('set-cookie'),'Historical alias failed');
+ const refCookie=ref.headers.get('set-cookie').split(';')[0];
+ const publicReferral=await fetch(origin+'/api/interests',{method:'POST',headers:{'Content-Type':'application/json',Cookie:refCookie},body:JSON.stringify({name:'Referral Smoke',phone:'081234567800',email:'referral@example.test',city:'Bandung',service:'Informasi Promotor',productKey:'bantuanPromotor',sourcePath:'/',leadType:'promoter_candidate',consentToContact:true,consentToShare:true,idempotencyKey:randomUUID(),startedAt:Date.now()-3000})});
+ check(publicReferral.ok,'Public referral registration failed '+publicReferral.status+' '+await publicReferral.text());
+ const source=(await db.query("SELECT assigned_promoter_code,source_partner_code,source_referral_alias FROM public_interest_leads WHERE name='Referral Smoke'")).rows[0];check(source?.source_partner_code===invite.promoterCode&&source.assigned_promoter_code===invite.promoterCode&&source.source_referral_alias==='synthetic-partner','Referral attribution lost');
+ const ownBalance=await partnerApi('/api/account/vouchers/balance');check(ownBalance.voucher===3&&ownBalance.free===2,'Official balance DTO incorrect');
+ const voucherKey=randomUUID();const purchase=await partnerApi('/api/account/vouchers','POST',{quantity:2,key:voucherKey});const voucherId=purchase.order.id;check(purchase.order.total===330000&&purchase.order.mode==='test','Voucher checkout snapshot incorrect');
+ const duplicate=await partnerApi('/api/account/vouchers','POST',{quantity:2,key:voucherKey});check(duplicate.order.id===voucherId,'Duplicate voucher order');
+ check((await fetch(origin+'/api/account/vouchers/'+voucherId,{headers:{Cookie:cookie}})).status===404,'Other promoter could read voucher order');
+ await api('/api/admin/orders/'+voucherId,'POST',{action:'receipt',amount:330000,reason:'Synthetic verified transfer',reference:'SMOKE-VOUCHER',key:randomUUID()});
+ const fulfilled=await partnerApi('/api/account/vouchers/'+voucherId);check(fulfilled.order.fulfillmentStatus==='test_success','Test voucher fulfillment missing');
+ // Simulate a payment committed before the request process crashed: only the worker may pick it up.
+ const queued=(await partnerApi('/api/account/vouchers','POST',{quantity:3,key:randomUUID()})).order;
+ await db.query("INSERT INTO commerce_ledger(order_id,kind,amount,reason,reference,actor) VALUES($1,'receipt',$2,'Synthetic recovery payment','WORKER-ONLY','smoke')",[queued.id,queued.total]);
+ let recovered=false;for(let i=0;i<100;i++){const state=await partnerApi('/api/account/vouchers/'+queued.id);if(state.order.fulfillmentStatus==='test_success'){recovered=true;break;}await new Promise(resolve=>setTimeout(resolve,200));}check(recovered,'Native worker did not recover paid pending order');
+ await privatePage('/admin/voucher','Voucher');
+ const voucherPage=await fetch(origin+'/akun/voucher',{headers:{Cookie:promoterCookie}});check(voucherPage.ok&&(await voucherPage.text()).includes('Voucher promotor'),'Voucher SSR failed');
+ const aliasPage=await fetch(origin+'/akun/tautan',{headers:{Cookie:promoterCookie}});check(aliasPage.ok&&(await aliasPage.text()).includes('synthetic-partner'),'Referral SSR failed');
  const created=await api('/api/admin/orders','POST',{leadId:lead.lead.id,lines:[{name:'Tes STIFIn Personal',unitPrice:650000,quantity:1}],key:randomUUID()});const id=created.order.id;
  await api('/api/admin/orders/'+id,'POST',{action:'update',lines:[{name:'Tes STIFIn Personal',unitPrice:650000,quantity:1}],key:randomUUID()});await api('/api/admin/orders/'+id,'POST',{action:'issue',key:randomUUID()});
  const receipt={action:'receipt',amount:650000,reason:'Mutasi sintetis terverifikasi',reference:'QA-ONLY',key:randomUUID()};await api('/api/admin/orders/'+id,'POST',receipt);const repeated=await api('/api/admin/orders/'+id,'POST',receipt);check(repeated.order.balance===650000&&repeated.order.ledger.length===1,'Duplicate payment counted');
  const invoice=await privatePage('/admin/pesanan/'+id,'Rincian pesanan');check(invoice.includes('123456'),'Missing transfer details');
  await privatePage('/admin/leads?leadId='+lead.lead.id,'Klien &amp; Promotor');await privatePage('/admin/pengaturan','Atur operasional platform');await privatePage('/admin/konten','Kelola materi dan penawaran');
  await api('/api/admin/logout','POST',{});check((await fetch(origin+'/api/admin/orders',{headers:{Cookie:cookie}})).status===401,'Revoked session still accepted');
- console.log('PASS: standalone operators, network import/idempotency, 10 pending promoters+owner, one-use activation, promoter login/scoped leads/admin denial, privacy headers, admin login, CSRF, settings, CRM, order issue/payment dedupe, private SSR pages, logout.');
+ console.log('PASS: standalone operators, network import/idempotency, 10 pending promoters+owner, one-use activation, promoter login/scoped leads/admin denial, referral aliases/attribution, own voucher balance, checkout idempotency, payment-triggered test fulfillment, native worker recovery, voucher ownership/SSR, privacy headers, admin login, CSRF, settings, CRM, order issue/payment dedupe, private SSR pages, logout.');
  console.log('Synthetic PostgreSQL wire server only; does not use DATABASE_URL supplied by your environment. No Docker/browser/real PostgreSQL concurrency claim.');
 }catch(error){console.error(error instanceof Error?error.message:'Smoke test failed');console.error((await readFile(path.join(image,'smoke.log'),'utf8')).slice(-5000));process.exitCode=1;}
 finally{if(server){server.kill('SIGTERM');await new Promise(resolve=>server.exitCode!==null?resolve():server.once('exit',resolve));}await socket.stop();await new Promise(resolve=>setTimeout(resolve,100));await db.close();await new Promise(resolve=>logs.end(resolve));await rm(image,{recursive:true,force:true});}

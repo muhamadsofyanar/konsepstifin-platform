@@ -3,13 +3,13 @@ import { CommerceError, calculateLines, paymentStatus, validateMoney, type Comme
 export interface CommerceQuery { query(text:string,params?:unknown[]):Promise<Record<string,unknown>[]> }
 export interface CommerceDatabase extends CommerceQuery { transaction<T>(fn:(tx:CommerceQuery)=>Promise<T>):Promise<T> }
 export type LedgerEntry={id:number;kind:string;amount:number;reversesId:number|null;reason:string;reference:string;actor:string;createdAt:string};
-export type CommerceOrder={id:number;number:string;leadId:number;customerName:string;customerPhone:string;customerEmail:string;state:string;lines:CommerceLine[];total:number;balance:number;paymentStatus:string;createdAt:string;ledger:LedgerEntry[];audit:Record<string,unknown>[]};
+export type CommerceOrder={id:number;number:string;leadId:number|null;customerName:string;customerPhone:string;customerEmail:string;state:string;lines:CommerceLine[];total:number;balance:number;paymentStatus:string;createdAt:string;ledger:LedgerEntry[];audit:Record<string,unknown>[]};
 export type OrderCommand={action:'issue'|'cancel'|'update'|'receipt'|'refund'|'correction';key:string;lines?:unknown;amount?:unknown;reason?:string;reference?:string;entryId?:number};
 function id(value:unknown){ if(typeof value!=='number'||!Number.isSafeInteger(value)||value<1) throw new CommerceError('ID tidak valid.'); return value; }
 function text(value:unknown,max:number,label:string){if(typeof value!=='string'||!value.trim()||value.length>max)throw new CommerceError(`${label} wajib diisi (maksimum ${max} karakter).`);return value.trim();}
 const date=(v:unknown)=>v instanceof Date?v.toISOString():String(v);
 export class CommerceService {
- constructor(private db:CommerceDatabase){}
+ constructor(private db:CommerceDatabase,private guard?:(tx:CommerceQuery,id:number,input:OrderCommand)=>Promise<void>){}
  async lead(leadId:number){const rows=await this.db.query('SELECT id,name,phone,email FROM public_interest_leads WHERE id=$1',[id(leadId)]);return rows[0]??null;}
  async create(input:{leadId:number;lines:unknown;key:string},actor:string){
   const leadId=id(input.leadId), key=text(input.key,120,'Idempotensi'), snapshot=calculateLines(input.lines), payload=JSON.stringify({leadId,...snapshot}); text(actor,200,'Pelaku');
@@ -26,7 +26,7 @@ export class CommerceService {
   const ledger=await tx.query('SELECT * FROM commerce_ledger WHERE order_id=$1 ORDER BY id',[orderId]);
   const balance=ledger.reduce((sum,entry)=>sum+Number(entry.amount),0);
   const audit=await tx.query('SELECT action,actor,created_at,payload FROM commerce_audit WHERE order_id=$1 ORDER BY id',[orderId]);
-  return {id:Number(row.id),number:String(row.number),leadId:Number(row.lead_id),customerName:String(row.customer_name),customerPhone:String(row.customer_phone),customerEmail:String(row.customer_email),state:String(row.state),lines:row.lines as CommerceLine[],total:Number(row.total),balance,paymentStatus:paymentStatus(Number(row.total),balance),createdAt:date(row.created_at),ledger:ledger.map(e=>({id:Number(e.id),kind:String(e.kind),amount:Number(e.amount),reversesId:e.reverses_id?Number(e.reverses_id):null,reason:String(e.reason),reference:String(e.reference),actor:String(e.actor),createdAt:date(e.created_at)})),audit:audit.map(e=>({...e,created_at:date(e.created_at)}))};
+  return {id:Number(row.id),number:String(row.number),leadId:row.lead_id===null?null:Number(row.lead_id),customerName:String(row.customer_name),customerPhone:String(row.customer_phone),customerEmail:String(row.customer_email),state:String(row.state),lines:row.lines as CommerceLine[],total:Number(row.total),balance,paymentStatus:paymentStatus(Number(row.total),balance),createdAt:date(row.created_at),ledger:ledger.map(e=>({id:Number(e.id),kind:String(e.kind),amount:Number(e.amount),reversesId:e.reverses_id?Number(e.reverses_id):null,reason:String(e.reason),reference:String(e.reference),actor:String(e.actor),createdAt:date(e.created_at)})),audit:audit.map(e=>({...e,created_at:date(e.created_at)}))};
   });
  }
  async command(orderId:number,input:OrderCommand,actor:string){
@@ -35,6 +35,7 @@ export class CommerceService {
   await this.db.transaction(async tx=>{
    const order=(await tx.query('SELECT * FROM commerce_orders WHERE id=$1 FOR UPDATE',[orderId]))[0];if(!order)throw new CommerceError('Pesanan tidak ditemukan.');
    const previous=(await tx.query('SELECT payload FROM commerce_audit WHERE order_id=$1 AND operation_key=$2',[orderId,key]))[0];if(previous){if(previous.payload!==payload)throw new CommerceError('Idempotensi sudah digunakan untuk data berbeda.');return;}
+   await this.guard?.(tx,orderId,input);
    const balance=Number((await tx.query('SELECT COALESCE(sum(amount),0) AS balance FROM commerce_ledger WHERE order_id=$1',[orderId]))[0].balance);
    if(input.action==='update'){
     if(order.state!=='draft')throw new CommerceError('Hanya draf yang dapat diubah.');const snapshot=calculateLines(input.lines);await tx.query('UPDATE commerce_orders SET lines=$1::text::jsonb,total=$2,updated_at=now() WHERE id=$3',[JSON.stringify(snapshot.lines),snapshot.total,orderId]);

@@ -1,3 +1,5 @@
+import { getReferralService } from '@/lib/referral-store';
+import { REFERRAL_COOKIE } from '@/lib/referral-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { submitInterest } from '@/lib/interest-service';
 import { createInterestLead } from '@/lib/interest-store';
@@ -30,6 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await submitInterest(body, {
+      referralSource: request.cookies.get(REFERRAL_COOKIE)?.value ? await getReferralService().resolveToken(request.cookies.get(REFERRAL_COOKIE)?.value) : null,
       findPromoters: getPromotersForRegion,
       createLead: createInterestLead,
     });

@@ -40,3 +40,18 @@ describe('submitInterest', () => {
     expect(resolver).not.toHaveBeenCalled();
   });
 });
+
+it('uses only server referral attribution before region matching, ignoring forged body fields',async()=>{
+ const source={userId:'00000000-0000-4000-8000-000000000001',promoterCode:'KHU-ABU-01',alias:'budi',name:'Budi',branchCode:'JML-CAB-62',area:'Sumedang'};
+ const createLead=vi.fn().mockResolvedValue({id:80}),findMatch=vi.fn();
+ await submitInterest({...raw,assignedPromoterCode:'FORGED',source:{...source,promoterCode:'FORGED'}},{createLead,findMatch,referralSource:source});
+ expect(findMatch).not.toHaveBeenCalled();expect(createLead).toHaveBeenCalledWith(expect.objectContaining({source,match:expect.objectContaining({assignedPromoterCode:'KHU-ABU-01',matchMethod:'referral'})}));
+ const noCookie=vi.fn().mockResolvedValue({id:81});await submitInterest({...raw,referralSource:source},{createLead:noCookie});
+ expect(noCookie).toHaveBeenCalledWith(expect.objectContaining({source:undefined,match:expect.objectContaining({assignedPromoterCode:''})}));
+});
+it('assigns consenting promoter registrations but does not share nonconsenting registrations',async()=>{
+ const source={userId:'00000000-0000-4000-8000-000000000001',promoterCode:'KHU-ABU-01',alias:'budi',name:'Budi',branchCode:'JML-CAB-62',area:'Sumedang'};
+ const createLead=vi.fn().mockResolvedValue({id:82});const registration={...raw,leadType:'promoter_candidate',productKey:'wsl1',service:'WSL 1'};
+ await submitInterest(registration,{createLead,referralSource:source});expect(createLead).toHaveBeenLastCalledWith(expect.objectContaining({source,match:expect.objectContaining({assignedPromoterCode:source.promoterCode})}));
+ await submitInterest({...registration,consentToShare:false},{createLead,referralSource:source});expect(createLead).toHaveBeenLastCalledWith(expect.objectContaining({source:null,match:null}));
+});

@@ -14,4 +14,4 @@ export type TestServiceStatus = typeof testServiceStatuses[number];
 export type PromoterCandidateStatus = typeof promoterCandidateStatuses[number];
 export type LeadStatus = TestServiceStatus | PromoterCandidateStatus;
 export type PaymentStatus = 'belum_dicek' | 'menunggu' | 'dibayar' | 'gagal' | 'dikembalikan';
-export type MatchMethod = 'manual' | 'automatic' | 'province' | 'area' | 'none';
+export type MatchMethod = 'manual' | 'automatic' | 'province' | 'area' | 'none' | 'referral';

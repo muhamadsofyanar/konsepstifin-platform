@@ -11,9 +11,9 @@ const principal={userId:'member',active:true as const,sessionValid:true as const
 beforeEach(()=>{vi.mocked(getAccountPrincipal).mockResolvedValue(principal);});
 it('redirects an anonymous account to login without loading leads',async()=>{vi.mocked(getAccountPrincipal).mockResolvedValue(null);await expect(Page()).rejects.toThrow('redirect:/akun/login');expect(getPromoterPortal).not.toHaveBeenCalled();});
 it('shows an explicit non-member access state instead of redirecting again',async()=>{vi.mocked(getPromoterPortal).mockResolvedValue(null);expect(renderToStaticMarkup(await Page())).toContain('Keanggotaan cabang belum tersedia');});
-it('requests only the session owner portal and describes empty leads and unavailable voucher balance',async()=>{
+it('requests only the session owner portal and describes empty leads and links to voucher and referral portals',async()=>{
  vi.mocked(getPromoterPortal).mockResolvedValue({profile:{userId:'member',promoterCode:'CODE',name:'Anggota Uji',email:'member@example.test',area:'Area Uji',branchCode:'BRANCH',branchName:'Cabang Uji',isManager:false},leads:[],total:0});
- const html=renderToStaticMarkup(await Page());expect(getPromoterPortal).toHaveBeenCalledWith('member');expect(html).toContain('Belum ada lead yang ditugaskan');expect(html).toContain('Saldo belum terhubung');expect(html).not.toContain('Beli voucher');
+ const html=renderToStaticMarkup(await Page());expect(getPromoterPortal).toHaveBeenCalledWith('member');expect(html).toContain('Belum ada lead yang ditugaskan');expect(html).toContain('/akun/voucher');expect(html).toContain('/akun/tautan');expect(html).toContain('RUANG MITRA');
 });
 it('never loads promoter data for unrelated roles',async()=>{vi.mocked(getAccountPrincipal).mockResolvedValue({...principal,roles:['customer']});const html=renderToStaticMarkup(await Page());expect(html).toContain('Akses promotor diperlukan');expect(getPromoterPortal).not.toHaveBeenCalled();});
 it('explains when the scoped preview is smaller than the total',async()=>{

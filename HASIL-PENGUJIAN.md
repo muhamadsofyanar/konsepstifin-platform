@@ -1,4 +1,36 @@
-# Hasil terbaru KonsepSTIFIn 0.7.0
+# Hasil terbaru KonsepSTIFIn 0.8.0
+
+Tanggal: 28 Oktober 2026. Fitur baru: alias referral mitra, atribusi lead dari cookie yang divalidasi server, cek saldo riil, pesanan voucher yang terhubung ke ledger pembayaran, dan worker pengisian otomatis setelah lunas.
+
+| Pemeriksaan 0.8.0 | Hasil aktual |
+| --- | --- |
+| npm test | 213 lulus; 6 integrasi lama dilewati karena TEST_DATABASE_URL khusus uji tidak tersedia |
+| npm run test:identity | 78 lulus |
+| npm run test:network | 7 lulus |
+| npm run test:unit:node | 45 lulus; cakupan sebagian berulang dengan identity |
+| TypeScript | Typecheck dan build TypeScript lulus |
+| npm run lint | Lulus |
+| npm run build | Build produksi berhasil |
+| npm run test:smoke | Lulus pada paket standalone, termasuk server dan worker Node 24 bersamaan |
+| Native runtime | Impor langsung service/API voucher lulus tanpa transform TypeScript eksperimental |
+| Review independen | Dua temuan worker/antrean diperbaiki dan diverifikasi |
+| git diff --check | Lulus |
+
+Smoke menjalankan migrasi/provision/verify dan impor jaringan sintetis, aktivasi sekali pakai, login promotor, penolakan akses admin, alias baru dan lama, registrasi publik dengan referral, sumber dan penugasan lead, saldo tiruan dengan format API riil, checkout idempoten, isolasi pemilik pesanan, pembayaran lunas menuju test_success, serta halaman privat. Pengujian pemulihan worker mencatat pembayaran sintetis langsung ke ledger dan membuktikan worker native mengambil pesanan pending tanpa bantuan handler pembayaran.
+
+Cakupan voucher meliputi pembayaran sebagian/penuh, harga snapshot, jumlah bebas bilangan bulat, pesanan ganda, klaim bersamaan, mode test/off/live, timeout tanpa pengiriman ulang, penolakan API HTTP 2xx, pemeriksaan delta saldo, refund sebelum klaim dan pemblokiran sesudah klaim, profil berubah/nonaktif, rekonsiliasi dan pemulihan proses terhenti. Regresi antrean memastikan puluhan pesanan tertahan satu promotor tidak menghalangi promotor lain. Adapter postgres.js diuji lewat PostgreSQL wire untuk snapshot JSON, transaksi, dan binding parameter.
+
+Cakupan referral meliputi benturan alias, nama terlarang, alias resmi/historis, first-touch 30 hari, token kedaluwarsa/palsu, akun nonaktif, cookie HttpOnly/Secure, CSRF, izin akun sendiri, persetujuan pembagian kontak, atribusi dari server, idempotensi registrasi dan sumber yang tetap setelah penugasan berubah. Trigger database menolak perubahan sumber referral.
+
+Satu pembacaan GET ke saldo resmi memverifikasi bentuk respons `Pesan`, `totalF`, `totalV`; nilai saldo tidak disalin ke source. Semua pengujian POST pengisian menggunakan API tiruan. Tidak ada pengisian voucher riil, perubahan database produksi, pesan kepada promotor, push GitHub, atau deployment yang dilakukan oleh rilis ini.
+
+Batas validasi: Docker Alpine dan inspeksi visual Chromium belum dijalankan. Database PGlite memakai satu backend; ini bukan bukti seluruh interleaving PostgreSQL multi-transaksi independen. Pengisian produksi belum diuji. Gunakan panduan **MITRA-DAN-VOUCHER.md** untuk konfigurasi dan pemeriksaan operasional.
+
+---
+
+# Arsip pengujian rilis sebelumnya
+
+## Arsip hasil KonsepSTIFIn 0.7.0
 
 Tanggal: 28 Oktober 2026. Fitur baru: Kepala Cabang dan sepuluh akun promotor, keanggotaan cabang, undangan, aktivasi, dan portal promotor. Data resmi dibaca untuk pencocokan; akun produksi belum dibuat dari lingkungan pengerjaan.
 

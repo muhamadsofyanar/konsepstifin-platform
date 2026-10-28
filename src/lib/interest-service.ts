@@ -10,6 +10,8 @@ import {
   type StoredPromoterCandidate,
 } from '@/lib/interest-store';
 
+import type { ReferralSource } from './referral-service';
+
 type CheckoutResolver = (productKey: string) => Promise<string>;
 type MatchResolver = (interest: InterestInput) => Promise<PromoterMatch>;
 type PromoterResolver = (regionCode: string) => Promise<PublicPromoter[]>;
@@ -17,6 +19,8 @@ type LeadCreator = (command: CreateInterestLeadCommand) => Promise<StoredLead | 
 
 export type SubmissionDependencies = {
   createLead?: LeadCreator;
+  /** Only a server-validated cookie resolver may supply this dependency. */
+  referralSource?: ReferralSource | null;
   findMatch?: MatchResolver;
   findPromoters?: PromoterResolver;
   /** Accepted only for old callers; public submissions never resolve a checkout URL. */
@@ -73,7 +77,8 @@ export async function submitInterest(payload: unknown, dependencies: SubmissionD
 
   if (interest.leadType === 'promoter_candidate') {
     const status = 'baru' as const;
-    const lead = await createLead({ interest, idempotencyKey, status, match: null });
+    const source = interest.consentToShare ? dependencies.referralSource : null;
+    const lead = await createLead({ interest, idempotencyKey, status, match: source ? referralSnapshot(source) : null, source });
     return {
       lead,
       reference: `KSF-${lead.id}`,
@@ -82,13 +87,18 @@ export async function submitInterest(payload: unknown, dependencies: SubmissionD
     };
   }
 
-  const match = await resolveMatch(interest, dependencies);
+  const source = interest.consentToShare ? dependencies.referralSource : null;
+  const match = source ? { method: 'referral' as const, primary: { code: source.promoterCode, name: source.name, branchCode: source.branchCode, area: source.area, province: '', active: true, regionCodes: [], mappingSource: 'unresolved' as const }, candidates: [] } : await resolveMatch(interest, dependencies);
   const status = match.primary ? 'ditawarkan' as const : 'mencari_promotor' as const;
-  const lead = await createLead({ interest, idempotencyKey, status, match: snapshot(match) });
+  const lead = await createLead({ interest, idempotencyKey, status, match: source ? referralSnapshot(source) : snapshot(match), source });
   return {
     lead,
     reference: `KSF-${lead.id}`,
     status: lead.status ?? status,
     match: publicMatch(match),
   };
+}
+
+function referralSnapshot(source: ReferralSource): LeadMatchSnapshot {
+ return {matchMethod:'referral',assignedPromoterCode:source.promoterCode,matchedPromoterName:source.name,matchedBranchCode:source.branchCode,candidates:[]};
 }

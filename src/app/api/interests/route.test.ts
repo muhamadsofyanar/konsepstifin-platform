@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST, publicInterestErrorResponse } from './route';
 import { submitInterest } from '@/lib/interest-service';
 
+const referral = vi.hoisted(()=>({resolveToken:vi.fn()}));
+vi.mock('@/lib/referral-store',()=>({getReferralService:()=>referral}));
+
 vi.mock('@/lib/interest-service', () => ({ submitInterest: vi.fn() }));
 
 let address = 0;
@@ -79,4 +82,14 @@ describe('POST /api/interests', () => {
     expect(responses.slice(0, 8).every((response) => response.status === 201)).toBe(true);
     expect(responses[8].status).toBe(429);
   });
+});
+
+
+it('resolves attribution from the HttpOnly cookie rather than body fields',async()=>{
+ const source={userId:'u',promoterCode:'REAL',alias:'budi',name:'Budi',branchCode:'JML-CAB-62',area:''};
+ referral.resolveToken.mockResolvedValue(source);
+ vi.mocked(submitInterest).mockResolvedValue({lead:{id:1,leadType:'test_service',status:'ditawarkan'},reference:'KSF-1',status:'ditawarkan',match:null} as Awaited<ReturnType<typeof submitInterest>>);
+ const req=new NextRequest('http://localhost/api/interests',{method:'POST',headers:{'content-type':'application/json',cookie:`konsepstifin_referral=${'a'.repeat(64)}`},body:JSON.stringify({startedAt:Date.now()-2000,sourcePartnerCode:'FORGED'})});
+ const response=await POST(req);expect(response.status).toBe(201);
+ expect(referral.resolveToken).toHaveBeenCalledWith('a'.repeat(64));expect(vi.mocked(submitInterest).mock.calls.at(-1)?.[1].referralSource).toEqual(source);
 });

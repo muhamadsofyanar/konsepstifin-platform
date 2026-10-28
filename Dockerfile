@@ -20,6 +20,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/src/lib/identity ./src/lib/identity
 COPY --from=builder /app/src/lib/network-domain.ts /app/src/lib/network-service.ts ./src/lib/
+COPY --from=builder /app/src/lib/voucher-domain.ts /app/src/lib/voucher-api.ts /app/src/lib/voucher-service.ts ./src/lib/
 COPY --from=deps /app/node_modules/postgres ./node_modules/postgres
 RUN mkdir -p /app/storage/stifin-sources && chown -R node:node /app
 USER node
@@ -27,4 +28,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
-CMD ["node", "server.js"]
+CMD ["node", "scripts/start-with-worker.mjs"]

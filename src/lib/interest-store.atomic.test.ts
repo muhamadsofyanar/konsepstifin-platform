@@ -32,3 +32,12 @@ it('rolls contact mutation back when audit insert fails',async()=>{
  await expect(updateLead(id,{status:'selesai',internalNotes:'Should roll back'},'reject-actor')).rejects.toThrow();
  const lead=await getLeadById(id);expect(lead?.status).toBe('diklaim');expect(lead?.internalNotes).toBe('Contacted');
 });
+
+it('persists referral source separately and preserves it across admin reassignment',async()=>{
+ const source={userId:'00000000-0000-4000-8000-000000000001',promoterCode:'ORIGIN',alias:'budi',name:'Budi',branchCode:'JML-CAB-62',area:''};
+ const interest={leadType:'promoter_candidate' as const,productKey:'wsl1',name:'Registration Test',phone:'628123456789',email:'',provinceCode:'',provinceName:'',regencyCode:'',regencyName:'',city:'Sumedang',service:'WSL 1',notes:'',sourcePath:'/',utmSource:'',utmMedium:'',utmCampaign:'',utmContent:'',utmTerm:'',referrer:'',consentToContact:true,consentToShare:true};
+ const command={idempotencyKey:'123e4567-e89b-42d3-a456-426614174098',interest,source,match:{assignedPromoterCode:'ORIGIN',matchedPromoterName:'Budi',matchedBranchCode:'JML-CAB-62',matchMethod:'referral' as const}};
+ const lead=await createInterestLead(command);expect(lead.assignedPromoterCode).toBe('ORIGIN');expect(lead.sourceReferralAlias).toBe('budi');
+ const reassigned=await updateLead(lead.id,{status:'dihubungi',assignedPromoterCode:'NEW'},'admin');expect(reassigned.assignedPromoterCode).toBe('NEW');expect(reassigned.sourcePartnerCode).toBe('ORIGIN');expect(reassigned.sourcePartnerUserId).toBe(source.userId);
+ const repeated=await createInterestLead({...command,source:{...source,promoterCode:'ATTEMPT'}});expect(repeated.id).toBe(lead.id);expect(repeated.sourcePartnerCode).toBe('ORIGIN');
+});

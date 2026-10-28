@@ -1,3 +1,5 @@
+> Catatan rilis 0.7.0. Untuk pembaruan referral dan voucher 0.8.0, ikuti **MITRA-DAN-VOUCHER.md**. Akun aktif tidak perlu diimpor ulang.
+
 # Pembaruan 0.7.0: Kepala Cabang dan 10 promotor
 
 ## Data yang dicocokkan

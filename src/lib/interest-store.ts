@@ -1,3 +1,4 @@
+import type { ReferralSource } from './referral-service';
 import { listCrmLeads, type CrmQuery } from './crm-query';
 import { getDatabaseClient } from '@/lib/article-store';
 import {
@@ -66,6 +67,9 @@ export type StoredPromoterCandidate = {
 export type StoredLead = InterestInput & {
   id: number;
   status: LeadStatus;
+  sourcePartnerUserId?: string;
+  sourcePartnerCode?: string;
+  sourceReferralAlias?: string;
   assignedPromoterCode: string;
   pic: string;
   matchMethod: MatchMethod;
@@ -113,6 +117,7 @@ export type CreateInterestLeadCommand = {
   idempotencyKey: string;
   status?: LeadStatus;
   match?: LeadMatchSnapshot | null;
+  source?: ReferralSource | null;
 };
 
 export type LeadAdminUpdate = {
@@ -316,6 +321,9 @@ export async function initializeInterestSchema() {
         service TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', source_path TEXT NOT NULL DEFAULT '/',
         status TEXT NOT NULL DEFAULT 'baru', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`;
+      await sql`ALTER TABLE public_interest_leads ADD COLUMN IF NOT EXISTS source_partner_user_id UUID`;
+      await sql`ALTER TABLE public_interest_leads ADD COLUMN IF NOT EXISTS source_partner_code TEXT NOT NULL DEFAULT ''`;
+      await sql`ALTER TABLE public_interest_leads ADD COLUMN IF NOT EXISTS source_referral_alias TEXT NOT NULL DEFAULT ''`;
       await sql`ALTER TABLE public_interest_leads ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT ''`;
       await sql`ALTER TABLE public_interest_leads ADD COLUMN IF NOT EXISTS lead_type TEXT NOT NULL DEFAULT 'test_service'`;
       await sql`ALTER TABLE public_interest_leads ADD COLUMN IF NOT EXISTS product_key TEXT NOT NULL DEFAULT ''`;
@@ -429,6 +437,9 @@ export function mapLead(row: Record<string, unknown>): StoredLead {
     consentToContact: Boolean(row.consent_to_contact),
     consentToShare: Boolean(row.consent_to_share),
     status: String(row.status ?? 'baru') as LeadStatus,
+    sourcePartnerUserId: String(row.source_partner_user_id ?? ''),
+    sourcePartnerCode: String(row.source_partner_code ?? ''),
+    sourceReferralAlias: String(row.source_referral_alias ?? ''),
     assignedPromoterCode: String(row.assigned_promoter_code ?? ''),
     pic: String(row.pic ?? ''),
     matchMethod: String(row.match_method ?? 'none') as MatchMethod,
@@ -464,7 +475,8 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
   const idempotencyKey = validateIdempotencyKey(command.idempotencyKey);
   const status = defaultStatus({ ...command, interest });
   if (!validStatuses(interest.leadType).includes(status)) throw new Error('Status tidak sesuai dengan jenis lead.');
-  const match = interest.leadType === 'test_service' ? command.match : null;
+  const source = interest.consentToShare ? command.source : null;
+  const match = interest.leadType === 'test_service' || source ? command.match : null;
   const candidates = mapCandidates(match?.candidates ?? []);
   const sql = getDatabaseClient();
 
@@ -473,7 +485,8 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
       lead_type, product_key, name, phone, email, province_code, province_name, regency_code, regency_name,
       city, service, notes, source_path, utm_source, utm_medium, utm_campaign, utm_content, utm_term, referrer,
       status, consent_to_contact, consent_to_share, consent_at, response_due_at, assigned_promoter_code,
-      pic, match_method, matched_promoter_name, matched_branch_code, promoter_candidates, idempotency_key
+      pic, match_method, matched_promoter_name, matched_branch_code, promoter_candidates, idempotency_key,
+      source_partner_user_id, source_partner_code, source_referral_alias
     ) VALUES (
       ${interest.leadType}, ${interest.productKey}, ${interest.name}, ${interest.phone}, ${interest.email},
       ${interest.provinceCode}, ${interest.provinceName}, ${interest.regencyCode}, ${interest.regencyName},
@@ -482,7 +495,8 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
       ${status}, ${interest.consentToContact}, ${interest.consentToShare}, NOW(), NOW() + INTERVAL '2 hours',
       ${match?.assignedPromoterCode ?? ''}, ${interest.leadType === 'promoter_candidate' ? '' : ''},
       ${match?.matchMethod ?? 'none'}, ${match?.matchedPromoterName ?? ''}, ${match?.matchedBranchCode ?? ''},
-      ${transaction.json(candidates)}, ${idempotencyKey}
+      ${transaction.json(candidates)}, ${idempotencyKey},
+      ${source?.userId ?? null}, ${source?.promoterCode ?? ''}, ${source?.alias ?? ''}
     ) ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING RETURNING *`;
     const rows = inserted.length
       ? inserted
@@ -549,6 +563,7 @@ function changed<T>(from: T, to: T) {
 }
 
 export function assertCrmContactFields(input: Record<string, unknown>) {
+  if (['sourcePartnerUserId','sourcePartnerCode','sourceReferralAlias','source_partner_user_id','source_partner_code','source_referral_alias'].some(key => Object.hasOwn(input,key))) throw new Error('Asal referral tidak dapat diubah.');
   if (['paymentStatus','sejoliOrderId','saleAmount','promoterPayout','otherCost','payment_status','sejoli_order_id','sale_amount','promoter_payout','other_cost'].some(key => Object.prototype.hasOwnProperty.call(input,key))) {
     throw new Error('Pembayaran dikelola melalui pesanan.');
   }

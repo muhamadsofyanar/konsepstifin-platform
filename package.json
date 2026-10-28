@@ -1,6 +1,6 @@
 {
   "name": "konsepstifin-platform",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -17,7 +17,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test:smoke": "node scripts/smoke-release.mjs",
     "test:network": "node --test --test-concurrency=2 tests/network/*.test.mjs",
-    "network:import": "node scripts/promoter-admin.mjs import"
+    "network:import": "node scripts/promoter-admin.mjs import",
+    "voucher:worker": "node --env-file-if-exists=.env.local scripts/voucher-worker.mjs"
   },
   "dependencies": {
     "next": "16.2.10",
@@ -43,5 +44,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"
-  }
+  },
+  "type": "module"
 }

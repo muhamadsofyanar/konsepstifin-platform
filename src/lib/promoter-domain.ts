@@ -5,7 +5,7 @@ export type PublicPromoter = {
   active: boolean; regionCodes: string[]; mappingSource: MappingSource;
 };
 export type PromoterLocationInput = { provinceCode: string; provinceName: string; regencyCode: string; regencyName: string };
-export type MatchMethod = 'manual_region' | 'area' | 'province' | 'none';
+export type MatchMethod = 'manual_region' | 'area' | 'province' | 'none' | 'referral';
 export type PromoterMatch = { method: MatchMethod; primary: PublicPromoter | null; candidates: PublicPromoter[] };
 
 const BRANCH_PATTERN = /^[A-Z0-9]{2,12}-CAB-[A-Z0-9]{1,8}$/;

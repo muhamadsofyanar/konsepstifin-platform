@@ -132,7 +132,7 @@ export default function PublicInterestAction({
           regencyCode,
           regencyName,
           consentToContact: form.get('consentToContact') === 'on',
-          consentToShare: effectiveLeadType === 'test_service' && form.get('consentToShare') === 'on',
+          consentToShare: form.get('consentToShare') === 'on',
           sourcePath: window.location.pathname,
           startedAt,
           idempotencyKey,
@@ -180,7 +180,7 @@ export default function PublicInterestAction({
             <div className="form-row"><label>Kota/domisili<input name="city" required defaultValue={regencyName} placeholder="Contoh: Bandung" /></label><label>Pilihan layanan<select name="productKey" defaultValue={selectedDefault}>{serviceOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label></div>
             <label>Jadwal atau kebutuhan tambahan<textarea name="notes" rows={3} placeholder={effectiveLeadType === 'test_service' ? 'Contoh: Sabtu pagi' : 'Contoh: ingin memahami tahapan WSL'} /></label>
             <label className="interest-consent"><input type="checkbox" name="consentToContact" required /> Saya setuju nomor WhatsApp digunakan tim untuk menindaklanjuti permintaan ini.</label>
-            {effectiveLeadType === 'test_service' ? <label className="interest-consent"><input type="checkbox" name="consentToShare" required /> Saya setuju nomor WhatsApp dibagikan kepada promotor yang ditugaskan untuk melayani permintaan ini.</label> : null}
+            <label className="interest-consent"><input type="checkbox" name="consentToShare" required={effectiveLeadType === 'test_service'} /> {effectiveLeadType === 'test_service' ? 'Saya setuju nomor WhatsApp dibagikan kepada promotor yang ditugaskan untuk melayani permintaan ini.' : 'Opsional: Saya setuju data kontak dibagikan kepada promotor pengundang untuk mendampingi pendaftaran ini.'}</label>
             <label className="interest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
             <div className="privacy-note">Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
             {error ? <p className="interest-error" role="alert">{error}</p> : null}

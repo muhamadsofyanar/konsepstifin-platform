@@ -1,6 +1,6 @@
 # KonsepSTIFIn: panduan unggah dan deploy
 
-Pembaruan terbaru **0.7.0** menambah akun dan portal promotor. Untuk upgrade dari 0.6.0 yang sudah berjalan, ikuti **AKUN-PROMOTOR.md** terlebih dahulu. Instruksi dasar di bawah tetap berlaku; migrasi sekarang juga mencakup `004-promoter-network.sql`.
+Pembaruan terbaru **0.8.0** menambah tautan referral pribadi, pembelian voucher, dan antrean pengisian melalui API STIFIn. Untuk upgrade dari 0.7.0 yang sudah berjalan, ikuti **MITRA-DAN-VOUCHER.md**. Jangan provision ulang akun aktif. Migrasi sekarang juga mencakup `005-referrals.sql` dan `006-vouchers.sql` (lihat nama file aktual pada folder migrasi).
 
 Paket ini memperbaiki aplikasi yang ada. SEJOLI tidak dipakai untuk pemesanan baru. Pembayaran dicatat setelah admin memeriksa transfer. Data transaksi lama tetap menjadi histori, bukan pembayaran baru.
 
@@ -14,7 +14,7 @@ Paket ini memperbaiki aplikasi yang ada. SEJOLI tidak dipakai untuk pemesanan ba
 ## 2. Unggah isi source ke GitHub
 
 1. Ekstrak ZIP.
-2. Buka folder `konsepstifin-admin-0.7.0`.
+2. Buka folder `konsepstifin-admin-0.8.0`.
 3. Unggah **isinya** ke root repository yang sekarang. `package.json`, `package-lock.json`, dan `Dockerfile` harus berada di root, bukan di dalam satu folder tambahan.
 4. Sertakan semua file source, `scripts`, `public`, konfigurasi, dan dokumen baru. Jangan mengunggah `.env` asli, `node_modules`, atau `.next`.
 5. Bila GitHub membatasi jumlah file, unggah per folder atau gunakan GitHub Desktop. Commit seluruh perubahan sebelum deploy.
@@ -55,7 +55,7 @@ Catatan penting: pada Dockerfile deployment, pre-deployment command Coolify berj
 
 ## 5. Migrasi dan penyiapan admin
 
-Buka Terminal **container versi 0.7.0**. Direktori kerja `/app`. Jalankan:
+Buka Terminal **container versi 0.8.0**. Direktori kerja `/app`. Jalankan:
 
 ```sh
 IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
@@ -93,7 +93,7 @@ Tambahan admin berikutnya dapat dibuat di **Pengaturan → Tambah admin**. Akun 
 
 ## 6. Pemeriksaan setelah deploy
 
-1. Buka `/api/health`. Respons memuat versi `0.7.0`.
+1. Buka `/api/health`. Respons memuat versi `0.8.0`.
 2. Buka `/admin/login`, login akun database, dan pastikan masuk ke Ringkasan.
 3. Buka Pengaturan. Isi bank, nomor rekening, nama pemilik, dan petunjuk pembayaran.
 4. Pada staging, kirim formulir layanan dan calon promotor. Catat nomor referensi. Pastikan tetap di website dan tidak menuju SEJOLI.
@@ -118,7 +118,7 @@ Nominal dan status pembayaran baru tidak diedit melalui CRM. CRM menampilkan ref
 
 Koreksi membalik entri salah tanpa menghapus entri asal. Pengembalian dipakai untuk uang yang benar-benar dikembalikan. Konfirmasikan kondisi nyata sebelum mencatat keduanya.
 
-Paket ini tidak mengaktifkan payment gateway, komisi otomatis, LMS, atau penerbitan voucher otomatis. Halaman affiliate mengarahkan ke pembahasan dengan tim, bukan menjanjikan akun/payout otomatis.
+Pembayaran tetap diverifikasi manual melalui mutasi transfer oleh admin. Voucher dikirim melalui API setelah lunas, dengan mode uji sebagai konfigurasi awal. Tautan referral sudah tersedia; komisi otomatis dan LMS belum diaktifkan.
 
 ## 8. Jika terjadi masalah
 
