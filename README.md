@@ -1,3 +1,7 @@
+# KonsepSTIFIn 0.9.1
+
+Perbaikan UI/UX admin dan member. Mulai dari [panduan 0.9.1](docs/UPGRADE-0.9.1.md) dan [hasil verifikasi UI/UX](docs/HASIL-PENGUJIAN-0.9.1.md). Migrasi 007 dari 0.9 tetap diperlukan jika belum pernah dijalankan.
+
 # KonsepSTIFIn 0.9.0
 
 Upgrade e-course dan affiliate di atas fondasi 0.8. Mulai dari [panduan upgrade 0.9](docs/UPGRADE-0.9.md), [hasil pengujian](docs/HASIL-PENGUJIAN-0.9.md), dan [spesifikasi sumber](docs/Spesifikasi-Pengembangan-KonsepSTIFIn-dari-Averion.md).

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Input, Notice } from '../../belajar/ui';
 import '../../belajar/learning.css';
-export default function Page() { const [busy, setBusy] = useState(false), [message, setMessage] = useState(''); return <main className="learning"><nav><strong>KonsepSTIFIn</strong><Link href="/belajar">Katalog kelas</Link><Link href="/akun/login">Masuk</Link></nav><section className="card"><h1>Daftar peserta.</h1><p>Sudah punya akun promotor atau peserta? Gunakan akun yang sama melalui halaman masuk.</p><form onSubmit={async (e) => { e.preventDefault(); if (busy)
+export default function Page() { const [busy, setBusy] = useState(false), [message, setMessage] = useState(''); return <main className="learning-app"><nav><strong>KonsepSTIFIn</strong><Link href="/belajar">Katalog kelas</Link><Link href="/akun/login">Masuk</Link></nav><section className="lr-card"><h1>Daftar peserta.</h1><p>Sudah punya akun promotor atau peserta? Gunakan akun yang sama melalui halaman masuk.</p><form onSubmit={async (e) => { e.preventDefault(); if (busy)
     return; const d = Object.fromEntries(new FormData(e.currentTarget)); setBusy(true); try {
     const r = await fetch('/api/account/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
     setMessage((await r.json()).message);

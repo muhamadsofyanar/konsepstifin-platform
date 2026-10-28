@@ -1,0 +1,12 @@
+KonsepSTIFIn 0.9.1: perbaikan UI/UX
+
+Paket source lengkap, bukan patch. Unggah isi folder ke repository aplikasi yang sama lalu redeploy satu kali.
+Panduan: docs/UPGRADE-0.9.1.md.
+Tidak ada dependency, ENV, atau migrasi baru dari 0.9.0.
+
+Jika belum pernah menjalankan migrasi setelah upgrade 0.8 -> 0.9:
+IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+Jalankan di terminal container Coolify dengan DATABASE_URL yang benar.
+
+Healthcheck healthy berarti server web berjalan; belum memastikan tabel learning lengkap.
+Jangan menghapus database/volume untuk memperbaiki tampilan.

@@ -4,34 +4,40 @@ import { learningGuard, learningJson, learningFailure } from '@/lib/learning-htt
 import { REFERRAL_COOKIE } from '@/lib/referral-service';
 import { LearningError, positive } from '@/lib/learning-service';
 export const dynamic = 'force-dynamic';
-export async function GET(request: Request) { try {
-    const u = new URL(request.url), view = u.searchParams.get('view') ?? 'catalog', s = getLearningService();
-    if (view === 'catalog')
-        return learningJson({ products: await s.catalog() });
-    if (view === 'certificate')
-        return learningJson({ certificate: await s.verifyCertificate(u.searchParams.get('code') ?? '') });
-    const g = await learningGuard(request, false, view === 'admin');
-    if (g.response)
-        return g.response;
-    const user = g.principal!.userId;
-    if (view === 'admin')
-        return learningJson(await s.adminData());
-    if (view === 'dashboard')
-        return learningJson(await s.dashboard(user));
-    if (view === 'partner')
-        return learningJson(await s.partner(user));
-    if (view === 'syllabus')
-        return learningJson({ lessons: await s.syllabus(user, positive(u.searchParams.get('id'))) });
-    if (view === 'material') {
-        const l = await s.material(user, positive(u.searchParams.get('id')));
-        const { file_path, ...safe } = l;
-        return learningJson({ material: { ...safe, hasFile: Boolean(file_path) } });
+export async function GET(request: Request) {
+    try {
+        const u = new URL(request.url), view = u.searchParams.get('view') ?? 'catalog', s = getLearningService();
+        if (view === 'catalog')
+            return learningJson({ products: await s.catalog() });
+        if (view === 'certificate')
+            return learningJson({ certificate: await s.verifyCertificate(u.searchParams.get('code') ?? '') });
+        const g = await learningGuard(request, false, view === 'admin' || view === 'setup' || view === 'users');
+        if (g.response)
+            return g.response;
+        const user = g.principal!.userId;
+        if (view === 'users')
+            return learningJson({ users: await s.searchUsers(u.searchParams.get('q') ?? '') });
+        if (view === 'setup')
+            return learningJson(await s.readiness());
+        if (view === 'admin')
+            return learningJson(await s.adminData());
+        if (view === 'dashboard')
+            return learningJson(await s.dashboard(user));
+        if (view === 'partner')
+            return learningJson(await s.partner(user));
+        if (view === 'syllabus')
+            return learningJson({ lessons: await s.syllabus(user, positive(u.searchParams.get('id'))) });
+        if (view === 'material') {
+            const l = await s.material(user, positive(u.searchParams.get('id')));
+            const { file_path, ...safe } = l;
+            return learningJson({ material: { ...safe, hasFile: Boolean(file_path) } });
+        }
+        throw new LearningError('Tampilan tidak dikenal.');
     }
-    throw new LearningError('Tampilan tidak dikenal.');
+    catch (e) {
+        return learningFailure(e);
+    }
 }
-catch (e) {
-    return learningFailure(e);
-} }
 const adminActions = new Set(['product.save', 'lesson.save', 'coupon.save', 'grant', 'commission', 'payout', 'certificate.issue', 'certificate.revoke', 'ticket.reply', 'reconcile']);
 export async function POST(request: Request) {
     try {

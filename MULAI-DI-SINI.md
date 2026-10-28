@@ -1,3 +1,7 @@
+# Rilis terbaru: 0.9.1
+
+Baca `docs/UPGRADE-0.9.1.md`. Upgrade ini merapikan menu, memperbaiki benturan CSS, dan memudahkan admin serta peserta.
+
 # Rilis terbaru: 0.9.0
 
 Baca `docs/UPGRADE-0.9.md` sebelum deployment. Admin kelas: `/admin/kelas`. Ruang peserta: `/belajar`. Komisi: `/akun/komisi`.

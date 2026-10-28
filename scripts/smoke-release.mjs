@@ -117,6 +117,11 @@ try{
  const register=await fetch(origin+'/api/account/register',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(memberCredentials)});check(register.ok,'Learner registration failed '+register.status);
  const memberLogin=await fetch(origin+'/api/account/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(memberCredentials)});check(memberLogin.ok,'Learner login failed');const memberCookie=memberLogin.headers.get('set-cookie').split(';')[0];
  const memberApi=async(endpoint,method='GET',body)=>{const r=await fetch(origin+endpoint,{method,headers:{Cookie:memberCookie+'; '+refCookie,Origin:origin,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const json=await r.json();check(r.ok,endpoint+' learner HTTP '+r.status+' '+JSON.stringify(json));return json;};
+ const learningReady=await api('/api/learning?view=setup','GET');check(learningReady.ready===true,'Learning readiness reports missing schema after migration');
+ const users=await api('/api/learning?view=users&q=learner','GET');check(users.users.some(u=>u.email==='learner@example.test'),'Admin account search failed');
+ check((await fetch(origin+'/api/learning?view=users&q=learner',{headers:{Cookie:memberCookie}})).status===403,'Member can search account directory');
+ const learnerPage=await fetch(origin+'/akun',{headers:{Cookie:memberCookie}});const learnerHtml=await learnerPage.text();check(learnerPage.ok&&learnerHtml.includes('Selamat datang di akun Anda')&&!learnerHtml.includes('href="/akun/voucher"'),'Member navigation includes promoter-only menu');
+ const learningHtml=await (await fetch(origin+'/belajar',{headers:{Cookie:memberCookie}})).text();check(learningHtml.includes('class="lr-heading"')&&!learningHtml.includes('class="hero"'),'Learning header shares public hero styling');
  check((await fetch(origin+'/api/learning?view=admin',{headers:{Cookie:memberCookie}})).status===403,'Learner can read admin learning data');
  const checkoutInput={action:'checkout',productId:lp.id,key:randomUUID(),name:'Peserta Sintetis',phone:'0812345678'};
  const lo=(await memberApi('/api/learning','POST',checkoutInput)).result;
