@@ -1,3 +1,7 @@
+# Rilis terkini: 0.10.0
+
+Untuk paket ini ikuti **docs/UPGRADE-0.10.0.md** dan **PETUNJUK-UPGRADE-0.10.0.txt**. Migrasi 008 wajib. Dokumentasi di bawah dipertahankan sebagai referensi historis.
+
 # Rilis terbaru: 0.9.1
 
 Baca `docs/UPGRADE-0.9.1.md`. Upgrade ini merapikan menu, memperbaiki benturan CSS, dan memudahkan admin serta peserta.

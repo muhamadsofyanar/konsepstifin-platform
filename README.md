@@ -1,3 +1,9 @@
+# KonsepSTIFIn 0.10.0
+
+Katalog gabungan layanan tes dan produk digital, produk promosi affiliate, komisi layanan melalui CRM dan pesanan, slug otomatis, ebook privat, hapus/arsip, serta pembaruan tampilan ruang kerja.
+
+Mulai dari [panduan upgrade 0.10.0](docs/UPGRADE-0.10.0.md) dan [audit serta hasil pengujian](docs/AUDIT-0.10.0.md). Migrasi 008 wajib. Dokumentasi versi sebelumnya di bawah adalah riwayat.
+
 # KonsepSTIFIn 0.9.1
 
 Perbaikan UI/UX admin dan member. Mulai dari [panduan 0.9.1](docs/UPGRADE-0.9.1.md) dan [hasil verifikasi UI/UX](docs/HASIL-PENGUJIAN-0.9.1.md). Migrasi 007 dari 0.9 tetap diperlukan jika belum pernah dijalankan.

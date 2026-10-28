@@ -3,7 +3,9 @@ import { getReferralService } from '@/lib/referral-store';
 import { REFERRAL_COOKIE, REFERRAL_MAX_AGE, referralDestination } from '@/lib/referral-service';
 export const runtime = 'nodejs';
 export async function GET(request: NextRequest, {params}: {params: Promise<{alias:string}>}) {
- const response=NextResponse.redirect(new URL(referralDestination(request.nextUrl.searchParams.get('to')),request.url),302);
+ const response=new NextResponse(null,{status:302,headers:{Location:referralDestination(request.nextUrl.searchParams.get('to'))}});
+ const product=request.nextUrl.searchParams.get('product');
+ if(product && /^[a-zA-Z0-9-]{1,100}$/.test(product)){const target=new URL(response.headers.get('Location')!, 'https://internal.invalid');target.searchParams.set('product',product);response.headers.set('Location',target.pathname+target.search);}
  response.headers.set('Cache-Control','private, no-store');
  response.headers.set('Referrer-Policy','same-origin');
  try {

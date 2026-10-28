@@ -12,7 +12,7 @@ const app=process.cwd(),image=await mkdtemp(path.join(tmpdir(),'konsep-smoke-'))
 const freePort=await new Promise((resolve,reject)=>{const s=createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
 const db=await PGlite.create(),socket=new PGLiteSocketServer({db,port:0,host:'127.0.0.1',maxConnections:20});await socket.start();
 const origin='http://127.0.0.1:'+freePort;
-const env={...process.env,DATABASE_URL:'postgresql://postgres:postgres@'+socket.getServerConn()+'/postgres',PLATFORM_ORIGIN:origin,PORT:String(freePort),HOSTNAME:'127.0.0.1',NODE_ENV:'production',STIFIN_PROMOTER_MODE:'manual',STIFIN_PROMOTERS_JSON:'[]',IDENTITY_ADMIN_CONFIRM:'yes',STIFIN_VOUCHER_MODE:'test',STIFIN_VOUCHER_USER_ID:'synthetic-only'};
+const env={...process.env,LEARNING_STORAGE_PATH:image+'/storage/learning',DATABASE_URL:'postgresql://postgres:postgres@'+socket.getServerConn()+'/postgres',PLATFORM_ORIGIN:origin,PORT:String(freePort),HOSTNAME:'127.0.0.1',NODE_ENV:'production',STIFIN_PROMOTER_MODE:'manual',STIFIN_PROMOTERS_JSON:'[]',IDENTITY_ADMIN_CONFIRM:'yes',STIFIN_VOUCHER_MODE:'test',STIFIN_VOUCHER_USER_ID:'synthetic-only'};
 const logs=createWriteStream(path.join(image,'smoke.log'));
 function command(args,input){return new Promise((resolve,reject)=>{const child=spawn(process.execPath,args,{cwd:image,env,stdio:['pipe','pipe','pipe']});let output='';child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>logs.write(d));child.on('exit',code=>code===0?resolve(output):reject(new Error('Operator command failed: '+args.join(' '))));child.stdin.end(input||'');});}
 let server;
@@ -20,7 +20,7 @@ const check=(v,message)=>{if(!v)throw new Error(message);};
 try{
  await cp(app+'/.next/standalone',image,{recursive:true});await cp(app+'/public',image+'/public',{recursive:true});await mkdir(image+'/.next',{recursive:true});await cp(app+'/.next/static',image+'/.next/static',{recursive:true});await cp(app+'/scripts',image+'/scripts',{recursive:true});await mkdir(image+'/src/lib',{recursive:true});await cp(app+'/src/lib/identity',image+'/src/lib/identity',{recursive:true});await cp(app+'/node_modules/postgres',image+'/node_modules/postgres',{recursive:true});
  await command(['scripts/identity-admin.mjs','migrate']);
- for(const file of ['network-domain.ts','network-service.ts','voucher-domain.ts','voucher-api.ts','voucher-service.ts','learning-service.ts'])await cp(app+'/src/lib/'+file,image+'/src/lib/'+file);
+ for(const file of ['network-domain.ts','network-service.ts','voucher-domain.ts','voucher-api.ts','voucher-service.ts','learning-service.ts','slug.ts'])await cp(app+'/src/lib/'+file,image+'/src/lib/'+file);
  const credentials={email:'admin@konsepstifin.com',password:'SyntheticOnly-'+randomUUID(),roles:['super_admin']};
  await command(['scripts/identity-admin.mjs','provision'],JSON.stringify(credentials));
  await command(['scripts/identity-admin.mjs','verify'],JSON.stringify(credentials));
@@ -109,7 +109,7 @@ try{
  await privatePage('/admin/leads?leadId='+lead.lead.id,'Klien &amp; Promotor');await privatePage('/admin/pengaturan','Atur operasional platform');await privatePage('/admin/konten','Kelola materi dan penawaran');
 
  // Learning upgrade: real HTTP + packaged worker, synthetic users and local files only.
- await privatePage('/admin/kelas','Kelas, peserta, dan komisi.');
+ await privatePage('/admin/kelas','Semua produk. Satu ruang kerja.');
  const lp=(await api('/api/learning','POST',{action:'product.save',title:'Kelas Uji',slug:'kelas-uji',description:'Sintetis untuk QA',kind:'course',price:100000,state:'published',accessDays:30,commissionBps:1000,attributionEnabled:true})).result;
  await mkdir(image+'/storage/learning',{recursive:true});await writeFile(image+'/storage/learning/worksheet.txt','SYNTHETIC WORKSHEET');
  const ll=(await api('/api/learning','POST',{action:'lesson.save',productId:lp.id,title:'Worksheet Uji',module:'Modul 1',kind:'file',filePath:'worksheet.txt',body:'Materi uji aman',required:true,position:1,unlockDays:0,state:'published'})).result;
@@ -153,9 +153,41 @@ try{
  const summary=await api('/api/admin/orders','GET');check(Boolean(summary),'Order endpoint unavailable after upgrade');
  await api('/api/admin/orders/'+lo.id,'POST',{action:'refund',amount:100000,reason:'Synthetic refund',reference:'LEARN-RF',key:randomUUID()});
  check((await memberApi('/api/learning?view=dashboard')).grants.some(g=>g.status==='suspended'),'Refund did not suspend original grant');
+
+ // Version 0.10 regression: unified services, protected ebook upload, service affiliate and deletes.
+ const catalog10=(await memberApi('/api/learning?view=catalog')).products;
+ for(const key of ['tesPersonal','tesPasangan','paketKeluarga','paketKeluargaPlus']) check(catalog10.some(p=>p.source_product_key===key),'Missing unified service '+key);
+ const family=catalog10.find(p=>p.source_product_key==='paketKeluarga');
+ await api('/api/learning','POST',{action:'product.save',...family,price:Number(family.price),commissionBps:1000,attributionEnabled:true});
+ const selectedReferral=await fetch(origin+'/r/synthetic-partner?to=/belajar&product=paketKeluarga',{redirect:'manual'});
+ check(selectedReferral.headers.get('location')==='/belajar?product=paketKeluarga','Product referral exposes internal host or loses product');
+ const serviceLeadResponse=await fetch(origin+'/api/interests',{method:'POST',headers:{'Content-Type':'application/json',Cookie:refCookie},body:JSON.stringify({name:'Family Referral QA',phone:'081234500009',email:'family@example.test',city:'Bandung',service:'Paket Tes Keluarga',productKey:'paketKeluarga',sourcePath:'/belajar',leadType:'test_service',consentToContact:true,consentToShare:true,idempotencyKey:randomUUID(),startedAt:Date.now()-3000})});
+ check(serviceLeadResponse.ok,'Service referral form failed');
+ const serviceLead=(await db.query("SELECT id FROM public_interest_leads WHERE name='Family Referral QA'")).rows[0];
+ const familyOrder=(await api('/api/admin/orders','POST',{leadId:Number(serviceLead.id),key:randomUUID(),lines:[{name:family.title,unitPrice:Number(family.price),quantity:1}]})).order;
+ await api('/api/admin/orders/'+familyOrder.id,'POST',{action:'issue',key:randomUUID()});
+ await api('/api/admin/orders/'+familyOrder.id,'POST',{action:'receipt',amount:Number(family.price),reason:'Family QA',reference:'FAMILY-QA',key:randomUUID()});
+ const familyEntry=(await partnerApi('/api/learning?view=partner')).commissions.find(e=>e.order_number===familyOrder.number);
+ check(familyEntry?.amount===155000,'Service commission missing or wrong amount');
+ const form=new FormData();form.set('file',new Blob(['%PDF-1.4\nSynthetic ebook QA'],{type:'application/pdf'}),'ebook.pdf');
+ const upload=await fetch(origin+'/api/learning/upload',{method:'POST',headers:{Cookie:cookie,Origin:origin},body:form});const uploaded=await upload.json();check(upload.ok,'Private ebook upload failed '+JSON.stringify(uploaded));
+ const ebook=(await api('/api/learning','POST',{action:'product.save',title:'Ebook Praktis STIFIn',slug:'',kind:'ebook',state:'published',price:0,ebookFilePath:uploaded.filePath})).result;
+ check(ebook.slug==='ebook-praktis-stifin','Automatic slug failed');
+ const ebookOrder=(await memberApi('/api/learning','POST',{action:'checkout',productId:ebook.id,key:randomUUID(),name:'Learner QA',phone:'081234'})).result;check(ebookOrder.free,'Free ebook grant failed');
+ const bookFile=(await memberApi('/api/learning?view=syllabus&id='+ebook.id)).lessons[0];
+ check((await fetch(origin+'/api/learning/files/'+bookFile.id,{headers:{Cookie:memberCookie}})).ok,'Ebook download denied to owner');
+ check((await fetch(origin+'/api/learning/files/'+bookFile.id,{headers:{Cookie:promoterCookie}})).status===400,'Ebook exposed to unrelated partner');
+ const unused=(await api('/api/learning','POST',{action:'product.save',title:'Draft salah',kind:'course',state:'draft',price:0})).result;
+ check((await api('/api/learning','POST',{action:'product.delete',id:unused.id})).result.deleted,'Unused product cannot be deleted');
+ check((await api('/api/learning','POST',{action:'product.delete',id:ebook.id})).result.archived,'Purchased ebook is not archived safely');
+ console.log('PASS: 0.10 unified legacy catalog, product-specific relative referral, CRM service paid commission, auto slug, private ebook upload/download ownership, delete and archive.');
  if(process.env.LEARNING_VISUAL_QA_MODULE){
   const {chromium}=await import(process.env.LEARNING_VISUAL_QA_MODULE);const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
-  try{const page=await browser.newPage({viewport:{width:1440,height:1000}});await page.context().addCookies([{name:memberCookie.split('=')[0],value:memberCookie.split('=')[1],url:origin}]);await page.goto(origin+'/belajar');await page.getByText('Kelas Uji',{exact:true}).first().waitFor();await page.screenshot({path:process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png',fullPage:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:(process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png').replace('.png','-mobile.png'),fullPage:true});}finally{await browser.close();}
+  try{const page=await browser.newPage({viewport:{width:1440,height:1000}});await page.context().addCookies([{name:memberCookie.split('=')[0],value:memberCookie.split('=')[1],url:origin}]);await page.goto(origin+'/belajar');await page.getByText('Kelas Uji',{exact:true}).first().waitFor();await page.screenshot({path:process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png',fullPage:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:(process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png').replace('.png','-mobile.png'),fullPage:true});
+  await page.context().clearCookies();await page.context().addCookies([{name:cookie.split('=')[0],value:cookie.split('=')[1],url:origin}]);await page.goto(origin+'/admin/kelas?section=products');await page.getByRole('heading',{name:'Semua produk',exact:true}).waitFor();await page.getByRole('button',{name:'Edit',exact:true}).first().waitFor();await page.screenshot({path:(process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png').replace('.png','-admin-mobile.png'),fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:(process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png').replace('.png','-admin.png'),fullPage:true});
+  await page.context().clearCookies();await page.context().addCookies([{name:promoterCookie.split('=')[0],value:promoterCookie.split('=')[1],url:origin}]);await page.goto(origin+'/akun/produk');await page.getByRole('heading',{name:'Tes STIFIn Personal',exact:true}).waitFor();await page.screenshot({path:(process.env.LEARNING_VISUAL_QA_OUTPUT||image+'/learning.png').replace('.png','-partner.png'),fullPage:true});
+  for(const width of [390,1440]){await page.setViewportSize({width,height:1000});check(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Partner layout overflows '+width);}
+}finally{await browser.close();}
  }
  console.log('PASS: learning registration, checkout snapshot/idempotency, partial/full payment, protected file ownership, progress, public certificate privacy, native learning worker recovery, referral commission and manual payout.');
  await api('/api/admin/logout','POST',{});check((await fetch(origin+'/api/admin/orders',{headers:{Cookie:cookie}})).status===401,'Revoked session still accepted');

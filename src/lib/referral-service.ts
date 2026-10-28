@@ -20,7 +20,8 @@ const eligible = `SELECT u.id,a.promoter_code,p.name,p.branch_code,p.service_are
 export class ReferralService {
  constructor(private query: NetworkQuery, private transaction: NetworkTransaction, private origin: string) {}
  private async member(q: NetworkQuery,userId: string,lock=false) {
-  const [row]=await q(eligible+(lock?' FOR UPDATE OF u':''),[userId,NETWORK_BRANCH.code]);
+  let [row]=await q(eligible+(lock?' FOR UPDATE OF u':''),[userId,NETWORK_BRANCH.code]);
+ if(!row)[row]=await q(`SELECT u.id,'mitra-'||replace(u.id::text,'-','') AS promoter_code,split_part(u.email,'@',1) AS name,'' AS branch_code,'' AS service_area FROM platform_users u WHERE u.id=$1 AND u.active=true AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='affiliate')`+(lock?' FOR UPDATE OF u':''),[userId]);
   if(!row) throw new Error('Keanggotaan promotor aktif diperlukan.');
   return row;
  }
@@ -56,8 +57,8 @@ export class ReferralService {
  }
  async resolveToken(token: string | undefined): Promise<ReferralSource|null> {
   if(!token||!/^[a-f0-9]{64}$/.test(token))return null;
-  const [row]=await this.query(`SELECT u.id,a.promoter_code,p.name,p.branch_code,p.service_area,v.alias FROM platform_referral_visits v JOIN platform_referral_aliases x ON x.alias=v.alias JOIN platform_users u ON u.id=x.user_id JOIN platform_promoter_accounts a ON a.user_id=u.id JOIN platform_promoter_profiles p ON p.user_id=u.id WHERE v.token_hash=$1 AND v.expires_at>now() AND u.active=true AND p.branch_code=$2 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='promoter')`,[digest(token),NETWORK_BRANCH.code]);
-  return row?{userId:String(row.id),promoterCode:String(row.promoter_code),alias:String(row.alias),name:String(row.name),branchCode:String(row.branch_code),area:String(row.service_area)}:null;
+  const [row]=await this.query(`SELECT u.id,a.promoter_code,p.name,p.branch_code,p.service_area,v.alias FROM platform_referral_visits v JOIN platform_referral_aliases x ON x.alias=v.alias JOIN platform_users u ON u.id=x.user_id LEFT JOIN platform_promoter_accounts a ON a.user_id=u.id LEFT JOIN platform_promoter_profiles p ON p.user_id=u.id WHERE v.token_hash=$1 AND v.expires_at>now() AND u.active=true AND ((p.branch_code=$2 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='promoter')) OR EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='affiliate'))`,[digest(token),NETWORK_BRANCH.code]);
+  return row?{userId:String(row.id),promoterCode:String(row.promoter_code ?? ''),alias:String(row.alias),name:String(row.name ?? 'Mitra'),branchCode:String(row.branch_code ?? ''),area:String(row.service_area ?? '')}:null;
  }
  async visit(value: string,existingToken?: string) {
   // Existing valid first touch is never extended or replaced.
@@ -67,7 +68,7 @@ export class ReferralService {
   const [official]=await this.query('SELECT user_id FROM platform_promoter_accounts WHERE lower(promoter_code)=$1',[alias]);
   if(official)await this.transaction(async q=>{const member=await this.member(q,String(official.user_id),true);await this.ensureDefault(q,String(official.user_id),String(member.promoter_code));}).catch(()=>undefined);
   const token=randomBytes(32).toString('hex');
-  const rows=await this.query(`INSERT INTO platform_referral_visits(token_hash,alias) SELECT $1,x.alias FROM platform_referral_aliases x JOIN platform_users u ON u.id=x.user_id JOIN platform_promoter_profiles p ON p.user_id=u.id JOIN platform_promoter_accounts a ON a.user_id=u.id WHERE x.alias=$2 AND u.active=true AND p.branch_code=$3 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='promoter') RETURNING alias`,[digest(token),alias,NETWORK_BRANCH.code]);
+  const rows=await this.query(`INSERT INTO platform_referral_visits(token_hash,alias) SELECT $1,x.alias FROM platform_referral_aliases x JOIN platform_users u ON u.id=x.user_id LEFT JOIN platform_promoter_profiles p ON p.user_id=u.id LEFT JOIN platform_promoter_accounts a ON a.user_id=u.id WHERE x.alias=$2 AND u.active=true AND ((p.branch_code=$3 AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='promoter')) OR EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=u.id AND r.role='affiliate')) RETURNING alias`,[digest(token),alias,NETWORK_BRANCH.code]);
   return {token:rows.length?token:null,valid:!!rows.length};
  }
 }

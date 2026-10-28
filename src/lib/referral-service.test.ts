@@ -58,3 +58,9 @@ describe('referral aliases and attribution',()=>{
   expect(await service.resolveToken(visit.token!)).toBeNull();await query("INSERT INTO platform_user_roles VALUES($1,'promoter')",[user]);
  });
 });
+it('allows an authorized affiliate without promoter membership to own a referral link without assigning a fake promoter',async()=>{
+ const affiliate=randomUUID();await query("INSERT INTO platform_users(id,email,password_hash) VALUES($1,'affiliate-only@example.test','hash')",[affiliate]);await query("INSERT INTO platform_user_roles VALUES($1,'affiliate')",[affiliate]);
+ const portal=await service.getPortal(affiliate);expect(portal.alias).toMatch(/^mitra-/);const saved=await service.saveAlias(affiliate,'affiliate-only');expect(saved.url).toBe('https://example.test/r/affiliate-only');
+ const visit=await service.visit('affiliate-only');expect(visit.valid).toBe(true);const source=await service.resolveToken(visit.token!);expect(source?.userId).toBe(affiliate);expect(source?.promoterCode).toBe('');
+ await query('UPDATE platform_users SET active=false WHERE id=$1',[affiliate]);expect(await service.resolveToken(visit.token!)).toBeNull();
+});

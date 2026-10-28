@@ -12,3 +12,8 @@ it('member cannot edit products or read admin data', async () => { account.mockR
 it('checkout gets user and referral from verified session, never supplied identity', async () => { account.mockResolvedValue({ userId: 'trusted', active: true, sessionValid: true, roles: ['member'] }); service.checkout.mockResolvedValue({ id: 1 }); const result = await POST(req({ action: 'checkout', productId: 1, key: 'x', name: 'A', phone: '08', userId: 'victim', referral: 'fake' })); expect(result.status).toBe(200); expect(service.checkout.mock.calls[0][0]).toBe('trusted'); expect(service.checkout.mock.calls[0][2]).toBeNull(); });
 it('does not expose raw database errors', async () => { service.catalog.mockRejectedValue(new Error('secret-db-password')); const result = await GET(new Request('https://example.test/api/learning?view=catalog')); expect(result.status).toBe(503); expect(await result.text()).not.toContain('secret-db-password'); });
 it('readiness diagnostics are admin only',async()=>{account.mockResolvedValue({userId:'member',active:true,sessionValid:true,roles:['member']});for(const view of ['setup','users&q=older'])expect((await GET(new Request('https://example.test/api/learning?view='+view))).status).toBe(403);});
+it('requires administrator for deletion and partner role for payout or partner dashboard',async()=>{
+ account.mockResolvedValue({userId:'u',active:true,sessionValid:true,roles:['member']});
+ for(const action of ['product.delete','lesson.delete','payout.request'])expect((await POST(req({action,id:1}))).status).toBe(403);
+ expect((await GET(new Request('https://example.test/api/learning?view=partner'))).status).toBe(403);
+});

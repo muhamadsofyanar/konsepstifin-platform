@@ -1,3 +1,4 @@
+import { ensureProductSchema } from '@/lib/product-store';
 import { cookies } from 'next/headers';
 import { getLearningService } from '@/lib/learning-store';
 import { learningGuard, learningJson, learningFailure } from '@/lib/learning-http';
@@ -7,20 +8,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     try {
         const u = new URL(request.url), view = u.searchParams.get('view') ?? 'catalog', s = getLearningService();
-        if (view === 'catalog')
-            return learningJson({ products: await s.catalog() });
+        if (view === 'catalog') { await ensureProductSchema(); return learningJson({ products: await s.catalog() }); }
         if (view === 'certificate')
             return learningJson({ certificate: await s.verifyCertificate(u.searchParams.get('code') ?? '') });
         const g = await learningGuard(request, false, view === 'admin' || view === 'setup' || view === 'users');
         if (g.response)
             return g.response;
         const user = g.principal!.userId;
+        if (view === 'partner' && !g.principal!.roles.some(r => ['promoter', 'affiliate'].includes(r)))
+            return learningJson({ message: 'Akses mitra diperlukan.' }, 403);
         if (view === 'users')
             return learningJson({ users: await s.searchUsers(u.searchParams.get('q') ?? '') });
         if (view === 'setup')
             return learningJson(await s.readiness());
-        if (view === 'admin')
-            return learningJson(await s.adminData());
+        if (view === 'admin') { await ensureProductSchema(); return learningJson(await s.adminData()); }
         if (view === 'dashboard')
             return learningJson(await s.dashboard(user));
         if (view === 'partner')
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
         return learningFailure(e);
     }
 }
-const adminActions = new Set(['product.save', 'lesson.save', 'coupon.save', 'grant', 'commission', 'payout', 'certificate.issue', 'certificate.revoke', 'ticket.reply', 'reconcile']);
+const adminActions = new Set(['product.save', 'product.delete', 'lesson.delete', 'lesson.save', 'coupon.save', 'grant', 'commission', 'payout', 'certificate.issue', 'certificate.revoke', 'ticket.reply', 'reconcile']);
 export async function POST(request: Request) {
     try {
         if (Number(request.headers.get('content-length') ?? 0) > 120000)
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
         if (g.response)
             return g.response;
         const user = g.principal!.userId, s = getLearningService();
+        if (input.action === 'payout.request' && !g.principal!.roles.some(r => ['promoter', 'affiliate'].includes(r)))
+            return learningJson({ message: 'Akses mitra diperlukan.' }, 403);
         let result;
         switch (input.action) {
             case 'checkout':
@@ -70,6 +73,8 @@ export async function POST(request: Request) {
             case 'product.save':
                 result = await s.saveProduct(input, user);
                 break;
+            case 'product.delete': result = await s.removeProduct(positive(input.id), user); break;
+            case 'lesson.delete': result = await s.removeLesson(positive(input.id), user); break;
             case 'lesson.save':
                 result = await s.saveLesson(input, user);
                 break;

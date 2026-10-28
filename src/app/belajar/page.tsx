@@ -10,4 +10,4 @@ export default async function Page({ searchParams }: {
     signedIn = !!p?.active && !!p?.sessionValid;
     roles = p?.roles ?? [];
 }
-catch { } const tab = (await searchParams).tab; return <LearningPortal key={tab ?? 'classes'} signedIn={signedIn} roles={roles} initialTab={tab}/>; }
+catch { } const params = await searchParams; const tab = params.product ? 'catalog' : params.tab; return <LearningPortal key={tab ?? 'classes'} signedIn={signedIn} roles={roles} initialTab={tab} initialProduct={params.product}/>; }

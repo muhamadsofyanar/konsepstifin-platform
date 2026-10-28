@@ -3,6 +3,7 @@ import path from 'node:path';
 import { getLearningService } from '@/lib/learning-store';
 import { learningGuard, learningFailure, learningJson } from '@/lib/learning-http';
 import { safePrivatePath, positive } from '@/lib/learning-service';
+import { productSlug } from '@/lib/slug';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request, { params }: {
     params: Promise<{
@@ -21,7 +22,9 @@ export async function GET(request: Request, { params }: {
         return learningJson({ message: 'File tidak tersedia.' }, 403);
     const bytes = await readFile(/* turbopackIgnore: true */ file);
     await s.logDownload(g.principal!.userId, id);
-    return new Response(bytes, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${path.basename(relative)}"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'" } });
+    const extension = path.extname(relative).toLowerCase();
+    const filename = productSlug(String(l.title)) + extension;
+    return new Response(bytes, { headers: { 'Content-Type': extension === '.pdf' ? 'application/pdf' : extension === '.epub' ? 'application/epub+zip' : 'application/octet-stream', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'" } });
 }
 catch (e) {
     return learningFailure(e);

@@ -37,3 +37,16 @@ describe('internal product catalog', () => {
     expect(products.every((product) => product.checkoutUrl === '')).toBe(true);
   });
 });
+it('unifies legacy services without resetting configured commissions and syncs legacy price edits', async()=>{
+ const { readFileSync }=await import('node:fs');
+ await database.exec('CREATE TABLE platform_users(id UUID PRIMARY KEY);');
+ for(const file of ['002-commerce.sql','007-learning.sql','008-unified-catalog.sql'])await database.exec(readFileSync('scripts/migrations/'+file,'utf8'));
+ await ensureProductSchema();
+ const family=(await database.query<{id:number;price:number}>("SELECT id,price FROM learning_products WHERE source_product_key='paketKeluarga'")).rows[0];
+ expect(Number(family.price)).toBe(1550000);
+ await database.query('UPDATE learning_products SET commission_bps=1200,attribution_enabled=true WHERE id=$1',[family.id]);
+ const legacy=(await getManagedProducts('test')).find(p=>p.productKey==='paketKeluarga')!;
+ await updateManagedProduct(legacy.id,{...legacy,price:'Rp1.650.000'});
+ const rows=(await database.query<{price:number;commission_bps:number;attribution_enabled:boolean}>("SELECT * FROM learning_products WHERE source_product_key='paketKeluarga'")).rows;
+ expect(rows).toHaveLength(1);expect(Number(rows[0].price)).toBe(1650000);expect(rows[0].commission_bps).toBe(1200);expect(rows[0].attribution_enabled).toBe(true);
+});

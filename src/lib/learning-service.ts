@@ -1,6 +1,7 @@
 /** One ledger, additive learning module. No external payment or messaging side effects. */
 import { createHash, randomUUID } from 'node:crypto';
 import type { CommerceDatabase, CommerceQuery } from './commerce-service.ts';
+import { productSlug } from './slug.ts';
 type Row = Record<string, unknown>;
 export class LearningError extends Error {
 }
@@ -26,12 +27,12 @@ export class LearningService {
     private async audit(q: CommerceQuery, actor: string, action: string, entity: unknown, payload: unknown = {}) { await q.query('INSERT INTO learning_audit(actor,action,entity,payload) VALUES($1,$2,$3,$4::text::jsonb)', [actor, action, String(entity), JSON.stringify(payload)]); }
     private async lockUser(q: CommerceQuery, user: string) { if (!(await q.query('SELECT id FROM platform_users WHERE id=$1 AND active=true FOR UPDATE', [user])).length)
         throw new LearningError('Akun aktif diperlukan.'); }
-    async catalog(admin = false) { return this.db.query(`SELECT * FROM learning_products ${admin ? '' : "WHERE state='published'"} ORDER BY id DESC LIMIT 200`); }
+    async catalog(admin = false) { return this.db.query(`SELECT id,slug,title,description,kind,state,price,access_days,commission_bps,attribution_enabled,source_product_key,price_note FROM learning_products ${admin ? '' : "WHERE state='published'"} ORDER BY source_product_key NULLS LAST,id DESC LIMIT 200`); }
     async saveProduct(input: Row, actor: string): Promise<Row & {
         id: number;
     }> {
-        const title = text(input.title), slug = text(input.slug, 100);
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
+        const title = text(input.title), requestedSlug = text(input.slug ?? '', 100, true);
+        if (requestedSlug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requestedSlug))
             throw new LearningError('Slug tidak valid.');
         const kind = text(input.kind), state = text(input.state);
         if (!['course', 'ebook', 'webinar', 'consultation', 'bundle'].includes(kind) || !['draft', 'published', 'archived'].includes(state))
@@ -42,14 +43,77 @@ export class LearningService {
         const price = integer(input.price), days = (input.accessDays === undefined ? input.access_days : input.accessDays) === null || (input.accessDays === undefined ? input.access_days : input.accessDays) === undefined || input.accessDays === '' ? null : integer(input.accessDays === undefined ? input.access_days : input.accessDays, 1, 36500), bps = integer(input.commissionBps ?? input.commission_bps ?? 0, 0, 10000);
         if (input.attributionEnabled !== true && input.attribution_enabled !== true && bps)
             throw new LearningError('Aktifkan kebijakan atribusi sebelum menetapkan komisi.');
+        return this.db.transaction(async (q) => {
+        // Serialize slug allocation with product updates/deletes, including concurrent inserts.
+        await q.query('LOCK TABLE learning_products IN SHARE ROW EXCLUSIVE MODE');
+        const current = input.id ? (await q.query('SELECT * FROM learning_products WHERE id=$1 FOR UPDATE', [positive(input.id)]))[0] : null;
+        if (input.id && !current) throw new LearningError('Produk tidak ditemukan.');
+        if (current?.source_product_key && kind !== 'consultation') throw new LearningError('Layanan lama harus tetap bertipe layanan.');
+        if (current && current.kind !== kind && (await q.query('SELECT id FROM learning_purchases WHERE product_id=$1 UNION ALL SELECT id FROM learning_grants WHERE product_id=$1 LIMIT 1', [current.id])).length)
+            throw new LearningError('Jenis produk yang sudah digunakan tidak dapat diganti. Buat produk baru.');
+        let slug = requestedSlug || (current ? String(current.slug) : productSlug(title));
+        const existing = await q.query('SELECT id,slug FROM learning_products WHERE id<>$1', [current?.id ?? 0]);
+        if (requestedSlug && existing.some(p => p.slug === slug)) throw new LearningError('Slug sudah digunakan. Kosongkan untuk membuat otomatis atau pilih slug lain.');
+        if (!requestedSlug && !current) { const base = slug; let suffix = 2; while (existing.some(p => p.slug === slug)) slug = base + '-' + suffix++; }
+        const ebookFile = kind === 'ebook' ? safePrivatePath(input.ebookFilePath) : '';
+        const downloads = current ? await q.query("SELECT * FROM learning_lessons WHERE product_id=$1 AND kind='file' ORDER BY id", [current.id]) : [];
+        if (kind === 'ebook' && state === 'published' && !ebookFile && !downloads.some(l => l.state === 'published'))
+            throw new LearningError('Unggah file ebook sebelum menerbitkan produk.');
         const args = [slug, title, text(input.description ?? '', 20000, true), kind, state, price, days, bps, input.attributionEnabled === true || input.attribution_enabled === true];
-        return this.db.transaction(async (q) => { let rows; if (input.id) {
+        let rows; if (input.id) {
             rows = await q.query('UPDATE learning_products SET slug=$1,title=$2,description=$3,kind=$4,state=$5,price=$6,access_days=$7,commission_bps=$8,attribution_enabled=$9,updated_at=now() WHERE id=$10 RETURNING *', [...args, positive(input.id)]);
         }
         else {
             rows = await q.query('INSERT INTO learning_products(slug,title,description,kind,state,price,access_days,commission_bps,attribution_enabled) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *', args);
         } if (!rows[0])
-            throw new LearningError('Produk tidak ditemukan.'); await this.audit(q, actor, 'product.save', rows[0].id, { title, price, bps, days }); return { ...rows[0], id: Number(rows[0].id) }; });
+            throw new LearningError('Produk tidak ditemukan.');
+        if (ebookFile) {
+            const download = downloads[0];
+            if (download) await q.query("UPDATE learning_lessons SET title=$1,file_path=$2,state=$3,preview=false,unlock_days=0,required=false WHERE id=$4", [title, ebookFile, state === 'published' ? 'published' : 'draft', download.id]);
+            else await q.query("INSERT INTO learning_lessons(product_id,module,title,kind,file_path,required,preview,state) VALUES($1,'Ebook',$2,'file',$3,false,false,$4)", [rows[0].id, title, ebookFile, state === 'published' ? 'published' : 'draft']);
+        }
+        if (current?.source_product_key) await q.query('UPDATE public_products SET title=$1,description=$2,price=$3,active=$4,updated_at=now() WHERE product_key=$5', [title, args[2], 'Rp' + price.toLocaleString('id-ID'), state === 'published', current.source_product_key]);
+        if (kind === 'ebook') await q.query("UPDATE learning_lessons SET preview=false,unlock_days=0,required=false,state=CASE WHEN kind='file' THEN state ELSE 'archived' END WHERE product_id=$1", [rows[0].id]);
+        await this.audit(q, actor, 'product.save', rows[0].id, { title, price, bps, days }); return { ...rows[0], id: Number(rows[0].id) }; });
+    }
+    async removeProduct(id: number, actor: string) {
+        return this.db.transaction(async q => {
+            await q.query('LOCK TABLE learning_products IN SHARE ROW EXCLUSIVE MODE');
+            const p = (await q.query('SELECT * FROM learning_products WHERE id=$1 FOR UPDATE', [positive(id)]))[0];
+            if (!p) throw new LearningError('Produk tidak ditemukan.');
+            if (p.source_product_key) {
+                await q.query("UPDATE learning_products SET state='archived',updated_at=now() WHERE id=$1", [id]);
+                await q.query('UPDATE public_products SET active=false,updated_at=now() WHERE product_key=$1', [p.source_product_key]);
+                await this.audit(q, actor, 'product.archive', id);
+                return { archived: true, message: 'Layanan disembunyikan dari katalog dan halaman publik. Riwayat tetap tersimpan.' };
+            }
+            const used = await q.query('SELECT id FROM learning_purchases WHERE product_id=$1 UNION ALL SELECT id FROM learning_grants WHERE product_id=$1 UNION ALL SELECT 1 FROM learning_certificates WHERE product_id=$1 LIMIT 1', [id]);
+            if (used.length) {
+                await q.query("UPDATE learning_products SET state='archived',updated_at=now() WHERE id=$1", [id]);
+                await this.audit(q, actor, 'product.archive', id);
+                return { archived: true, message: 'Produk diarsipkan karena memiliki riwayat. Akses pembeli dan transaksi tetap tersimpan.' };
+            }
+            await q.query('DELETE FROM learning_lessons WHERE product_id=$1', [id]);
+            await q.query('DELETE FROM learning_coupons WHERE product_id=$1', [id]);
+            await q.query('DELETE FROM learning_products WHERE id=$1', [id]);
+            await this.audit(q, actor, 'product.delete', id, { title: p.title });
+            return { deleted: true, message: 'Produk dan materi yang belum digunakan berhasil dihapus.' };
+        });
+    }
+    async removeLesson(id: number, actor: string) {
+        return this.db.transaction(async q => {
+            // Same lock order as checkout: product, then lesson.
+            const ref = (await q.query('SELECT product_id FROM learning_lessons WHERE id=$1', [positive(id)]))[0];
+            if (!ref) throw new LearningError('Materi tidak ditemukan.');
+            await q.query('SELECT id FROM learning_products WHERE id=$1 FOR UPDATE', [ref.product_id]);
+            const l = (await q.query('SELECT * FROM learning_lessons WHERE id=$1 FOR UPDATE', [id]))[0];
+            if (!l) throw new LearningError('Materi tidak ditemukan.');
+            const used = await q.query('SELECT id FROM learning_grants WHERE product_id=$1 UNION ALL SELECT id FROM learning_purchases WHERE product_id=$1 UNION ALL SELECT 1 FROM learning_progress WHERE lesson_id=$2 LIMIT 1', [l.product_id, id]);
+            if (used.length) await q.query("UPDATE learning_lessons SET state='archived' WHERE id=$1", [id]);
+            else await q.query('DELETE FROM learning_lessons WHERE id=$1', [id]);
+            await this.audit(q, actor, used.length ? 'lesson.archive' : 'lesson.delete', id);
+            return { archived: !!used.length, message: used.length ? 'Materi diarsipkan. Materi wajib pada pembelian lama tetap dapat diselesaikan.' : 'Materi berhasil dihapus.' };
+        });
     }
     async saveLesson(input: Row, actor: string): Promise<Row & {
         id: number;
@@ -60,7 +124,15 @@ export class LearningService {
         const args = [productId, text(input.module), text(input.title), kind, text(input.body ?? '', 100000, true), safeLearningUrl(input.url), safePrivatePath(input.filePath), integer(input.position ?? 0, 0, 100000), integer(input.unlockDays ?? 0, 0, 36500), input.required !== false, input.preview === true, state];
         if (kind === 'file' && !args[6] || ['video', 'link'].includes(kind) && !args[5])
             throw new LearningError('Isi tautan atau file materi.');
-        return this.db.transaction(async (q) => { let rows; if (input.id) {
+        return this.db.transaction(async (q) => {
+        const parent = (await q.query('SELECT * FROM learning_products WHERE id=$1 FOR UPDATE', [productId]))[0];
+        if (!parent) throw new LearningError('Produk tidak ditemukan.');
+        if (parent.kind === 'ebook' && (kind !== 'file' || input.preview === true || Number(input.unlockDays ?? 0) > 0)) throw new LearningError('Ebook menggunakan file privat tanpa pratinjau atau jadwal modul.');
+        if (input.id && (await q.query('SELECT id FROM learning_grants WHERE product_id=$1 UNION ALL SELECT id FROM learning_purchases WHERE product_id=$1 LIMIT 1', [productId])).length) {
+            const original = (await q.query('SELECT required FROM learning_lessons WHERE id=$1 AND product_id=$2', [positive(input.id), productId]))[0];
+            if (original?.required && state !== 'published' && state !== 'archived') throw new LearningError('Materi wajib sudah digunakan. Gunakan arsip agar pembeli lama tetap dapat menyelesaikannya.');
+        }
+        let rows; if (input.id) {
             rows = await q.query('UPDATE learning_lessons SET product_id=$1,module=$2,title=$3,kind=$4,body=$5,url=$6,file_path=$7,position=$8,unlock_days=$9,required=$10,preview=$11,state=$12 WHERE id=$13 AND product_id=$1 RETURNING *', [...args, positive(input.id)]);
         }
         else
@@ -83,6 +155,7 @@ export class LearningService {
             const p = (await q.query("SELECT * FROM learning_products WHERE id=$1 AND state='published' FOR SHARE", [productId]))[0];
             if (!p)
                 throw new LearningError('Produk belum tersedia.');
+            if (p.source_product_key) throw new LearningError('Layanan tes dipesan melalui formulir layanan untuk koordinasi jadwal dan peserta.');
             let price = Number(p.price);
             if (coupon) {
                 const cp = (await q.query('SELECT * FROM learning_coupons WHERE code=$1 AND product_id=$2 AND active=true AND (expires_at IS NULL OR expires_at>now()) FOR UPDATE', [coupon, productId]))[0];
@@ -112,6 +185,17 @@ export class LearningService {
             await this.audit(q, user, 'checkout', purchase.id, { productId, orderId: order?.id ?? null });
             return this.purchaseResult(q, purchase);
         });
+    }
+    /** Called in the same transaction as CRM order creation. No invented customer account. */
+    async attachServiceOrder(q: CommerceQuery, orderId: number, leadId: number, total: number) {
+        const lead = (await q.query('SELECT * FROM public_interest_leads WHERE id=$1', [leadId]))[0];
+        if (!lead?.product_key) return;
+        const p = (await q.query("SELECT * FROM learning_products WHERE source_product_key=$1 AND state='published' FOR SHARE", [lead.product_key]))[0];
+        if (!p) return;
+        const partner = lead.source_partner_user_id && p.attribution_enabled ? (await q.query("SELECT id FROM platform_users WHERE id=$1 AND active=true AND EXISTS(SELECT 1 FROM platform_user_roles r WHERE r.user_id=platform_users.id AND r.role IN ('promoter','affiliate')) AND lower(email)<>lower($2)", [lead.source_partner_user_id, lead.email || '']))[0] : null;
+        const buyer = lead.email ? (await q.query('SELECT id FROM platform_users WHERE lower(email)=lower($1) AND active=true', [lead.email]))[0] : null;
+        const snapshot = { title: p.title, kind: 'service', price: total, listPrice: total, commissionBps: Number(p.commission_bps), accessDays: null, required: [], productKey: lead.product_key, leadId };
+        await q.query('INSERT INTO learning_purchases(user_id,product_id,order_id,request_key,payload,snapshot,partner_user_id,referral_alias) VALUES($8,$1,$2,$3,$4,$5::text::jsonb,$6,$7) ON CONFLICT(order_id) DO NOTHING', [p.id, orderId, 'service:' + orderId, JSON.stringify({ leadId, orderId }), JSON.stringify(snapshot), partner?.id ?? null, partner ? lead.source_referral_alias || '' : '', buyer?.id ?? null]);
     }
     private async purchaseResult(q: CommerceQuery, p: Row) { if (p.order_id) {
         const row = (await q.query('SELECT id,number,total,state FROM commerce_orders WHERE id=$1', [p.order_id]))[0];
@@ -162,7 +246,7 @@ export class LearningService {
             const balance = ledger.reduce((a, e) => a + Number(e.amount), 0);
             const paid = balance === Number(order.total) && order.state === 'issued';
             const grant = (await q.query('SELECT * FROM learning_grants WHERE purchase_id=$1', [p.id]))[0];
-            if (paid && !grant)
+            if (paid && !grant && (p.snapshot as Row).kind !== 'service')
                 await this.grant(q, p);
             if (!paid && grant) {
                 await q.query("UPDATE learning_grants SET status='suspended',reason='Pembayaran berkurang; perlu peninjauan admin' WHERE purchase_id=$1 AND status='active'", [p.id]);
@@ -194,13 +278,14 @@ export class LearningService {
         }
     } return rows.length; }
     async manualGrant(user: string, productId: number, reason: string, actor: string) { text(reason, 1000); return this.db.transaction(async (q) => { await this.lockUser(q, user); const p = (await q.query('SELECT * FROM learning_products WHERE id=$1', [positive(productId)]))[0]; if (!p)
-        throw new LearningError('Produk tidak ditemukan.'); const required = (await q.query("SELECT id FROM learning_lessons WHERE product_id=$1 AND required=true AND state='published'", [productId])).map(r => Number(r.id)); const row = (await q.query('INSERT INTO learning_grants(user_id,product_id,source,reason,expires_at,required_lessons,duration_days) VALUES($1,$2,$3,$4,CASE WHEN $5::int IS NULL THEN NULL ELSE now()+$5::int*interval \'1 day\' END,$6::text::jsonb,$5) RETURNING id', [user, productId, 'admin', reason, p.access_days, JSON.stringify(required)]))[0]; await this.audit(q, actor, 'grant.manual', row.id, { reason, user }); return row; }); }
-    async syllabus(user: string, productId: number) { return this.db.query("SELECT id,product_id,module,title,kind,position,unlock_days,required,preview FROM learning_lessons WHERE product_id=$1 AND state='published' ORDER BY position,id", [positive(productId)]); }
+        throw new LearningError('Produk tidak ditemukan.'); if (p.source_product_key) throw new LearningError('Layanan tes dikelola melalui CRM dan pesanan, bukan hak akses kelas.'); const required = (await q.query("SELECT id FROM learning_lessons WHERE product_id=$1 AND required=true AND state='published'", [productId])).map(r => Number(r.id)); const row = (await q.query('INSERT INTO learning_grants(user_id,product_id,source,reason,expires_at,required_lessons,duration_days) VALUES($1,$2,$3,$4,CASE WHEN $5::int IS NULL THEN NULL ELSE now()+$5::int*interval \'1 day\' END,$6::text::jsonb,$5) RETURNING id', [user, productId, 'admin', reason, p.access_days, JSON.stringify(required)]))[0]; await this.audit(q, actor, 'grant.manual', row.id, { reason, user }); return row; }); }
+    async syllabus(user: string, productId: number) { return this.db.query(`SELECT l.id,l.product_id,l.module,l.title,l.kind,l.position,l.unlock_days,l.required,l.preview FROM learning_lessons l WHERE l.product_id=$1 AND (l.state='published' OR (l.state='archived' AND EXISTS(SELECT 1 FROM learning_grants g WHERE g.product_id=l.product_id AND g.user_id=$2 AND g.status='active' AND (g.expires_at IS NULL OR g.expires_at>now()) AND g.required_lessons @> to_jsonb(l.id)))) ORDER BY l.position,l.id`, [positive(productId), user]); }
     private async accessible(q: CommerceQuery, user: string, lessonId: number) {
-        const l = (await q.query("SELECT l.* FROM learning_lessons l JOIN learning_products p ON p.id=l.product_id WHERE l.id=$1 AND l.state='published' AND p.state<>'draft'", [positive(lessonId)]))[0];
+        const l = (await q.query("SELECT l.* FROM learning_lessons l JOIN learning_products p ON p.id=l.product_id WHERE l.id=$1 AND l.state IN ('published','archived') AND p.state<>'draft'", [positive(lessonId)]))[0];
         if (!l)
             throw new LearningError('Materi tidak ditemukan.');
         const g = (await q.query("SELECT * FROM learning_grants WHERE user_id=$1 AND product_id=$2 AND status='active' AND (expires_at IS NULL OR expires_at>now()) ORDER BY started_at LIMIT 1", [user, l.product_id]))[0];
+        if (l.state === 'archived' && (!g || !(g.required_lessons as number[]).includes(Number(l.id)))) throw new LearningError('Materi telah diarsipkan.');
         if (!g && !l.preview)
             throw new LearningError('Akses kelas belum aktif atau sudah berakhir.');
         if (!l.preview && g && new Date(String(g.started_at)).getTime() + Number(l.unlock_days) * 86400000 > Date.now())
@@ -211,13 +296,13 @@ export class LearningService {
         await q.query('UPDATE learning_grants SET last_lesson_id=$1 WHERE user_id=$2 AND product_id=$3 AND status=$4', [lessonId, user, l.product_id, 'active']); return l; }); }
     async complete(user: string, lessonId: number) { return this.db.transaction(async (q) => { const { g } = await this.accessible(q, user, lessonId); if (!g)
         throw new LearningError('Daftar kelas sebelum menyimpan progres.'); await q.query('INSERT INTO learning_progress(user_id,lesson_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [user, lessonId]); return { saved: true }; }); }
-    async dashboard(user: string) { return this.db.transaction(async q=>{ const [grants, progress, purchases, notifications, tickets, certificates] = [await q.query('SELECT g.*,p.title FROM learning_grants g JOIN learning_products p ON p.id=g.product_id WHERE g.user_id=$1 ORDER BY g.id DESC LIMIT 200', [user]),
+    async dashboard(user: string) { return this.db.transaction(async q=>{ const [grants, progress, purchases, notifications, tickets, certificates] = [await q.query('SELECT g.*,p.title,p.kind,p.source_product_key FROM learning_grants g JOIN learning_products p ON p.id=g.product_id WHERE g.user_id=$1 ORDER BY g.id DESC LIMIT 200', [user]),
 await q.query('SELECT pr.*,l.product_id FROM learning_progress pr JOIN learning_lessons l ON l.id=pr.lesson_id WHERE user_id=$1', [user]),
 await q.query('SELECT p.id,p.product_id,p.snapshot,p.created_at,o.id AS order_id,o.number,o.total,o.state AS order_state,EXISTS(SELECT 1 FROM commerce_ledger refund WHERE refund.order_id=o.id AND refund.kind=\'refund\') AS has_refund,COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance FROM learning_purchases p LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE p.user_id=$1 ORDER BY p.id DESC LIMIT 100', [user]),
 await q.query('SELECT message,created_at FROM learning_notifications WHERE user_id=$1 ORDER BY id DESC LIMIT 50', [user]),
 await q.query('SELECT * FROM learning_tickets WHERE user_id=$1 ORDER BY id DESC LIMIT 50', [user]),
 await q.query('SELECT * FROM learning_certificates WHERE user_id=$1', [user])]; return { grants, progress, purchases, notifications, tickets, certificates }; }); }
-    async partner(user: string) { return this.db.transaction(async q=>{ const [commissions, payouts] = [await q.query('SELECT id,purchase_id,amount,state,payout_id,reason,created_at FROM affiliate_entries WHERE user_id=$1 ORDER BY id DESC LIMIT 200', [user]),
+    async partner(user: string) { return this.db.transaction(async q=>{ const [commissions, payouts] = [await q.query("SELECT e.id,e.purchase_id,e.amount,e.state,e.payout_id,e.reason,e.created_at,p.snapshot->>'title' AS product_title,o.number AS order_number FROM affiliate_entries e LEFT JOIN learning_purchases p ON p.id=e.purchase_id LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE e.user_id=$1 ORDER BY e.id DESC LIMIT 200", [user]),
 await q.query('SELECT * FROM affiliate_payouts WHERE user_id=$1 ORDER BY id DESC LIMIT 100', [user])]; const [r] = await q.query("SELECT COALESCE(sum(amount) FILTER(WHERE state='available'),0) AS available,COALESCE(sum(amount) FILTER(WHERE state='reversed' AND amount<0 AND reverses_id IN (SELECT id FROM affiliate_entries WHERE state IN ('paid','reserved'))),0) AS debt FROM affiliate_entries WHERE user_id=$1", [user]); return { commissions: commissions.map((r): Row & {
             amount: number;
         } => ({ ...r, amount: Number(r.amount) })), payouts, available: Math.max(0, Number(r.available) + Number(r.debt)), debt: Number(r.debt) }; }); }
@@ -265,7 +350,7 @@ await q.query('SELECT * FROM affiliate_payouts WHERE user_id=$1 ORDER BY id DESC
     async revokeCertificate(code: string, reason: string, actor: string) { text(reason, 1000); await this.db.transaction(async (q) => { await q.query('UPDATE learning_certificates SET revoked_at=now(),reason=$1 WHERE code=$2', [reason, text(code, 100)]); await this.audit(q, actor, 'certificate.revoke', code, { reason }); }); }
     async ticket(user: string, subject: string, message: string) { return (await this.db.query('INSERT INTO learning_tickets(user_id,subject,message) VALUES($1,$2,$3) RETURNING id', [user, text(subject), text(message, 5000)]))[0]; }
     async searchUsers(term:string){if(typeof term!=='string'||term.trim().length<2||term.length>254)throw new LearningError('Ketik 2–254 karakter email untuk mencari akun.');return this.db.query('SELECT id,email,active FROM platform_users WHERE email ILIKE $1 ORDER BY email LIMIT 50',['%'+term.trim()+'%']);}
-    async readiness(){const rows=await this.db.query("SELECT name,to_regclass('public.'||name) AS relation FROM (VALUES ('learning_products'),('learning_lessons'),('learning_coupons'),('learning_purchases'),('learning_grants'),('learning_progress'),('learning_jobs'),('affiliate_payouts'),('affiliate_entries'),('learning_audit'),('learning_notifications'),('learning_certificates'),('learning_tickets')) AS expected(name)");const missing=rows.filter(r=>!r.relation).map(r=>String(r.name));return {ready:missing.length===0,missing};}
+    async readiness(){const rows=await this.db.query("SELECT name,to_regclass('public.'||name) AS relation FROM (VALUES ('learning_products'),('learning_lessons'),('learning_coupons'),('learning_purchases'),('learning_grants'),('learning_progress'),('learning_jobs'),('affiliate_payouts'),('affiliate_entries'),('learning_audit'),('learning_notifications'),('learning_certificates'),('learning_tickets')) AS expected(name)");const missing=rows.filter(r=>!r.relation).map(r=>String(r.name));const columns=await this.db.query("SELECT column_name FROM information_schema.columns WHERE table_name='learning_products' AND column_name IN ('source_product_key','price_note')");if(columns.length<2)missing.push('catalog_0_10');return {ready:missing.length===0,missing};}
     async adminData() { return this.db.transaction(async q=>{ const [products, lessons, grants, commissions, payouts, jobs, tickets, coupons, users] = [await q.query('SELECT * FROM learning_products ORDER BY id DESC LIMIT 200'),
 await q.query('SELECT * FROM learning_lessons ORDER BY product_id,position,id LIMIT 1000'),
 await q.query('SELECT g.*,u.email,p.title,(SELECT count(*) FROM learning_progress pr JOIN learning_lessons ll ON ll.id=pr.lesson_id WHERE pr.user_id=g.user_id AND ll.product_id=g.product_id) AS completed_count FROM learning_grants g JOIN platform_users u ON u.id=g.user_id JOIN learning_products p ON p.id=g.product_id ORDER BY g.id DESC LIMIT 200'),

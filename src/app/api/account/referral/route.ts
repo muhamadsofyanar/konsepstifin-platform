@@ -4,7 +4,7 @@ export const runtime='nodejs';
 const json=(body:object,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
 async function account() {
  const p=await getAccountPrincipal();
- return p?.active&&p.sessionValid&&p.roles.includes('promoter')?p:null;
+ return p?.active&&p.sessionValid&&p.roles.some(r=>['promoter','affiliate'].includes(r))?p:null;
 }
 export async function GET() {
  try {const p=await account();if(!p)return json({message:'Akses promotor diperlukan.'},401);return json(await getReferralService().getPortal(p.userId));}

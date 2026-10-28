@@ -64,6 +64,16 @@ export async function ensureProductSchema() {
     })().catch((error) => { globalProducts.konsepStifinProductSchema = undefined; throw error; });
   }
   await globalProducts.konsepStifinProductSchema;
+  // Public cards and affiliate catalog share one stable product identity. Never reset commission rules.
+  const sql = getDatabaseClient();
+  const [ready] = await sql`SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='learning_products' AND column_name='source_product_key') AS ready`;
+  if (ready?.ready) await sql`INSERT INTO learning_products(slug,title,description,kind,state,price,source_product_key,price_note)
+    SELECT 'layanan-' || lower(product_key),title,description,'consultation',CASE WHEN active THEN 'published' ELSE 'archived' END,
+    CASE WHEN price ~ '^Rp[0-9.]+$' THEN replace(substring(price from 3),'.','')::bigint ELSE 0 END,product_key,price_note
+    FROM public_products WHERE group_name IN ('test','promoter')
+    ON CONFLICT(source_product_key) DO UPDATE SET title=EXCLUDED.title,description=EXCLUDED.description,state=EXCLUDED.state,price=EXCLUDED.price,price_note=EXCLUDED.price_note
+    WHERE learning_products.title IS DISTINCT FROM EXCLUDED.title OR learning_products.description IS DISTINCT FROM EXCLUDED.description OR learning_products.state IS DISTINCT FROM EXCLUDED.state OR learning_products.price IS DISTINCT FROM EXCLUDED.price OR learning_products.price_note IS DISTINCT FROM EXCLUDED.price_note`;
+
 }
 
 function textArray(value: unknown): string[] {
@@ -114,5 +124,6 @@ export async function updateManagedProduct(id: number, input: Partial<ManagedPro
     active=${Boolean(input.active)}, featured=${Boolean(input.featured)}, sort_order=${Math.max(0, Number(input.sortOrder) || 0)}, updated_at=NOW()
     WHERE id=${id} RETURNING *`;
   if (!rows[0]) throw new Error('Produk tidak ditemukan.');
+  await ensureProductSchema();
   return rowToProduct(rows[0]);
 }

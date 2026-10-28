@@ -22,16 +22,19 @@ export default function ProductManager({ databaseReady, initialProducts, initial
   function update<K extends keyof ManagedProduct>(key: K, value: ManagedProduct[K]) { setEditing((current) => current ? { ...current, [key]: value } : current); }
   async function save(event: FormEvent) {
     event.preventDefault(); if (!editing) return; setSaving(true); setMessage(''); setError('');
-    const response = await fetch(`/api/admin/products/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) });
-    const result = await response.json(); setSaving(false);
-    if (response.status === 401) { router.replace('/admin/login'); return; }
-    if (!response.ok) { setError(result.message ?? 'Produk gagal disimpan.'); return; }
-    setProducts((current) => current.map((item) => item.id === result.product.id ? result.product : item)); setEditing(result.product); setMessage('Produk dan harga berhasil diperbarui.'); router.refresh();
+    try {
+      const response = await fetch(`/api/admin/products/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) });
+      const result = await response.json();
+      if (response.status === 401) { router.replace('/admin/login'); return; }
+      if (!response.ok) throw new Error(result.message ?? 'Produk gagal disimpan.');
+      setProducts((current) => current.map((item) => item.id === result.product.id ? result.product : item)); setEditing(result.product); setMessage('Produk dan harga berhasil diperbarui.'); router.refresh();
+    } catch(e) { setError(e instanceof Error ? e.message : 'Produk gagal disimpan. Coba kembali.'); }
+    finally { setSaving(false); }
   }
   async function logout() { await fetch('/api/admin/logout', { method: 'POST' }); router.replace('/admin/login'); router.refresh(); }
 
   return <div className="article-admin product-admin"><header className="article-admin-header"><Link href="/"><Image src="/stifin-konsep-wordmark.png" alt="STIFIn Konsep" width={419} height={168} priority /></Link><nav><span>Portal Tim</span><b>Produk & Harga</b></nav><div><Link href="/admin/intelligence">Content Intelligence</Link><Link href="/admin/artikel">Artikel</Link><Link href="/admin/pustaka">Pustaka</Link><Link href="/" target="_blank">Lihat website ↗</Link><button onClick={logout}>Keluar</button></div></header><main>
-    <section className="article-admin-title"><div><span>PUSAT PRODUK</span><h1>Kelola layanan dan harga</h1><p>Satu perubahan di sini digunakan oleh homepage dan landing page terkait.</p></div><div className="article-admin-metrics"><span><small>Total produk</small><b>{products.length}</b></span><span><small>Aktif</small><b>{products.filter((item) => item.active).length}</b></span></div></section>
+    <p className="admin-success"><Link href="/admin/kelas?section=products">Buka semua produk, atur komisi affiliate, dan kelola ebook →</Link></p><section className="article-admin-title"><div><span>PUSAT PRODUK</span><h1>Kelola layanan dan harga</h1><p>Satu perubahan di sini digunakan oleh homepage dan landing page terkait.</p></div><div className="article-admin-metrics"><span><small>Total produk</small><b>{products.length}</b></span><span><small>Aktif</small><b>{products.filter((item) => item.active).length}</b></span></div></section>
     {!databaseReady && <section className="admin-setup-warning"><b>Database belum dihubungkan</b><p>Tambahkan DATABASE_URL agar pengaturan dapat disimpan.</p></section>}
     <div className="product-admin-tabs">{(Object.keys(groupLabels) as ProductGroup[]).map((key) => <button key={key} className={group === key ? 'active' : ''} onClick={() => selectGroup(key)}>{groupLabels[key]}</button>)}</div>
     <div className="product-admin-layout"><aside>{visible.map((item) => <button key={item.id} className={editing?.id === item.id ? 'active' : ''} onClick={() => setEditing(item)}><span>{item.eyebrow}</span><b>{item.title}</b><small>{item.price} · {item.active ? 'Tampil' : 'Disembunyikan'}</small></button>)}</aside>

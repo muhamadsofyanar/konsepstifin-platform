@@ -9,7 +9,7 @@ function id(value:unknown){ if(typeof value!=='number'||!Number.isSafeInteger(va
 function text(value:unknown,max:number,label:string){if(typeof value!=='string'||!value.trim()||value.length>max)throw new CommerceError(`${label} wajib diisi (maksimum ${max} karakter).`);return value.trim();}
 const date=(v:unknown)=>v instanceof Date?v.toISOString():String(v);
 export class CommerceService {
- constructor(private db:CommerceDatabase,private guard?:(tx:CommerceQuery,id:number,input:OrderCommand)=>Promise<void>){}
+ constructor(private db:CommerceDatabase,private guard?:(tx:CommerceQuery,id:number,input:OrderCommand)=>Promise<void>,private onCreate?:(tx:CommerceQuery,id:number,leadId:number,total:number)=>Promise<void>){}
  async lead(leadId:number){const rows=await this.db.query('SELECT id,name,phone,email FROM public_interest_leads WHERE id=$1',[id(leadId)]);return rows[0]??null;}
  async create(input:{leadId:number;lines:unknown;key:string},actor:string){
   const leadId=id(input.leadId), key=text(input.key,120,'Idempotensi'), snapshot=calculateLines(input.lines), payload=JSON.stringify({leadId,...snapshot}); text(actor,200,'Pelaku');
@@ -17,7 +17,7 @@ export class CommerceService {
    const lead=(await tx.query('SELECT id,name,phone,email FROM public_interest_leads WHERE id=$1',[leadId]))[0];if(!lead)throw new CommerceError('Lead tidak ditemukan.');
    const rows=await tx.query("INSERT INTO commerce_orders(number,lead_id,customer_name,customer_phone,customer_email,lines,total,create_key,create_payload,created_by) VALUES($1,$2,$3,$4,$5,$6::text::jsonb,$7,$8,$9,$10) ON CONFLICT(create_key) DO NOTHING RETURNING id",['KS-'+randomUUID().toUpperCase(),leadId,lead.name,lead.phone,lead.email??'',JSON.stringify(snapshot.lines),snapshot.total,key,payload,actor]);
    if(!rows.length){const previous=(await tx.query('SELECT id,create_payload FROM commerce_orders WHERE create_key=$1',[key]))[0];if(previous.create_payload!==payload)throw new CommerceError('Idempotensi sudah digunakan untuk data berbeda.');return Number(previous.id);}
-   const newId=Number(rows[0].id);await tx.query('INSERT INTO commerce_audit(order_id,action,operation_key,payload,actor) VALUES($1,$2,$3,$4,$5)',[newId,'create',key,payload,actor]);return newId;
+   const newId=Number(rows[0].id);await tx.query('INSERT INTO commerce_audit(order_id,action,operation_key,payload,actor) VALUES($1,$2,$3,$4,$5)',[newId,'create',key,payload,actor]);await this.onCreate?.(tx,newId,leadId,snapshot.total);return newId;
   });return (await this.get(orderId))!;
  }
  async get(orderId:number):Promise<CommerceOrder|null>{
