@@ -1,0 +1,16 @@
+KonsepSTIFIn 0.10.2 | source lengkap
+
+Baca docs/UPGRADE-0.10.2.md dan docs/AUDIT-0.10.2.md.
+Unggah isi folder ke root repository aplikasi yang sama dan redeploy.
+Dari 0.10.0/0.10.1 dengan migrasi 008 sudah berhasil: tidak ada migrasi/ENV baru.
+Pertahankan DATABASE_URL, akun, password, alias, transaksi dan volume file.
+
+Setelah deploy: Ctrl + Shift + R, lalu buka /api/health.
+Nilai version harus 0.10.2.
+Admin produk: /admin/kelas?section=products
+Pusat mitra: /akun/mitra
+Katalog: /belajar?tab=catalog
+
+Harga transaksi tidak diubah atau dibulatkan otomatis oleh rilis tampilan.
+Untuk memperbaiki nominal yang salah, edit produk dari admin.
+Tidak perlu provision akun atau import ulang jaringan.

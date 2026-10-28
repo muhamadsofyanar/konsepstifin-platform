@@ -1,3 +1,4 @@
+import { publicProductPresentation } from './catalog-presentation';
 import { databaseConfigured, getDatabaseClient } from '@/lib/article-store';
 import { affiliatePrograms, promoterSteps, publicProducts, type ProductKey } from '@/app/site-config';
 
@@ -94,21 +95,17 @@ export async function getManagedProducts(groupName?: ProductGroup) {
 }
 
 export async function getPublicManagedProducts(groupName: ProductGroup) {
-  if (!databaseConfigured()) return seeds.filter((item) => item.groupName === groupName).map((item, index) => ({ ...item, id: -(index + 1) }));
-  try { return (await getManagedProducts(groupName)).filter((item) => item.active); }
-  catch (error) { console.error('Product database fallback', error); return seeds.filter((item) => item.groupName === groupName).map((item, index) => ({ ...item, id: -(index + 1) })); }
+  const fallback=()=>seeds.filter(item=>item.groupName===groupName).map((item,index)=>publicProductPresentation({...item,id:-(index+1)}));
+  if (!databaseConfigured()) return fallback();
+  try { return (await getManagedProducts(groupName)).filter(item=>item.active).map(publicProductPresentation); }
+  catch { console.error('Product database unavailable'); return fallback(); }
 }
-
 export async function getPublicProductByKey(productKey: string) {
-  const normalized = String(productKey ?? '').trim();
-  if (!normalized) return null;
-  if (!databaseConfigured()) return seeds.find((item) => item.productKey === normalized && item.active) ?? null;
-  try {
-    return (await getManagedProducts()).find((item) => item.productKey === normalized && item.active) ?? null;
-  } catch (error) {
-    console.error('Product database fallback', error);
-    return seeds.find((item) => item.productKey === normalized && item.active) ?? null;
-  }
+  const normalized=String(productKey??'').trim();if(!normalized)return null;
+  const fallback=()=>{const item=seeds.find(p=>p.productKey===normalized&&p.active);return item?publicProductPresentation(item):null;};
+  if(!databaseConfigured())return fallback();
+  try { const item=(await getManagedProducts()).find(p=>p.productKey===normalized&&p.active);return item?publicProductPresentation(item):null; }
+  catch {return fallback();}
 }
 
 export async function updateManagedProduct(id: number, input: Partial<ManagedProduct>) {

@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 export default async function EducationPage() {
   const [featured, ...otherArticles] = await getPublishedArticles();
 
-  if (!featured) return <main className="education-main"><section className="education-empty"><span>PUSAT EDUKASI</span><h1>Artikel sedang disiapkan.</h1><p>Tim kami sedang menyiapkan materi edukasi terbaru. Silakan kembali lagi dalam beberapa waktu.</p><Link className="public-cta" href="/">Kembali ke beranda</Link></section></main>;
+  if (!featured) return <main id="main-content" className="education-main"><section className="education-empty"><span>PUSAT EDUKASI</span><h1>Artikel sedang disiapkan.</h1><p>Tim kami sedang menyiapkan materi edukasi terbaru. Silakan kembali lagi dalam beberapa waktu.</p><Link className="public-cta" href="/">Kembali ke beranda</Link></section></main>;
 
-  return <main className="education-main">
+  return <main id="main-content" className="education-main">
     <section className="education-hero">
       <div><span>PUSAT EDUKASI</span><h1>Cari bacaan sesuai pertanyaan yang sedang Anda hadapi.</h1><p>Pilih materi tentang penggunaan hasil, komunikasi keluarga, proses belajar, atau kolaborasi. Setiap artikel diposisikan sebagai bahan refleksi, bukan diagnosis atau keputusan tunggal.</p></div>
       <aside><b>Prinsip kami</b><p>Informasi menjadi pembuka percakapan dan refleksi, bukan label yang membatasi seseorang.</p></aside>

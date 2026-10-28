@@ -5,11 +5,11 @@ import MetaPixel from './meta-pixel';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://konsepstifin.com'),
-  title: 'Konsep STIFIn — Tes, Promotor, dan Affiliate dalam Jaringan STIFIn Genetic',
-  description: 'Layanan Tes STIFIn offline, daftar promotor, edukasi, dan jalur affiliate Konsep STIFIn dalam jaringan STIFIn Genetic.',
+  title: 'KonsepSTIFIn | Tes, Kelas, Ebook & Affiliate',
+  description: 'Temukan layanan Tes STIFIn offline, kelas, ebook, serta jalur promotor dan affiliate melalui satu platform KonsepSTIFIn.',
   openGraph: {
-    title: 'Konsep STIFIn — Tes dan Promotor dalam Jaringan STIFIn Genetic',
-    description: 'Temukan layanan Tes STIFIn offline, promotor berdasarkan wilayah, edukasi, dan jalur affiliate.',
+    title: 'KonsepSTIFIn | Layanan, Pembelajaran & Mitra',
+    description: 'Layanan tes, kelas dan ebook, serta aktivitas promotor dan affiliate dalam satu platform.',
     type: 'website',
     locale: 'id_ID',
     url: '/',

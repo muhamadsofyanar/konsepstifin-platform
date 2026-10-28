@@ -93,7 +93,7 @@ export function PromoterDirectoryView({
   const start = page.total ? (page.page - 1) * page.pageSize + 1 : 0;
   const end = page.total ? Math.min(page.page * page.pageSize, page.total) : 0;
 
-  return <main className="region-page promoter-directory">
+  return <main id="main-content" className="region-page promoter-directory">
     <nav className="region-breadcrumb"><Link href="/">Beranda</Link><span> / Jaringan Promotor</span></nav>
     <header className="region-hero promoter-directory-hero">
       <span>JARINGAN PROMOTOR STIFIN</span>

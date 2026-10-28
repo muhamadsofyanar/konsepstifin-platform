@@ -80,7 +80,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     ],
   };
 
-  return <main className="article-main">
+  return <main id="main-content" className="article-main">
     <JsonLd data={articleSchema} />
     <section className="article-heading"><Link href="/edukasi">← Kembali ke pusat edukasi</Link><div><span>{article.category}</span><span>{article.readTime}</span><time dateTime={article.publishedAt}>{article.publishedLabel}</time></div><h1>{article.title}</h1><p>{article.excerpt}</p></section>
     <div className={`article-hero-cover article-cover ${article.tone}`}><span>{article.category}</span><b>WAWASAN<br/>UNTUK<br/>BERTUMBUH</b><small>KONSEP STIFIn · EDUKASI</small></div>

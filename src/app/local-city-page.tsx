@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PublicHeader, PublicFooter } from './public-site-shell';
 import JsonLd from '@/app/json-ld';
 import PublicInterestAction from '@/app/public-interest-action';
 import { promoterProfileSlug, type LocalPageData } from '@/lib/local-seo';
@@ -23,7 +24,7 @@ export default function LocalCityPage({ data, intent }: { data: LocalPageData; i
     { name: data.regency.name, url: canonical },
   ];
 
-  return <main className="region-page local-city-page">
+  return <div className="public-site journey-site"><PublicHeader active="location" announcement="Layanan berdasarkan cakupan wilayah, dengan jadwal yang dikonfirmasi pengelola"/><main id="main-content" className="region-page local-city-page">
     <JsonLd data={{ '@context': 'https://schema.org', '@graph': [
       { '@type': 'Service', name: title, areaServed: { '@type': 'AdministrativeArea', name: data.regency.name }, url: canonical, provider: { '@type': 'Organization', name: 'Konsep STIFIn', url: 'https://konsepstifin.com' } },
       { '@type': 'BreadcrumbList', itemListElement: breadcrumbs.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: item.url })) },
@@ -55,5 +56,5 @@ export default function LocalCityPage({ data, intent }: { data: LocalPageData; i
 
     <section className="region-section region-faq"><span>PERTANYAAN UMUM</span><h2>Informasi untuk {data.regency.name}</h2><div>{faqs.map((faq) => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></section>
     <section className="region-section region-cta"><h2>Belum yakin paket mana yang sesuai?</h2><p>Sampaikan jumlah peserta, kota, dan kebutuhan pembahasan. Tim mencatat permintaan dan membantu pencocokan tanpa menjanjikan jadwal sebelum promotor mengonfirmasi.</p><PublicInterestAction leadType="test_service" captureLead linkKey="tesPersonal" label="Minta bantuan memilih layanan →" service="Bantuan memilih layanan STIFIn" className="dark-button" provinceCode={data.province.code} provinceName={data.province.name} regencyCode={data.regency.code} regencyName={data.regency.name} /></section>
-  </main>;
+  </main><PublicFooter/></div>;
 }

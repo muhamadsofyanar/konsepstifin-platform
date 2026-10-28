@@ -2,7 +2,7 @@
 import { statusLabel } from '@/lib/portal-ui';
 import { useEffect, useState, type FormEvent } from 'react';
 export type DataRow = Record<string, unknown>;
-export const rupiah = (v: unknown) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(v ?? 0));
+export const rupiah = (v: unknown) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(v ?? 0)).replace(/\u00a0/g,'');
 export const date = (v: unknown) => v ? new Date(typeof v === 'number' ? v : String(v)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : 'Tanpa batas';
 export async function readLearningJson(url: string) {
     let r = await fetch(url, { cache: 'no-store' });

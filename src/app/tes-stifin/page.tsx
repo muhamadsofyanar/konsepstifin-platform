@@ -4,6 +4,7 @@ import Link from 'next/link';
 import PublicInterestAction from '../public-interest-action';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
 import { faqItems } from '../site-config';
+import { catalogAmount } from '@/lib/catalog-presentation';
 import { getPublicManagedProducts } from '@/lib/product-store';
 import ActivityGallery from '../activity-gallery';
 import JsonLd from '../json-ld';
@@ -23,7 +24,6 @@ export const dynamic = 'force-dynamic';
 export default async function TestLandingPage() {
   const testFaq = faqItems.filter((_, index) => [0, 1, 4].includes(index));
   const publicProducts = await getPublicManagedProducts('test');
-  const rupiahValue = (value: string) => value.toLowerCase().includes('gratis') ? '0' : value.replace(/\D/g, '');
   const servicesSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -37,12 +37,12 @@ export default async function TestLandingPage() {
         description: product.description,
         provider: { '@id': 'https://konsepstifin.com/#organization' },
         areaServed: { '@type': 'Country', name: 'Indonesia' },
-        offers: {
+        ...(catalogAmount(product.price)!==null&&catalogAmount(product.price)!>0?{offers: {
           '@type': 'Offer',
-          price: rupiahValue(product.price),
+          price: String(catalogAmount(product.price)),
           priceCurrency: 'IDR',
-          url: 'https://konsepstifin.com/tes-stifin#layanan',
-        },
+          url: 'https://konsepstifin.com/produk/layanan/'+product.productKey,
+        }}:{}),
       },
     })),
   };
@@ -50,9 +50,9 @@ export default async function TestLandingPage() {
   return <div className="public-site journey-site test-landing">
     <JsonLd data={servicesSchema} />
     <PublicHeader active="test" announcement="Tes dilakukan offline · Permintaan dan pembayaran dikonfirmasi admin" />
-    <main>
+    <main id="main-content">
       <section className="hero test-hero">
-        <div className="hero-copy"><div className="eyebrow">LAYANAN TES STIFIn · OFFLINE</div><h1>Sebelum memilih paket, pahami dulu proses dan batas penggunaan hasilnya.</h1><p>Tes dimulai dari pemindaian sepuluh sidik jari secara langsung. Hasil kemudian dibahas bersama promotor sebagai bahan refleksi untuk belajar, bekerja, dan berkomunikasi—bukan sebagai diagnosis atau keputusan tunggal.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Bandingkan layanan tes <span>→</span></Link><Link href="#proses">Lihat alur dari formulir hingga tes</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>berdasarkan konfirmasi</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
+        <div className="hero-copy"><div className="eyebrow">LAYANAN TES STIFIn · OFFLINE</div><h1>Satu langkah untuk lebih memahami diri dan keluarga.</h1><p>Tes dimulai dari pemindaian sepuluh sidik jari secara langsung. Hasil kemudian dibahas bersama promotor sebagai bahan refleksi untuk belajar, bekerja, dan berkomunikasi—bukan sebagai diagnosis atau keputusan tunggal.</p><div className="hero-actions"><Link className="public-cta big" href="#layanan">Bandingkan layanan tes <span>→</span></Link><Link href="#proses">Lihat alur dari formulir hingga tes</Link></div><div className="trust-row"><span><b>Offline</b><small>pemindaian langsung</small></span><span><b>Terjadwal</b><small>berdasarkan konfirmasi</small></span><span><b>Dibahas</b><small>bersama promotor</small></span></div></div>
         <figure className="journey-hero-media test-hero-media">
           <Image src="/images/hero-tes-v3.webp" alt="Peserta Muslim menerima penjelasan langsung dari promotor perempuan" width={1586} height={992} sizes="(max-width: 900px) 90vw, 45vw" preload />
           <figcaption className="media-story-card test-story-card"><small>TIDAK BERHENTI DI HASIL</small><b>Dibahas bersama promotor</b><span>Offline · Personal · Lebih mudah dipahami</span></figcaption>
@@ -74,7 +74,7 @@ export default async function TestLandingPage() {
         ['04', 'Arah penerapan yang realistis', 'Pilih satu atau dua penyesuaian kecil yang dapat dicoba setelah pembahasan hasil.'],
       ].map((item) => <article key={item[0]}><span>{item[0]}</span><h3>{item[1]}</h3><p>{item[2]}</p></article>)}</div></section>
 
-      <section id="layanan" className="section product-section"><div className="section-heading"><span>PILIHAN LAYANAN</span><h2>Pilih untuk diri sendiri, keluarga, atau kelompok Anda.</h2><p>Isi data singkat agar sistem mencatat persetujuan kontak dan permintaan layanan. Admin menindaklanjuti pencocokan promotor, harga, dan jadwal. Jika masih ragu, gunakan bantuan pemilihan layanan di bawah kartu.</p></div><div className="product-grid">{publicProducts.map((product) => <article className={product.featured ? 'product-card featured-product' : 'product-card'} key={product.title}>{product.featured && <div className="product-ribbon">MULAI DARI 1 PESERTA</div>}<small>{product.eyebrow}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{product.price}</b><span>{product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map((item) => <span key={item}>✓ {item}</span>)}</div>{product.bonuses.length > 0 && <div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map((item) => <span key={item}>＋ {item}</span>)}</div>}<Link className="product-action" href={'/produk/layanan/'+product.productKey}>{product.action} →</Link></article>)}</div><div className="catalog-support"><div><b>Belum yakin memilih paket?</b><span>Tim dapat membantu mencocokkan jumlah peserta, kota, dan kebutuhan Anda.</span></div><PublicInterestAction leadType="test_service" captureLead className="catalog-support-action" linkKey="tesPersonal" label="Butuh bantuan memilih? →" service="Bantuan memilih layanan STIFIn" /></div><p className="price-note">Harga pada katalog menjadi informasi awal. Nominal dan instruksi pembayaran dikonfirmasi admin sebelum pembayaran. Tes STIFIn bukan layanan diagnosis medis atau psikologis.</p></section>
+      <section id="layanan" className="section product-section"><div className="section-heading"><span>PILIHAN LAYANAN</span><h2>Pilih untuk diri sendiri, keluarga, atau kelompok Anda.</h2><p>Bandingkan jumlah peserta dan fasilitasnya. Buka detail produk untuk mengajukan layanan, lalu pengelola membantu mengonfirmasi wilayah, promotor, dan jadwal.</p></div><div className="product-grid">{publicProducts.map((product) => <article className={product.featured ? 'product-card featured-product' : 'product-card'} key={product.title}>{product.featured && <div className="product-ribbon">MULAI DARI 1 PESERTA</div>}<small>{product.eyebrow}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{product.price}</b><span>{product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map((item) => <span key={item}>✓ {item}</span>)}</div>{product.bonuses.length > 0 && <div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map((item) => <span key={item}>＋ {item}</span>)}</div>}<Link className="product-action" href={'/produk/layanan/'+product.productKey}>{product.action} →</Link></article>)}</div><div className="catalog-support"><div><b>Belum yakin memilih paket?</b><span>Tim dapat membantu mencocokkan jumlah peserta, kota, dan kebutuhan Anda.</span></div><PublicInterestAction leadType="test_service" captureLead className="catalog-support-action" linkKey="tesPersonal" label="Butuh bantuan memilih? →" service="Bantuan memilih layanan STIFIn" /></div><p className="price-note">Harga pada katalog menjadi informasi awal. Nominal dan instruksi pembayaran dikonfirmasi admin sebelum pembayaran. Tes STIFIn bukan layanan diagnosis medis atau psikologis.</p></section>
 
       <ActivityGallery />
 

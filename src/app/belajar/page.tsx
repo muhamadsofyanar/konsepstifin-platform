@@ -4,7 +4,7 @@ import { getAccountPrincipal } from '@/lib/identity/server';
 import LearningPortal from './portal';
 import './learning.css';
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Kelas dan Produk Digital | KonsepSTIFIn', description: 'Temukan kelas dan materi KonsepSTIFIn. Belajar melalui satu akun dan lanjutkan progres Anda.' };
+export const metadata = { robots:{index:false,follow:true},alternates:{canonical:'/belajar'}, title: 'Kelas dan Produk Digital | KonsepSTIFIn', description: 'Temukan kelas dan materi KonsepSTIFIn. Belajar melalui satu akun dan lanjutkan progres Anda.' };
 export default async function Page({ searchParams }: {
     searchParams: Promise<Record<string, string | undefined>>;
 }) { let signedIn = false; let roles: readonly string[] = []; try {
@@ -12,4 +12,4 @@ export default async function Page({ searchParams }: {
     signedIn = !!p?.active && !!p?.sessionValid;
     roles = p?.roles ?? [];
 }
-catch { } const params = await searchParams; if(params.product && /^[a-zA-Z0-9-]{1,100}$/.test(params.product)) redirect(oldProductPath(params.product,params.kind)); const tab = params.tab; return <LearningPortal key={tab ?? 'classes'} signedIn={signedIn} roles={roles} initialTab={tab} initialProduct={params.product}/>; }
+catch { } const params = await searchParams; if(params.product && /^[a-zA-Z0-9-]{1,100}$/.test(params.product)) redirect(oldProductPath(params.product,params.kind)); const tab = params.tab;if(!signedIn&&['support','orders','certificates'].includes(tab??''))redirect('/akun/login?next='+encodeURIComponent('/belajar?tab='+tab)); return <LearningPortal key={tab ?? 'classes'} signedIn={signedIn} roles={roles} initialTab={tab} initialProduct={params.product}/>; }

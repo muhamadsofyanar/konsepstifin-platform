@@ -9,8 +9,8 @@ import ActivityGallery from './activity-gallery';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Tes STIFIn atau Jalur Calon Promotor | Konsep STIFIn',
-  description: 'Bandingkan layanan Tes STIFIn offline, cari promotor berdasarkan wilayah, atau pahami jalur calon promotor tanpa mencampurkan prosesnya.',
+  title: 'Konsep STIFIn | Tes, Kelas, Ebook & Affiliate',
+  description: 'Temukan layanan Tes STIFIn, kelas, ebook, serta jalur promotor dan affiliate dalam satu platform KonsepSTIFIn.',
   alternates: { canonical: '/' },
 };
 
@@ -21,9 +21,9 @@ const journeys = [
     href: '/tes-stifin', action: 'Saya ingin ikut tes', tone: 'forest',
   },
   {
-    number: '02', eyebrow: 'PUSAT PENGETAHUAN', title: 'Artikel & Edukasi',
-    description: 'Belum ingin tes? Mulai dari bacaan tentang belajar, keluarga, pekerjaan, dan cara menerapkan konsep STIFIn dalam keseharian.',
-    href: '/edukasi', action: 'Saya ingin belajar dulu', tone: 'mint',
+    number: '02', eyebrow: 'PUSAT PENGETAHUAN', title: 'Kelas & Ebook',
+    description: 'Pilih materi yang sesuai kebutuhan. Akses kelas, video, ebook, dan progres belajar melalui satu akun.',
+    href: '/belajar?tab=catalog', action: 'Jelajahi kelas & ebook', tone: 'mint',
   },
   {
     number: '03', eyebrow: 'JALUR CALON PROMOTOR', title: 'Calon Promotor',
@@ -44,14 +44,14 @@ export default async function Home() {
   ]);
 
   return <div className="public-site journey-site">
-    <PublicHeader active="home" announcement="Layanan tes dan konsultasi calon promotor memakai formulir serta tindak lanjut yang berbeda" />
-    <main>
+    <PublicHeader active="home" announcement="Tes STIFIn, kelas, ebook, dan aktivitas mitra dalam satu platform" />
+    <main id="main-content">
       <section className="hub-hero">
         <div className="hub-hero-copy">
           <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
-          <h1>Ingin menjalani Tes STIFIn, atau <em>sedang mempertimbangkan jalur promotor?</em></h1>
-          <p>Pilih sesuai tujuan Anda. Peserta tes dapat membandingkan layanan dan meminta pencocokan promotor. Calon promotor dapat memahami peran, tahap belajar, biaya, dan tanggung jawab sebelum mengambil keputusan.</p>
-          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin">Bandingkan layanan Tes STIFIn →</Link><Link href="/jadi-promotor">Pelajari jalur calon promotor</Link></div>
+          <h1>Kenali diri.<br/><em>Temukan langkah berikutnya.</em></h1>
+          <p>Mulai dari kebutuhan yang paling dekat: memahami diri dan keluarga, belajar melalui kelas dan ebook, atau bertumbuh bersama jaringan promotor dan affiliate.</p>
+          <div className="hub-actions"><Link className="public-cta big" href="/belajar?tab=catalog">Jelajahi produk & layanan →</Link><Link href="/tes-stifin#layanan">Bandingkan paket tes ↗</Link></div><div className="public-proof-strip"><span>✓ Tes tatap muka</span><span>✓ Kelas & ebook</span><span>✓ Satu akun</span></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
@@ -81,16 +81,17 @@ export default async function Home() {
       <section className="section home-catalog" aria-label="Ringkasan produk dan harga">
         <div className="section-heading"><span>PILIHAN & HARGA</span><h2>Apa yang sedang Anda butuhkan sekarang?</h2><p>Bandingkan layanan tes, tahap calon promotor, atau program affiliate. Harga yang tampil berasal dari katalog dan diperiksa kembali sebelum transaksi.</p></div>
         <div className="journey-grid catalog-overview">
-          <article className="journey-card forest"><header><span>LAYANAN TES</span><b>01</b></header><h2>Personal & Keluarga</h2><p>{publicProducts.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/tes-stifin">Lihat seluruh paket tes <span>→</span></Link></article>
-          <article className="journey-card sand"><header><span>JALUR PROFESI</span><b>02</b></header><h2>Tahapan Promotor</h2><p>{promoterSteps.slice(1).map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/jadi-promotor">Lihat tahapan promotor <span>→</span></Link></article>
-          <article className="journey-card leaf"><header><span>JALUR REKOMENDASI</span><b>03</b></header><h2>Program Affiliate</h2><p>{affiliatePrograms.map((product) => `${product.title}: ${product.price}`).join(' · ')}</p><Link href="/affiliate">Lihat program affiliate <span>→</span></Link></article>
+          <article className="journey-card forest"><header><span>LAYANAN TES</span><b>01</b></header><h2>Personal & Keluarga</h2><ul className="catalog-price-list">{publicProducts.map(p=><li key={p.productKey}><Link href={'/produk/layanan/'+p.productKey}><span>{p.title}</span><strong>{p.price}</strong></Link></li>)}</ul><Link href="/tes-stifin">Bandingkan semua paket <span>→</span></Link></article>
+          <article className="journey-card sand"><header><span>JALUR PROFESI</span><b>02</b></header><h2>Tahapan Promotor</h2><ul className="catalog-price-list">{promoterSteps.filter(p=>['wsl1','wsl2','idDanAlat','paketPromotor'].includes(p.productKey)).map(p=><li key={p.productKey}><Link href={'/produk/layanan/'+p.productKey}><span>{p.title}</span><strong>{p.price}</strong></Link></li>)}</ul><Link href="/jadi-promotor">Pahami tahap dan biayanya <span>→</span></Link></article>
+          <article className="journey-card mint"><header><span>RUANG BELAJAR</span><b>03</b></header><h2>Kelas & Ebook</h2><p>Pilih topik yang ingin Anda pelajari. Video, materi, dan ebook yang dimiliki tersedia di Akses saya, dengan progres belajar yang tersimpan.</p><div className="catalog-digital-tags"><span>Video pembelajaran</span><span>Ebook privat</span><span>Progres belajar</span></div><Link href="/belajar?tab=catalog">Jelajahi katalog terbaru <span>→</span></Link></article>
+          <article className="journey-card leaf"><header><span>JALUR REKOMENDASI</span><b>04</b></header><h2>Produk & Affiliate</h2><p>Bagikan tautan produk yang relevan. Akun mitra yang sudah diaktifkan dapat melihat produk promosi, komisi, dan pengajuan pencairan dalam satu pusat mitra.</p><ul className="catalog-program-list">{affiliatePrograms.map(p=><li key={p.productKey}>{p.title}</li>)}</ul><Link href="/affiliate">Lihat cara kerja affiliate <span>→</span></Link></article>
         </div>
       </section>
 
       <ActivityGallery />
 
       <section className="hub-foundation">
-        <div className="hub-foundation-copy"><span>SETELAH TAHU HASILNYA</span><h2>Tes memberi nama pada pola. Pemahaman membuatnya berguna.</h2><p>Hasil STIFIn adalah awal percakapan tentang cara Anda menyerap informasi, mengambil keputusan, bergerak, dan bertumbuh. Nilainya terasa ketika hasil dibahas dengan baik lalu diterapkan sesuai situasi nyata—bukan ketika dipakai untuk membatasi diri.</p><Link href="/edukasi">Lihat cara menerapkannya →</Link></div>
+        <div className="hub-foundation-copy"><span>SETELAH TAHU HASILNYA</span><h2>Tes memberi nama pada pola. Pemahaman membuatnya berguna.</h2><p>Hasil STIFIn adalah awal percakapan tentang cara Anda menyerap informasi, mengambil keputusan, bergerak, dan bertumbuh. Nilainya terasa ketika hasil dibahas dengan baik lalu diterapkan sesuai situasi nyata, bukan ketika dipakai untuk membatasi diri.</p><Link href="/edukasi">Lihat cara menerapkannya →</Link></div>
         <div className="hub-principles">
           <article><b>01</b><div><h3>Kenali Mesin Kecerdasan</h3><p>Pahami kecenderungan dominan yang ditemukan melalui proses tes.</p></div></article>
           <article><b>02</b><div><h3>Bahas, jangan hanya membaca</h3><p>Promotor membantu menerjemahkan hasil ke dalam bahasa yang lebih mudah dipahami.</p></div></article>

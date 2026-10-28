@@ -25,7 +25,7 @@ export default async function PromoterProfilePage({ params }: { params: Promise<
   if (!data || !data.promoter.active) notFound();
   const { promoter } = data;
   const canonical = `https://konsepstifin.com/promotor/${data.canonicalSlug}`;
-  return <main className="region-page promoter-profile">
+  return <main id="main-content" className="region-page promoter-profile">
     <JsonLd data={{ '@context': 'https://schema.org', '@graph': [
       { '@type': 'ProfilePage', url: canonical, mainEntity: { '@type': 'Person', name: promoter.name, identifier: promoter.code, jobTitle: 'Promotor STIFIn', areaServed: [promoter.area, promoter.province].filter(Boolean) } },
       { '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://konsepstifin.com/' }, { '@type': 'ListItem', position: 2, name: 'Promotor', item: 'https://konsepstifin.com/promotor' }, { '@type': 'ListItem', position: 3, name: promoter.name, item: canonical }] },

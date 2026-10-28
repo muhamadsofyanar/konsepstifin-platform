@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
 import { faqItems } from '../site-config';
+import { promoterInvestment, formatRupiah } from '@/lib/catalog-presentation';
 import { getPublicManagedProducts } from '@/lib/product-store';
 
 export const metadata: Metadata = {
@@ -17,32 +18,15 @@ export const metadata: Metadata = {
 };
 export const dynamic = 'force-dynamic';
 
-const rupiah = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  maximumFractionDigits: 0,
-});
-
-function priceNumber(price: string) {
-  return Number(price.replace(/\D/g, '') || 0);
-}
-
 export default async function PromoterLandingPage() {
   const promoterFaq = faqItems.filter((_, index) => [2, 3].includes(index));
   const promoterSteps = await getPublicManagedProducts('promoter');
-  const individualInvestment = promoterSteps
-    .filter((item) => ['wsl1', 'wsl2', 'idDanAlat'].includes(item.productKey))
-    .reduce((total, item) => total + priceNumber(item.price), 0);
-  const packageProduct = promoterSteps.find((item) => item.productKey === 'paketPromotor');
-  const packageInvestment = packageProduct ? priceNumber(packageProduct.price) : 0;
-  const mainInvestment = packageInvestment || individualInvestment;
-  const packageSavings = packageInvestment > 0
-    ? Math.max(0, individualInvestment - packageInvestment)
-    : 0;
+  const investment=promoterInvestment(promoterSteps);
+  const packageProduct=promoterSteps.find(item=>item.productKey==='paketPromotor');
 
   return <div className="public-site journey-site promoter-landing">
     <PublicHeader active="promoter" announcement="Jalur calon promotor terpisah dari pemesanan layanan tes" ctaHref="#tahapan" ctaLabel="Bandingkan tahapan" />
-    <main>
+    <main id="main-content">
       <section className="promoter-hero">
         <div><span className="eyebrow">JALUR CALON PROMOTOR STIFIn</span><h1>Sebelum mendaftar, lihat pekerjaan, tahap belajar, dan komitmen biayanya.</h1><p>Promotor menjalankan tes, menjelaskan hasil, menjaga data peserta, serta mengelola tindak lanjut layanan. Bandingkan tahapannya lebih dulu; formulir di halaman ini masuk ke antrean konsultasi untuk ditindaklanjuti tim.</p><div className="hub-actions"><Link className="public-cta big" href="#tahapan">Bandingkan tahap calon promotor →</Link><Link href="/affiliate">Belum siap menjalankan tes? Lihat affiliate</Link></div></div>
         <figure className="journey-hero-media promoter-hero-media">
@@ -70,8 +54,8 @@ export default async function PromoterLandingPage() {
           </article>;
         })}</div>
         <div className="promoter-investment">
-          <div><span>{packageProduct ? 'PAKET TERPADU DI KATALOG' : 'TOTAL TAHAP UTAMA'}</span><strong>{rupiah.format(mainInvestment)}</strong><small>{packageProduct ? 'WSL 1 + WSL 2 + ID aplikasi & scanner sesuai rincian Paket Lengkap.' : 'WSL 1 + WSL 2 + ID & scanner. Tes Personal dan biaya lain berada di luar rincian ini.'}</small></div>
-          <div className="promoter-investment-detail">{packageProduct && individualInvestment > packageInvestment && <div className="investment-saving"><small>Total harga tahap terpisah</small><s>{rupiah.format(individualInvestment)}</s><b>Selisih katalog {rupiah.format(packageSavings)}</b></div>}<p>Pemenuhan tahap tetap mengikuti kelulusan dan persyaratan yang berlaku. Harga final dikonfirmasi bersama admin.</p>{packageProduct && <Link className="investment-checkout" href="/produk/layanan/paketPromotor">Konsultasikan Paket Lengkap →</Link>}</div>
+          <div><span>{packageProduct ? 'PAKET TERPADU DI KATALOG' : 'TOTAL TAHAP UTAMA'}</span><strong>{investment.main===null?'Konfirmasi biaya':formatRupiah(investment.main)}</strong><small>{packageProduct ? 'WSL 1 + WSL 2 + ID aplikasi & scanner sesuai rincian Paket Lengkap.' : 'WSL 1 + WSL 2 + ID & scanner. Tes Personal dan biaya lain berada di luar rincian ini.'}</small></div>
+          <div className="promoter-investment-detail">{investment.saving!==null && <div className="investment-saving"><small>Total harga tahap terpisah</small><s>{formatRupiah(investment.individual!)}</s><b>Selisih katalog {formatRupiah(investment.saving!)}</b></div>}<p>Pemenuhan tahap tetap mengikuti kelulusan dan persyaratan yang berlaku. Harga final dikonfirmasi bersama admin.</p>{packageProduct && <Link className="investment-checkout" href="/produk/layanan/paketPromotor">Konsultasikan Paket Lengkap →</Link>}</div>
         </div>
         <div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & scanner</b><span>Aktivasi sesuai syarat</span></div></div>
       </section>

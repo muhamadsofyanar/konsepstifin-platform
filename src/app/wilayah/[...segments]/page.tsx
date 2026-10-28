@@ -62,7 +62,7 @@ export default async function WilayahPage({ params }: { params: Promise<{ segmen
     { question: `Apakah Tes STIFIn di ${current.name} dilakukan secara tatap muka?`, answer: 'Proses pemindaian sidik jari dilakukan secara tatap muka bersama promotor. Jadwal dan lokasi perlu dikonfirmasi sebelum layanan.' },
     { question: 'Apakah nomor promotor ditampilkan kepada publik?', answer: 'Tidak. Permintaan awal dikoordinasikan melalui Konsep STIFIn untuk menjaga persetujuan dan keamanan data kontak.' },
   ];
-  return <main className="region-page">
+  return <main id="main-content" className="region-page">
     <JsonLd data={{ '@context': 'https://schema.org', '@graph': [
       { '@type': 'Service', name: `Tes STIFIn di ${current.name}`, areaServed: { '@type': 'AdministrativeArea', name: current.name }, url: canonical, provider: { '@type': 'Organization', name: 'Konsep STIFIn', url: 'https://konsepstifin.com' } },
       { '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://konsepstifin.com/' }, { '@type': 'ListItem', position: 2, name: 'Wilayah', item: 'https://konsepstifin.com/wilayah' }, ...chain.map((item, index) => ({ '@type': 'ListItem', position: index + 3, name: item.name, item: `https://konsepstifin.com${wilayahChainPath(chain.slice(0, index + 1))}` }))] },
