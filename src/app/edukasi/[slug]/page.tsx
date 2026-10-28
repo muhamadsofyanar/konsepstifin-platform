@@ -33,9 +33,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function ArticlePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const query = await searchParams;
   const article = await getPublishedArticleBySlug(slug);
   if (!article) notFound();
   const allPublished = await getPublishedArticles();
@@ -46,10 +45,6 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
     && !selectedRelated.some((selected) => selected.slug === item.slug))].slice(0, 3);
   const publicSources = article.sourceReferences.filter((source) => source.accessLevel === 'reference');
   const blocks = bodyToBlocks(article.body);
-  const referralCandidate = [query.ref, query.affiliate, query.aff].find((value) => typeof value === 'string');
-  const referralCode = typeof referralCandidate === 'string' && /^[a-zA-Z0-9_-]{2,80}$/.test(referralCandidate) ? referralCandidate : '';
-  const affiliateParameter = /^[a-zA-Z0-9_-]{1,40}$/.test(process.env.SEJOLI_AFFILIATE_PARAM ?? '')
-    ? String(process.env.SEJOLI_AFFILIATE_PARAM) : 'ref';
   const articleUrl = `https://konsepstifin.com/edukasi/${article.slug}`;
   const articleSchema = {
     '@context': 'https://schema.org',
@@ -95,7 +90,7 @@ export default async function ArticlePage({ params, searchParams }: { params: Pr
         {article.experienceEvidence && <aside className="article-experience-evidence"><span>BUKTI & KONTEKS PENGALAMAN</span><p>{article.experienceEvidence}</p></aside>}
         <aside className="article-takeaway"><span>INTI ARTIKEL</span><p>{article.takeaway}</p></aside>
         {(article.reviewerName || article.sourceReferences.length > 0) && <section className="article-trust-panel"><header><span>PEMERIKSAAN KONTEN</span><h2>Ditulis dengan jejak sumber dan tinjauan manusia.</h2></header>{article.reviewerName && <div className="article-reviewer"><b>{article.reviewerName}</b><span>{article.reviewerRole || 'Reviewer konten'}{article.reviewedAt ? ` · Ditinjau ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${article.reviewedAt}T00:00:00Z`))}` : ''}</span></div>}{publicSources.length > 0 ? <ul>{publicSources.map((source) => <li key={`${source.sourceId}-${source.pageNumber}`}><b>{source.title}</b><span>Halaman {source.pageNumber} · {source.category}</span></li>)}</ul> : article.sourceReferences.length > 0 && <p>Materi artikel diperiksa menggunakan Pustaka STIFIn internal. Dokumen terbatas tidak dipublikasikan melalui website.</p>}</section>}
-        {article.contentType !== 'education' && article.productName && article.productUrl && <ArticleProductCta slug={article.slug} contentType={article.contentType} productName={article.productName} productUrl={article.productUrl} ctaLabel={article.ctaLabel} referralCode={referralCode} affiliateParameter={affiliateParameter} />}
+        {article.contentType !== 'education' && article.productName && article.productUrl && <ArticleProductCta slug={article.slug} contentType={article.contentType} productName={article.productName} productUrl={article.productUrl} ctaLabel={article.ctaLabel} />}
         <div className="article-disclaimer"><b>Catatan edukasi</b><p>Artikel ini bersifat umum dan tidak dimaksudkan sebagai diagnosis atau pengganti layanan medis, psikologis, pendidikan, maupun profesional lainnya.</p></div>
         <ArticleEngagement slug={article.slug} title={article.title} />
       </article>

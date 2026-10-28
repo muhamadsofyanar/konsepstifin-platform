@@ -46,7 +46,7 @@ export default function LocalCityPage({ data, intent }: { data: LocalPageData; i
     <section className="region-section local-process"><span>{isTest ? 'ALUR LAYANAN' : 'KOORDINASI AMAN'}</span><h2>{isTest ? 'Tiga langkah sebelum jadwal dipastikan' : 'Temukan promotor tanpa membuka kontak pribadi'}</h2><div className="local-process-grid">{(isTest ? [
       ['1', 'Kirim kebutuhan', 'Pilih layanan, isi domisili, dan sampaikan preferensi jadwal.'],
       ['2', 'Pencocokan promotor', 'Sistem mencari kandidat berdasarkan cakupan wilayah yang aman.'],
-      ['3', 'Konfirmasi dan checkout', 'Setelah lead tersimpan, layanan tes dapat diteruskan ke checkout resmi.'],
+      ['3', 'Konfirmasi bersama admin', 'Setelah permintaan tersimpan, admin mengonfirmasi jadwal, harga, dan instruksi pembayaran.'],
     ] : [
       ['1', 'Pilih dari data aktif', 'Identitas publik terbatas pada nama, KodeID, cabang, dan area.'],
       ['2', 'Kirim permintaan', 'Kontak Anda hanya dibagikan kepada promotor yang akhirnya ditugaskan dengan persetujuan.'],

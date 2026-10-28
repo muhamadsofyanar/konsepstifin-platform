@@ -78,9 +78,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (action === 'cta') {
-      if (String(data.channel ?? '') !== 'sejoli') return NextResponse.json({ message: 'Tujuan tautan tidak valid.' }, { status: 400 });
+      if (String(data.channel ?? '') !== 'internal_service') return NextResponse.json({ message: 'Tujuan tautan tidak valid.' }, { status: 400 });
       const rate = checkRateLimit(request, `cta:${slug}`, 30, 60 * 1000);
-      if (rate.allowed) await recordCta(slug, currentVisitor.token, 'sejoli');
+      if (rate.allowed) await recordCta(slug, currentVisitor.token, 'internal_service');
       return withVisitorCookie(NextResponse.json({ ok: true }), currentVisitor.token, currentVisitor.fresh);
     }
 

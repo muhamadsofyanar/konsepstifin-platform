@@ -3,6 +3,7 @@
  */
 export type Principal = {
   userId: string;
+  email?: string;
   roles: readonly string[];
   active: boolean;
   sessionValid: boolean;

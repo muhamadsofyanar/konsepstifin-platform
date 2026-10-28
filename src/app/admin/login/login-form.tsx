@@ -21,7 +21,7 @@ export default function LoginForm() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message ?? 'Login gagal.');
-      router.replace('/admin/leads');
+      router.replace('/admin');
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Login gagal.');

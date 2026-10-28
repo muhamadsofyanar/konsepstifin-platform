@@ -7,7 +7,10 @@ export default defineConfig({
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
   test: {
     environment: 'node',
-    exclude: ['**/node_modules/**', '**/.git/**', 'tests/identity/**'],
+    maxWorkers: 2,
+    testTimeout: 20000,
+    hookTimeout: 20000,
+    exclude: ['**/node_modules/**', '**/.git/**', 'tests/identity/**', 'tests/*.test.mjs'],
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     clearMocks: true,

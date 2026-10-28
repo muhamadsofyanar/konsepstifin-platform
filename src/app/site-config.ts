@@ -1,47 +1,38 @@
-/**
- * PEMBAGIAN PLATFORM
- *
- * konsepstifin.com     = website publik, edukasi, SEO, dan landing page.
- * app.konsepstifin.com = checkout SEJOLI, member area, dan affiliate.
- *
- * Semua URL transaksi disimpan di file ini agar tidak tersebar di komponen.
- * Selama URL produk masih kosong, tombol akan membuka formulir minat agar
- * calon pelanggan tidak menemukan tautan rusak.
- */
+/** Public services use internal request pages; payment is confirmed by the admin team. */
 export const platformLinks = {
   publicWebsite: 'https://konsepstifin.com/',
-  sejoliApp: 'https://app.konsepstifin.com/',
-  affiliateRegistration: 'https://app.konsepstifin.com/product/program-affiliate-konsep-stifin/',
-  affiliateDashboard: 'https://app.konsepstifin.com/member-area/home/lead-affiliasi/',
-  memberArea: 'https://app.konsepstifin.com/member-area/',
+  affiliateRegistration: '/affiliate#program',
 } as const;
 
-export const sejoliLinks = {
-  tesPersonal: 'https://app.konsepstifin.com/product/tes-stifin-personal/',
-  tesPasangan: 'https://app.konsepstifin.com/product/tes-stifin-pasangan/',
-  paketKeluarga: 'https://app.konsepstifin.com/product/tes-stifin-keluarga/',
-  paketKeluargaPlus: 'https://app.konsepstifin.com/product/tes-stifin-keluarga-plus/',
-  sekolahKomunitas: 'https://app.konsepstifin.com/product/tes-stifin-sekolah-komunitas/',
-  previewPromotor: '',
-  wsl1: 'https://app.konsepstifin.com/product/workshop-stifin-level-1-wsl-1/',
-  wsl2: 'https://app.konsepstifin.com/product/workshop-stifin-level-2-wsl-2/',
-  idDanAlat: 'https://app.konsepstifin.com/product/id-aplikasi-scanner-promotor/',
-  paketPromotor: 'https://app.konsepstifin.com/product/paket-lengkap-menjadi-promotor-stifin/',
-  affiliateUmum: 'https://app.konsepstifin.com/product/program-affiliate-konsep-stifin/',
-  affiliatePromotor: 'https://app.konsepstifin.com/product/program-affiliate-konsep-stifin/',
+export const productLinks = {
+  tesPersonal: '/tes-stifin#layanan',
+  tesPasangan: '/tes-stifin#layanan',
+  paketKeluarga: '/tes-stifin#layanan',
+  paketKeluargaPlus: '/tes-stifin#layanan',
+  sekolahKomunitas: '/tes-stifin#layanan',
+  previewPromotor: '/jadi-promotor#tahapan',
+  wsl1: '/jadi-promotor#tahapan',
+  wsl2: '/jadi-promotor#tahapan',
+  idDanAlat: '/jadi-promotor#tahapan',
+  paketPromotor: '/jadi-promotor#tahapan',
+  affiliateUmum: '/affiliate#program',
+  affiliatePromotor: '/affiliate#program',
 } as const;
 
-export function isOfficialSejoliUrl(value: string) {
-  if (!value) return true;
+/** Only implemented public service pages are valid article destinations. */
+export function isInternalServiceUrl(value: string) {
+  if (!value || value.includes('\\')) return false;
+  if (!value.startsWith('/') && !value.startsWith('https://')) return false;
   try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'app.konsepstifin.com';
+    const url = new URL(value, 'https://konsepstifin.com');
+    return url.origin === 'https://konsepstifin.com' && !url.username && !url.password
+      && ['/tes-stifin', '/jadi-promotor', '/affiliate', '/kontak'].includes(url.pathname.replace(/\/$/, ''));
   } catch {
     return false;
   }
 }
 
-export type SejoliLinkKey = keyof typeof sejoliLinks;
+export type ProductKey = keyof typeof productLinks;
 
 export type PublicProduct = {
   category: string;
@@ -51,7 +42,7 @@ export type PublicProduct = {
   priceNote: string;
   features: string[];
   bonuses: string[];
-  linkKey: SejoliLinkKey;
+  linkKey: ProductKey;
   featured?: boolean;
   action: string;
 };
@@ -127,7 +118,7 @@ export const publicProducts: PublicProduct[] = [
     title: 'Tes STIFIn Sekolah & Komunitas',
     description: 'Untuk sekolah, lembaga, komunitas, atau tim yang ingin menjalankan tes bersama dengan jadwal dan pendampingan yang terkoordinasi.',
     price: 'Gratis',
-    priceNote: 'program sekolah & komunitas · ketentuan mengikuti checkout SEJOLI',
+    priceNote: 'program sekolah & komunitas · harga dan jadwal dikonfirmasi admin',
     features: [
       'Pelaksanaan tes kelompok terjadwal',
       'Koordinasi promotor dan peserta',
@@ -149,7 +140,7 @@ export const promoterSteps = [
     priceNote: 'sesi pengenalan gratis atau sesuai agenda aktif',
     description: 'Dengarkan gambaran peran, peluang, tanggung jawab, biaya, dan perjalanan belajar sebelum Anda memutuskan.',
     benefits: ['Gambaran profesi secara utuh', 'Penjelasan tahapan dan kebutuhan biaya', 'Ruang tanya jawab sebelum memutuskan'],
-    linkKey: 'previewPromotor' as SejoliLinkKey,
+    linkKey: 'previewPromotor' as ProductKey,
     action: 'Ikuti preview',
   },
   {
@@ -160,7 +151,7 @@ export const promoterSteps = [
     priceNote: 'program offline · 1 hari pelatihan',
     description: 'Bangun pemahaman dasar yang diperlukan untuk melanjutkan perjalanan sebagai calon promotor.',
     benefits: ['Fondasi konsep dan cara kerja STIFIn', 'Pengenalan 9 personality genetic dan sirkulasi mesin kecerdasan', 'Materi belajar, ujian, dan sertifikat sesuai ketentuan', 'Persiapan terarah menuju WSL 2'],
-    linkKey: 'wsl1' as SejoliLinkKey,
+    linkKey: 'wsl1' as ProductKey,
     action: 'Lihat jadwal WSL 1',
   },
   {
@@ -171,7 +162,7 @@ export const promoterSteps = [
     priceNote: 'program offline · 2–3 hari pelatihan',
     description: 'Perdalam materi dan praktik sesuai tahap yang berlaku sebelum masuk ke proses aktivasi.',
     benefits: ['Pendalaman konsep STIFIn tingkat lanjut', 'Praktik membaca dan membahas hasil tes', 'Ujian kompetensi sesuai ketentuan', 'Persiapan menuju aktivasi promotor'],
-    linkKey: 'wsl2' as SejoliLinkKey,
+    linkKey: 'wsl2' as ProductKey,
     action: 'Lihat jadwal WSL 2',
   },
   {
@@ -182,7 +173,7 @@ export const promoterSteps = [
     priceNote: 'setelah lulus WSL 1 dan WSL 2',
     description: 'Setelah tahapan terpenuhi, lanjutkan proses ID dan alat tes sesuai ketentuan yang berlaku.',
     benefits: ['ID aplikasi promotor sesuai ketentuan', 'Scanner sidik jari untuk menjalankan layanan', 'Pendampingan instalasi dan penggunaan awal', 'Langkah aktivasi menuju promotor aktif'],
-    linkKey: 'idDanAlat' as SejoliLinkKey,
+    linkKey: 'idDanAlat' as ProductKey,
     action: 'Informasi ID & alat',
   },
   {
@@ -190,7 +181,7 @@ export const promoterSteps = [
     label: 'PAKET TERPADU',
     title: 'Paket Lengkap Menjadi Promotor STIFIn',
     price: 'Rp8.499.999',
-    priceNote: 'paket lengkap · ketentuan mengikuti checkout SEJOLI',
+    priceNote: 'paket lengkap · harga dan jadwal dikonfirmasi admin',
     description: 'Pilihan praktis untuk Anda yang sudah mantap menempuh perjalanan lengkap dari fondasi belajar hingga kesiapan aktivasi sebagai promotor.',
     benefits: [
       'Workshop STIFIn Level 1 (WSL 1)',
@@ -199,7 +190,7 @@ export const promoterSteps = [
       'Scanner sidik jari dan pendampingan instalasi awal',
       'Alur belajar lebih terarah dari awal hingga aktivasi',
     ],
-    linkKey: 'paketPromotor' as SejoliLinkKey,
+    linkKey: 'paketPromotor' as ProductKey,
     action: 'Pilih paket lengkap',
   },
 ];
@@ -209,11 +200,11 @@ export const affiliatePrograms = [
     eyebrow: 'JALUR TERBUKA',
     title: 'Program Affiliate Konsep STIFIn',
     price: 'Gratis',
-    priceNote: 'pendaftaran awal · komisi diatur di SEJOLI',
+    priceNote: 'konsultasi awal · ketentuan dikonfirmasi tim',
     description: 'Untuk Anda yang ingin mulai merekomendasikan layanan sambil belajar membangun komunikasi dan jaringan.',
-    points: ['Mendapat tautan referral pribadi', 'Komisi berdasarkan transaksi valid', 'Materi promosi siap pakai', 'Peluang bertumbuh menuju jalur promotor'],
-    linkKey: 'affiliateUmum' as SejoliLinkKey,
-    action: 'Daftar affiliate umum',
+    points: ['Konsultasi cara merekomendasikan layanan', 'Ketentuan kerja sama disepakati bersama tim', 'Informasi materi promosi dari tim', 'Peluang bertumbuh menuju jalur promotor'],
+    linkKey: 'affiliateUmum' as ProductKey,
+    action: 'Minta informasi affiliate',
   },
   {
     eyebrow: 'KHUSUS JARINGAN',
@@ -221,16 +212,16 @@ export const affiliatePrograms = [
     price: 'Gratis',
     priceNote: 'khusus promotor aktif yang memenuhi syarat',
     description: 'Untuk promotor aktif yang ingin memperluas jangkauan dan merapikan pencatatan transaksi dari jaringannya.',
-    points: ['Tautan referral khusus promotor', 'Pelacakan transaksi lebih rapi', 'Materi kampanye dan produk', 'Dukungan aktivitas jaringan'],
-    linkKey: 'affiliatePromotor' as SejoliLinkKey,
-    action: 'Aktifkan affiliate promotor',
+    points: ['Konsultasi rekomendasi untuk promotor', 'Koordinasi pencatatan dengan admin', 'Materi kampanye dan produk', 'Dukungan aktivitas jaringan'],
+    linkKey: 'affiliatePromotor' as ProductKey,
+    action: 'Konsultasikan affiliate promotor',
   },
 ];
 
 export const faqItems = [
-  ['Apakah tes dilakukan secara online?', 'Tidak. Proses pemindaian sidik jari dilakukan secara tatap muka oleh promotor. Website digunakan untuk memilih layanan, pembayaran, dan pengaturan jadwal.'],
-  ['Apa yang terjadi setelah pembayaran?', 'Tim menghubungi peserta melalui WhatsApp untuk mencocokkan kota, promotor, dan waktu pelaksanaan tes.'],
+  ['Apakah tes dilakukan secara online?', 'Tidak. Proses pemindaian sidik jari dilakukan secara tatap muka oleh promotor. Website digunakan untuk mengirim permintaan layanan dan mengonfirmasi jadwal bersama tim.'],
+  ['Apa yang terjadi setelah formulir dikirim?', 'Nomor referensi ditampilkan setelah permintaan tersimpan. Admin menindaklanjuti kebutuhan, harga, jadwal, dan instruksi pembayaran. Pembayaran transfer diverifikasi admin.'],
   ['Apakah saya bisa langsung membeli ID dan alat tes?', 'Tidak langsung. Calon promotor perlu mengikuti tahapan yang berlaku, termasuk WSL 1 dan WSL 2, sebelum proses ID dan alat.'],
-  ['Apa perbedaan affiliate dengan promotor?', 'Affiliate membantu merekomendasikan layanan melalui tautan referral. Promotor aktif menjalankan tes setelah memenuhi tahap dan ketentuan yang berlaku.'],
+  ['Apa perbedaan affiliate dengan promotor?', 'Affiliate membantu merekomendasikan layanan sesuai kesepakatan dengan tim. Promotor aktif menjalankan tes setelah memenuhi tahap dan ketentuan yang berlaku.'],
   ['Apakah hasil tes merupakan diagnosis?', 'Bukan. Layanan ini digunakan untuk edukasi dan pengembangan diri, bukan diagnosis medis atau psikologis.'],
 ];

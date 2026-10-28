@@ -1,3 +1,4 @@
+import { listCrmLeads, type CrmQuery } from './crm-query';
 import { getDatabaseClient } from '@/lib/article-store';
 import {
   leadStatuses,
@@ -27,7 +28,7 @@ const TEST_PRODUCT_KEYS = new Set([
 const PROMOTER_PRODUCT_KEYS = new Set([
   'previewPromotor', 'wsl1', 'wsl2', 'idDanAlat', 'paketPromotor', 'bantuanPromotor',
 ]);
-const PAYMENT_STATUSES = new Set<PaymentStatus>(['belum_dicek', 'menunggu', 'dibayar', 'gagal', 'dikembalikan']);
+
 const IDEMPOTENCY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type InterestInput = {
@@ -125,11 +126,11 @@ export type LeadAdminUpdate = {
   pic?: string;
   scheduledAt?: string | null;
   internalNotes?: string;
-  paymentStatus?: PaymentStatus;
-  sejoliOrderId?: string;
-  saleAmount?: number;
-  promoterPayout?: number;
-  otherCost?: number;
+
+
+
+
+
 };
 
 const globalForInterests = globalThis as unknown as { konsepStifinInterestSchema?: Promise<void> };
@@ -270,8 +271,7 @@ export function validateLeadAdminUpdate(value: unknown): LeadAdminUpdate {
   const status = compact(data.status, 40) as LeadStatus;
   if (leadType !== 'test_service' && leadType !== 'promoter_candidate') throw new Error('Jenis lead tidak valid.');
   if (!validStatuses(leadType).includes(status)) throw new Error('Status tidak sesuai dengan jenis lead.');
-  const paymentStatus = compact(data.paymentStatus, 40) as PaymentStatus;
-  if (paymentStatus && !PAYMENT_STATUSES.has(paymentStatus)) throw new Error('Status pembayaran tidak valid.');
+  assertCrmContactFields(data);
   const scheduledAt = data.scheduledAt ? nullableIsoString(data.scheduledAt) : null;
   if (data.scheduledAt && !scheduledAt) throw new Error('Jadwal tidak valid.');
   return {
@@ -282,11 +282,7 @@ export function validateLeadAdminUpdate(value: unknown): LeadAdminUpdate {
     pic: compact(data.pic, 120),
     scheduledAt,
     internalNotes: compact(data.internalNotes, 2000),
-    paymentStatus: paymentStatus || 'belum_dicek',
-    sejoliOrderId: compact(data.sejoliOrderId, 120),
-    saleAmount: nonNegativeNumber(data.saleAmount, 'Nilai penjualan'),
-    promoterPayout: nonNegativeNumber(data.promoterPayout, 'Bagian promotor'),
-    otherCost: nonNegativeNumber(data.otherCost, 'Biaya lain'),
+
 };
 }
 
@@ -552,46 +548,43 @@ function changed<T>(from: T, to: T) {
   return Object.is(from, to) ? undefined : { from, to };
 }
 
-export async function updateLead(id: number, input: Omit<LeadAdminUpdate, 'leadType'> & { leadType?: LeadType }, actor: string) {
+export function assertCrmContactFields(input: Record<string, unknown>) {
+  if (['paymentStatus','sejoliOrderId','saleAmount','promoterPayout','otherCost','payment_status','sejoli_order_id','sale_amount','promoter_payout','other_cost'].some(key => Object.prototype.hasOwnProperty.call(input,key))) {
+    throw new Error('Pembayaran dikelola melalui pesanan.');
+  }
+}
+
+export async function getCrmLeads(input: CrmQuery = {}) {
   await initializeInterestSchema();
-  if (!Number.isInteger(id) || id < 1) throw new Error('Perubahan lead tidak valid.');
-  const current = await getLeadById(id);
-  if (!current) throw new Error('Lead tidak ditemukan.');
-  const update = validateLeadAdminUpdate({ ...current, ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)), leadType: current.leadType });
-  const details = Object.fromEntries(Object.entries({
-    name: changed(current.name, update.name),
-    phone: changed(current.phone, update.phone),
-    email: changed(current.email, update.email),
-    city: changed(current.city, update.city),
-    status: changed(current.status, update.status),
-    assignedPromoterCode: changed(current.assignedPromoterCode, update.assignedPromoterCode || ''),
-    pic: changed(current.pic, update.pic || ''),
-    scheduledAt: changed(current.scheduledAt, update.scheduledAt || null),
-    internalNotes: changed(current.internalNotes, update.internalNotes || ''),
-    paymentStatus: changed(current.paymentStatus, update.paymentStatus || 'belum_dicek'),
-    sejoliOrderId: changed(current.sejoliOrderId, update.sejoliOrderId || ''),
-    saleAmount: changed(current.saleAmount, update.saleAmount || 0),
-    promoterPayout: changed(current.promoterPayout, update.promoterPayout || 0),
-    otherCost: changed(current.otherCost, update.otherCost || 0),
-  }).filter(([, value]) => value !== undefined));
   const sql = getDatabaseClient();
-  await sql.begin(async (transaction) => {
-    await transaction`UPDATE public_interest_leads SET
-      name=${update.name ?? current.name}, phone=${update.phone ?? current.phone}, email=${update.email ?? current.email},
-      city=${update.city ?? current.city},
+  const result = await listCrmLeads(async (text, values) => await sql.unsafe(text, values as string[]), input);
+  return { ...result, items: result.items.map(mapLead) };
+}
+
+export async function updateLead(id: number, input: Omit<LeadAdminUpdate, 'leadType'> & { leadType?: LeadType }, actor: string) {
+  assertCrmContactFields(input as Record<string, unknown>);
+  await initializeInterestSchema();
+  if (!Number.isSafeInteger(id) || id < 1 || !actor.trim()) throw new Error('Perubahan lead tidak valid.');
+  const sql = getDatabaseClient();
+  return sql.begin(async (transaction) => {
+    const rows = await transaction`SELECT * FROM public_interest_leads WHERE id=${id} FOR UPDATE`;
+    if (!rows[0]) throw new Error('Lead tidak ditemukan.');
+    const current = mapLead(rows[0] as Record<string, unknown>);
+    const merged = Object.fromEntries(['name','phone','email','city','status','assignedPromoterCode','pic','scheduledAt','internalNotes'].map(key => [key,(input as Record<string,unknown>)[key] === undefined ? (current as unknown as Record<string,unknown>)[key] : (input as Record<string,unknown>)[key]]));
+    const update = validateLeadAdminUpdate({ ...merged, leadType: current.leadType });
+    const details = Object.fromEntries(Object.entries(update).filter(([key]) => key !== 'leadType').map(([key,value]) => [key,changed((current as unknown as Record<string,unknown>)[key],value)]).filter(([,value])=>value !== undefined));
+    // Repeating the same save does not create duplicate history entries.
+    if (!Object.keys(details).length) return current;
+    const updated = await transaction`UPDATE public_interest_leads SET
+      name=${update.name ?? current.name}, phone=${update.phone ?? current.phone}, email=${update.email ?? current.email},city=${update.city ?? current.city},
       province_code=${update.city !== current.city ? '' : current.provinceCode}, province_name=${update.city !== current.city ? '' : current.provinceName},
       regency_code=${update.city !== current.city ? '' : current.regencyCode}, regency_name=${update.city !== current.city ? '' : current.regencyName},
       status=${update.status}, assigned_promoter_code=${update.assignedPromoterCode || ''}, pic=${update.pic || ''},
-      scheduled_at=${update.scheduledAt || null}, internal_notes=${update.internalNotes || ''},
-      payment_status=${update.paymentStatus || 'belum_dicek'}, sejoli_order_id=${update.sejoliOrderId || ''},
-      sale_amount=${update.saleAmount || 0}, promoter_payout=${update.promoterPayout || 0}, other_cost=${update.otherCost || 0},
-      payment_checked_at=CASE WHEN payment_status IS DISTINCT FROM ${update.paymentStatus || 'belum_dicek'} THEN NOW() ELSE payment_checked_at END,
-      updated_at=NOW() WHERE id=${id}`;
-    await transaction`INSERT INTO lead_status_history (
-      lead_id, old_status, new_status, note, actor, event_type, details
-    ) VALUES (${id}, ${current.status}, ${update.status}, 'Lead diperbarui dari dashboard', ${compact(actor, 160) || 'admin'}, 'admin_update', ${transaction.json(details)})`;
+      scheduled_at=${update.scheduledAt || null}, internal_notes=${update.internalNotes || ''},updated_at=NOW() WHERE id=${id} RETURNING *`;
+    await transaction`INSERT INTO lead_status_history (lead_id,old_status,new_status,note,actor,event_type,details)
+      VALUES (${id},${current.status},${update.status},'Lead diperbarui dari dashboard',${compact(actor,160)},'admin_update',${transaction.json(details)})`;
+    return mapLead(updated[0] as Record<string,unknown>);
   });
-  return getLeadById(id);
 }
 
 export async function getLeadHistory(id: number): Promise<LeadHistoryEntry[]> {

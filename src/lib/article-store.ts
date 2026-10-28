@@ -1,6 +1,6 @@
 import postgres from 'postgres';
 import { articles, type ArticleBlock, type ArticleTone } from '@/app/edukasi/articles';
-import { isOfficialSejoliUrl } from '@/app/site-config';
+import { isInternalServiceUrl } from '@/app/site-config';
 import type { KnowledgeReference } from '@/lib/knowledge-store';
 
 export type ArticleStatus = 'draft' | 'review' | 'scheduled' | 'published' | 'archived';
@@ -474,16 +474,11 @@ export function validateArticleInput(value: unknown): ArticleInput {
   const productUrlValue = sanitizeText(data.productUrl).trim().slice(0, 1000);
   let productUrl = '';
   if (productUrlValue) {
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(productUrlValue);
-    } catch {
-      throw new Error('Alamat produk SEJOLI tidak valid.');
+    if (!isInternalServiceUrl(productUrlValue)) {
+      throw new Error('Alamat produk wajib menuju halaman layanan internal yang tersedia.');
     }
-    if (!isOfficialSejoliUrl(parsedUrl.toString())) {
-      throw new Error('Alamat produk wajib menggunakan https://app.konsepstifin.com/.');
-    }
-    productUrl = parsedUrl.toString();
+    const parsedUrl = new URL(productUrlValue, 'https://konsepstifin.com');
+    productUrl = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
   }
   if (contentType !== 'education' && (!productName || !productUrl)) {
     throw new Error('Nama dan alamat produk wajib diisi untuk artikel produk atau affiliate.');

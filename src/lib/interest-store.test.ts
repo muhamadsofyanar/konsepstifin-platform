@@ -71,7 +71,7 @@ describe('interest-store domain', () => {
     expect(calculateMargin({ saleAmount: 650001, promoterPayout: 500000, otherCost: 25000 })).toBe(125001);
     expect(() => validateLeadAdminUpdate({
       leadType: 'test_service', status: 'selesai', paymentStatus: 'dibayar', saleAmount: -1,
-    })).toThrow('Nilai penjualan tidak boleh negatif.');
+    })).toThrow('Pembayaran dikelola melalui pesanan.');
   });
 
   it('memetakan bigint database menjadi number aman tanpa menyimpan margin', () => {
@@ -123,3 +123,5 @@ describe('interest-store domain', () => {
     expect(lead.leadType).toBe('test_service');
   });
 });
+
+it('rejects every legacy financial mutation',()=>{ for(const field of ['paymentStatus','sejoliOrderId','saleAmount','promoterPayout','otherCost']) expect(()=>validateLeadAdminUpdate({leadType:'test_service',status:'baru',[field]:0})).toThrow('Pembayaran dikelola melalui pesanan.'); });

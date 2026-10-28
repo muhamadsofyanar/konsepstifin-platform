@@ -20,7 +20,7 @@ describe('halaman kontak dua funnel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Minta konsultasi promotor →' }));
     const candidateDialog = screen.getByRole('dialog');
     expect(within(candidateDialog).getByText('JALUR CALON PROMOTOR')).toBeInTheDocument();
-    expect(within(candidateDialog).getByText(/tidak diarahkan ke checkout/i)).toBeInTheDocument();
+    expect(within(candidateDialog).getByText(/antrean konsultasi tim/i)).toBeInTheDocument();
     expect(within(candidateDialog).queryByRole('button', { name: /lanjut bayar/i })).not.toBeInTheDocument();
   });
 });

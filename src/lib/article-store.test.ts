@@ -48,3 +48,14 @@ describe('article input', () => {
     expect(result.body).not.toMatch(/<script|rahasia|alert\(/i);
   });
 });
+
+
+describe('article internal service validation', () => {
+  it('accepts an internal request page with campaign attribution', () => {
+    const result = validateArticleInput(validArticle({ contentType: 'product', productName: 'Tes Personal', productUrl: '/tes-stifin?utm_source=artikel#layanan' }));
+    expect(result.productUrl).toBe('/tes-stifin?utm_source=artikel#layanan');
+  });
+  it('rejects historical external product URLs for new edits', () => {
+    expect(() => validateArticleInput(validArticle({ contentType: 'product', productName: 'Tes Personal', productUrl: 'https://app.konsepstifin.com/product/tes/' }))).toThrow('halaman layanan internal');
+  });
+});

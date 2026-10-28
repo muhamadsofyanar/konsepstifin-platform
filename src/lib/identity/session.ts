@@ -36,6 +36,7 @@ export async function resolveSession(
     || (account.promoterCode !== null && typeof account.promoterCode !== 'string')) return null;
   return {
     userId: account.userId, active: true, sessionValid: true,
+    ...(typeof account.email === 'string' ? { email: account.email } : {}),
     roles: [...account.roles], promoterCode: account.promoterCode,
   };
 }

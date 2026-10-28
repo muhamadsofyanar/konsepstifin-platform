@@ -1,6 +1,13 @@
+import { getLeadOrders } from '@/lib/commerce-store';
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdminAuthenticated } from '@/lib/admin-auth';
-import { getLeadById, getLeadHistory, updateLead, type LeadStatus, type PaymentStatus } from '@/lib/interest-store';
+import { getAdminPrincipal } from '@/lib/admin-auth';
+import { requireAdminRequest } from '@/lib/admin-request';
+import { assertCrmContactFields, getLeadById, getLeadHistory, updateLead, type LeadStatus } from '@/lib/interest-store';
+
+function privateJson(data: unknown, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers); headers.set('Cache-Control','no-store');
+  return NextResponse.json(data,{...init,headers});
+}
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -10,24 +17,26 @@ function leadId(value: string) {
 }
 
 export async function GET(_request: NextRequest, context: RouteContext) {
-  if (!await isAdminAuthenticated()) return NextResponse.json({ error: 'Akses ditolak.' }, { status: 401 });
+  if (!await getAdminPrincipal()) return privateJson({ error: 'Akses ditolak.' }, { status: 401 });
   const id = leadId((await context.params).id);
-  if (!id) return NextResponse.json({ error: 'Referensi lead tidak valid.' }, { status: 400 });
+  if (!id) return privateJson({ error: 'Referensi lead tidak valid.' }, { status: 400 });
   try {
     const lead = await getLeadById(id);
-    if (!lead) return NextResponse.json({ error: 'Lead tidak ditemukan.' }, { status: 404 });
-    return NextResponse.json({ lead, history: await getLeadHistory(id) });
+    if (!lead) return privateJson({ error: 'Lead tidak ditemukan.' }, { status: 404 });
+    return privateJson({ lead, history: await getLeadHistory(id), orders: await getLeadOrders(id) },{headers:{'Cache-Control':'no-store'}});
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Lead belum dapat dibuka.' }, { status: 400 });
+    return privateJson({ error: error instanceof Error ? error.message : 'Lead belum dapat dibuka.' }, { status: 400 });
   }
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  if (!await isAdminAuthenticated()) return NextResponse.json({ error: 'Akses ditolak.' }, { status: 401 });
+  const principal = await requireAdminRequest(request);
+  if (!principal) return privateJson({ error: 'Akses ditolak.' }, { status: 401 });
   const id = leadId((await context.params).id);
-  if (!id) return NextResponse.json({ error: 'Referensi lead tidak valid.' }, { status: 400 });
+  if (!id) return privateJson({ error: 'Referensi lead tidak valid.' }, { status: 400 });
   try {
     const body = await request.json() as Record<string, unknown>;
+    assertCrmContactFields(body);
     const lead = await updateLead(id, {
       name: body.name == null ? undefined : String(body.name),
       phone: body.phone == null ? undefined : String(body.phone),
@@ -38,14 +47,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       pic: body.pic == null ? undefined : String(body.pic),
       scheduledAt: body.scheduledAt === undefined ? undefined : body.scheduledAt ? String(body.scheduledAt) : null,
       internalNotes: body.internalNotes == null ? undefined : String(body.internalNotes),
-      paymentStatus: body.paymentStatus == null ? undefined : String(body.paymentStatus) as PaymentStatus,
-      sejoliOrderId: body.sejoliOrderId == null ? undefined : String(body.sejoliOrderId),
-      saleAmount: body.saleAmount == null ? undefined : Number(body.saleAmount),
-      promoterPayout: body.promoterPayout == null ? undefined : Number(body.promoterPayout),
-      otherCost: body.otherCost == null ? undefined : Number(body.otherCost),
-    }, process.env.ADMIN_EMAIL || 'admin');
-    return NextResponse.json({ ok: true, lead });
+    }, principal.userId);
+    return privateJson({ ok: true, lead },{headers:{'Cache-Control':'no-store'}});
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Lead belum dapat diperbarui.' }, { status: 400 });
+    return privateJson({ error: error instanceof Error ? error.message : 'Lead belum dapat diperbarui.' }, { status: 400 });
   }
 }

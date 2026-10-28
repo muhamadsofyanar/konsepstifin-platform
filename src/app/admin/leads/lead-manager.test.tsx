@@ -55,79 +55,51 @@ function lead(overrides: Partial<StoredLead>): StoredLead {
 }
 
 const testLead = lead({});
-const promoterLead = lead({
-  id: 43,
-  leadType: 'promoter_candidate',
-  productKey: 'wsl1',
-  name: 'Calon WSL',
-  service: 'WSL 1',
-  consentToShare: false,
-  status: 'konsultasi',
-  assignedPromoterCode: '',
-  pic: 'Tim Rekrutmen',
-  matchMethod: 'none',
-  matchedPromoterName: '',
-  matchedBranchCode: '',
-  promoterCandidates: [],
-});
 
-describe('LeadManager', () => {
-  afterEach(() => cleanup());
+function page(items: StoredLead[] = [testLead], overrides = {}) {
+ return {items,total:526,page:1,pageSize:25,groups:{prospect:526,client:10,candidate:1,promoter:2},metrics:{baru:526,terlambat:526,milestone:0,selesai:0,ditutup:0},options:{province:['Aceh'],regency:[],service:['Tes'],campaign:['old']},...overrides};
+}
+describe('LeadManager server queries',()=>{
+ afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+ it('uses full database counts and requests server filters and pagination',async()=>{
+  const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify(page()),{status:200}));vi.stubGlobal('fetch',fetcher);
+  render(<LeadManager databaseReady initialPage={page()} initialError=""/>);
+  expect(screen.getByRole('tab',{name:/Calon Klien 526/})).toBeInTheDocument();
+  expect(screen.getByRole('option',{name:'Aceh'})).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button',{name:'Berikutnya'}));
+  expect(fetcher.mock.calls[0][0]).toContain('page=2');
+  fireEvent.change(screen.getByLabelText('Cari lead'),{target:{value:'Old target'}});
+  expect(fetcher.mock.calls.at(-1)?.[0]).toContain('q=Old+target');
+  expect(fetcher.mock.calls.at(-1)?.[0]).toContain('page=1');
+ });
+ it('keeps financial history read only and omits it from contact saves',async()=>{
+  const fetcher=vi.fn().mockImplementation(async (_url, init)=>new Response(JSON.stringify(init?.method==='PATCH'?{lead:testLead}:{history:[]}),{status:200}));vi.stubGlobal('fetch',fetcher);
+  render(<LeadManager databaseReady initialPage={page()} initialError="" initialHistories={{42:[]}}/>);
+  await userEvent.click(screen.getByRole('button',{name:'Ref. KSF-42'}));
+  expect(screen.queryByLabelText('Nilai penjualan')).not.toBeInTheDocument();
+  expect(screen.getByRole('link',{name:'Lihat / buat pesanan terkait'})).toHaveAttribute('href','/admin/pesanan?leadId=42');
+  fireEvent.change(screen.getByLabelText('Catatan internal'),{target:{value:'Follow up'}});
+  await userEvent.click(screen.getByRole('button',{name:'Simpan perubahan'}));
+  const body=JSON.parse(fetcher.mock.calls.find(call=>call[1]?.method==='PATCH')![1].body);
+  expect(body.internalNotes).toBe('Follow up'); expect(body).not.toHaveProperty('paymentStatus');expect(body).not.toHaveProperty('saleAmount');expect(body).not.toHaveProperty('sejoliOrderId');
+ });
+ it('ignores an old list response that resolves after a newer search',async()=>{
+  let resolveOld!:(value:Response)=>void;
+  const fetcher=vi.fn().mockImplementationOnce(()=>new Promise<Response>(resolve=>{resolveOld=resolve;})).mockResolvedValue(new Response(JSON.stringify(page([lead({name:'Newest result'})])),{status:200}));vi.stubGlobal('fetch',fetcher);
+  render(<LeadManager databaseReady initialPage={page()} initialError=""/>);
+  fireEvent.change(screen.getByLabelText('Cari lead'),{target:{value:'Old'}});
+  fireEvent.change(screen.getByLabelText('Cari lead'),{target:{value:'New'}});
+  expect(await screen.findByText('Newest result')).toBeInTheDocument();
+  resolveOld(new Response(JSON.stringify(page([lead({name:'Stale result'})])),{status:200}));
+  await new Promise(resolve=>setTimeout(resolve,0));
+  expect(screen.queryByText('Stale result')).not.toBeInTheDocument();
+ });
+ it('shows related internal order totals from authenticated detail response',async()=>{
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({history:[],orders:[{id:7,number:'KSF-ORDER-7',total:650000,balance:100000,state:'issued',paymentStatus:'partial'}]}),{status:200})));
+  render(<LeadManager databaseReady initialPage={page()} initialError=""/>);
+  await userEvent.click(screen.getByRole('button',{name:'Ref. KSF-42'}));
+  expect(await screen.findByRole('link',{name:'KSF-ORDER-7'})).toHaveAttribute('href','/admin/pesanan/7');
+  expect(screen.getByText(/partial.*Total/)).toBeInTheDocument();
+ });
 
-  it('memisahkan klien selesai dan promotor jaringan dari calon', async () => {
-    render(<LeadManager databaseReady initialLeads={[testLead, promoterLead, lead({ id: 50, name: 'Klien Selesai', status: 'selesai' }), lead({ ...promoterLead, id: 51, name: 'Promotor Aktif', status: 'selesai' })]} initialError="" />);
-    expect(screen.queryByText('Klien Selesai')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('tab', { name: /^Klien / }));
-    expect(screen.getByText('Klien Selesai')).toBeInTheDocument();
-    expect(screen.queryByText('Budi Tes')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('tab', { name: /Promotor Jaringan/ }));
-    expect(screen.getByText('Promotor Aktif')).toBeInTheDocument();
-    expect(screen.queryByText('Calon WSL')).not.toBeInTheDocument();
-  });
-
-  it('memisahkan tab dan pilihan status untuk kedua pipeline', async () => {
-    render(<LeadManager databaseReady initialLeads={[testLead, promoterLead]} initialError="" initialHistories={{ 43: [] }} />);
-    expect(screen.getByRole('tab', { name: /Calon Klien/ })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByText('Calon WSL')).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('tab', { name: /Calon Promotor/ }));
-    expect(screen.getByText('Calon WSL')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Ref. KSF-43/i }));
-    expect(screen.getByRole('option', { name: 'Mengikuti Preview' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Dijadwalkan' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('PIC')).toHaveValue('Tim Rekrutmen');
-    expect(screen.queryByLabelText('Status pembayaran')).not.toBeInTheDocument();
-  });
-
-  it('menampilkan attribution, kandidat, riwayat, dan menghitung margin', async () => {
-    render(<LeadManager databaseReady initialLeads={[testLead, promoterLead]} initialError="" initialHistories={{
-      42: [{ id: 1, oldStatus: 'mencari_promotor', newStatus: 'ditawarkan', note: 'Kandidat ditemukan', actor: 'system', eventType: 'status_change', details: {}, createdAt: new Date(0).toISOString() }],
-    }} />);
-    await userEvent.click(screen.getByRole('button', { name: /Ref. KSF-42/i }));
-    expect(screen.getByText('Promotor Aman')).toBeInTheDocument();
-    expect(screen.getByText(/meta · paid_social · launch/i)).toBeInTheDocument();
-    expect(screen.getByText('Kandidat ditemukan')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Nilai penjualan'), { target: { value: '650001' } });
-    fireEvent.change(screen.getByLabelText('Bagian promotor'), { target: { value: '500000' } });
-    fireEvent.change(screen.getByLabelText('Biaya lain'), { target: { value: '25000' } });
-    expect(screen.getByText((value) => value.replace(/\s/g, '') === 'Rp125.001')).toBeInTheDocument();
-  });
-
-  it('mengirim assignment, pembayaran, margin input, dan catatan internal', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true, lead: { ...testLead, paymentStatus: 'dibayar', sejoliOrderId: 'ORD-100' } }), { status: 200 })));
-    render(<LeadManager databaseReady initialLeads={[testLead]} initialError="" initialHistories={{ 42: [] }} />);
-    await userEvent.click(screen.getByRole('button', { name: /Ref. KSF-42/i }));
-    await userEvent.selectOptions(screen.getByLabelText('Status pembayaran'), 'dibayar');
-    fireEvent.change(screen.getByLabelText('ID order SEJOLI'), { target: { value: 'ORD-100' } });
-    fireEvent.change(screen.getByLabelText('Nilai penjualan'), { target: { value: '650001' } });
-    fireEvent.change(screen.getByLabelText('Catatan internal'), { target: { value: 'Pembayaran dikonfirmasi.' } });
-    await userEvent.click(screen.getByRole('button', { name: 'Simpan perubahan' }));
-
-    expect(fetch).toHaveBeenCalledWith('/api/admin/leads/42', expect.objectContaining({
-      method: 'PATCH',
-      body: expect.stringContaining('"sejoliOrderId":"ORD-100"'),
-    }));
-    expect(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body)).toContain('"internalNotes":"Pembayaran dikonfirmasi."');
-  });
 });

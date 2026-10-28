@@ -11,13 +11,13 @@ export default function ContactPage() {
       <section className="trust-hero">
         <span>KONTAK</span>
         <h1>Pilih tujuan Anda agar permintaan masuk ke tim dan alur yang tepat.</h1>
-        <p>Layanan tes dapat berlanjut ke pencocokan promotor dan checkout. Konsultasi calon promotor berhenti di pipeline tindak lanjut dan tidak menuju pembayaran tes.</p>
+        <p>Permintaan layanan tes dan konsultasi calon promotor disimpan untuk ditindaklanjuti tim. Admin mengonfirmasi kebutuhan, jadwal, harga, serta instruksi pembayaran.</p>
       </section>
       <section id="pilih-jalur" className="trust-grid">
         <article>
           <span>LAYANAN TES STIFIn</span>
           <h2>Untuk peserta tes</h2>
-          <p>Sampaikan kota, jumlah peserta, dan kebutuhan Anda. Sistem mencatat permintaan, mencari promotor, lalu mengarahkan layanan tes ke checkout resmi.</p>
+          <p>Sampaikan kota, jumlah peserta, dan kebutuhan Anda. Sistem menyimpan permintaan dan nomor referensi. Admin menindaklanjuti pencocokan promotor dan jadwal.</p>
           <PublicInterestAction leadType="test_service" captureLead className="public-cta" linkKey="tesPersonal" label="Ajukan layanan tes →" service="Bantuan memilih layanan STIFIn" />
           <Link href="/tes-stifin#layanan">Bandingkan paket tes</Link>
         </article>

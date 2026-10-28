@@ -1,6 +1,6 @@
 {
   "name": "konsepstifin-platform",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,9 +9,13 @@
     "lint": "eslint",
     "test": "vitest run --config vitest.config.mts",
     "test:watch": "vitest --config vitest.config.mts",
-    "test:identity": "node --test tests/identity/*.test.mjs",
+    "test:identity": "node --test --test-concurrency=2 tests/identity/*.test.mjs",
     "identity:migrate": "node scripts/identity-admin.mjs migrate",
-    "identity:provision": "node scripts/identity-admin.mjs provision"
+    "identity:provision": "node scripts/identity-admin.mjs provision",
+    "identity:verify": "node scripts/identity-admin.mjs verify",
+    "test:unit:node": "node --test tests/*.test.mjs",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:smoke": "node scripts/smoke-release.mjs"
   },
   "dependencies": {
     "next": "16.2.10",
@@ -22,6 +26,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.15",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

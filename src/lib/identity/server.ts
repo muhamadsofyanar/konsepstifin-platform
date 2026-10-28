@@ -7,7 +7,7 @@ import { resolveSession } from './session';
 import { ACCOUNT_COOKIE } from './http';
 const state = globalThis as unknown as { identitySql?: ReturnType<typeof postgres> };
 export function getIdentityStore() {
-  if (process.env.PLATFORM_IDENTITY_ENABLED !== 'true' || !process.env.DATABASE_URL || !process.env.PLATFORM_ORIGIN)
+  if (!process.env.DATABASE_URL || !process.env.PLATFORM_ORIGIN)
     throw new Error('Identity is not configured');
   state.identitySql ??= postgres(process.env.DATABASE_URL, { max: 5, connect_timeout: 10 });
   const sql = state.identitySql;

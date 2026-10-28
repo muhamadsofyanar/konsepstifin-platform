@@ -24,14 +24,14 @@ async function readBody(request: Request) {
   } finally { reader.releaseLock(); }
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
-export async function handleLogin(request: Request, store: Pick<IdentityStore, 'login'>, origin: string, secure: boolean): Promise<Response> {
+export async function handleLogin(request: Request, store: Pick<IdentityStore, 'login'>, origin: string, secure: boolean, adminOnly = false): Promise<Response> {
   if (!sameOrigin(request, origin)) return json({ message: 'Permintaan ditolak.' }, 403);
   let input;
   try { input = await readBody(request); } catch { return json({ message: 'Permintaan tidak valid.' }, 400); }
   if (!input || Array.isArray(input) || typeof input.email !== 'string' || typeof input.password !== 'string')
     return json({ message: 'Email dan kata sandi diperlukan.' }, 400);
   try {
-    const session = await store.login(input.email, input.password);
+    const session = await store.login(input.email, input.password, adminOnly);
     if (!session) return json({ message: 'Email atau kata sandi tidak sesuai.' }, 401);
     const response = json({ ok: true });
     response.headers.set('Set-Cookie', cookie(session.token, secure, Math.max(0, Math.floor((session.expiresAt-Date.now())/1000))));

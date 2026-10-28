@@ -1,0 +1,11 @@
+import { beforeEach,expect,it,vi } from 'vitest';
+const mocks=vi.hoisted(()=>({list:vi.fn(async()=>({orders:[],total:0,page:2}))}));
+vi.mock('next/navigation',()=>({redirect:vi.fn(()=>{throw new Error('redirect');})}));
+vi.mock('@/lib/admin-auth',()=>({getAdminPrincipal:async()=>({userId:'admin',email:'a@test',roles:['admin']})}));
+vi.mock('@/lib/operations-store',()=>({getOperationsService:()=>({settings:async()=>({bankName:'',accountNumber:'',accountHolder:'',instructions:''})})}));
+vi.mock('@/lib/commerce-store',()=>({listOrders:mocks.list}));
+import OrdersPage from '../../src/app/admin/pesanan/page';
+beforeEach(()=>mocks.list.mockClear());
+it('passes a validated lead filter to the server order query',async()=>{await OrdersPage({searchParams:Promise.resolve({leadId:'42',page:'2'})});expect(mocks.list).toHaveBeenCalledWith({page:2,leadId:42});});
+it.each(['0','-1','1.5','abc','9007199254740992',['1','2']])('rejects invalid lead filter %s without listing unrelated orders',async leadId=>{const page=await OrdersPage({searchParams:Promise.resolve({leadId})});expect(mocks.list).not.toHaveBeenCalled();expect(page.props.error).toContain('ID lead tidak valid');});
+it('keeps the unfiltered list when no lead filter is requested',async()=>{await OrdersPage({searchParams:Promise.resolve({})});expect(mocks.list).toHaveBeenCalledWith({page:1});});

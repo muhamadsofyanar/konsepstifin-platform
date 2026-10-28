@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import type { LeadType } from '@/lib/interest-store';
-import { isOfficialSejoliUrl, sejoliLinks, type SejoliLinkKey } from './site-config';
+import { type ProductKey } from './site-config';
 
 const testServices = [
   { key: 'tesPersonal', label: 'Tes STIFIn Personal' },
@@ -30,16 +30,15 @@ type SubmissionResult = {
     method?: string;
     promoter?: { code: string; name: string; branchCode: string; area: string; province: string } | null;
   } | null;
-  checkoutUrl?: string;
 };
 
-function inferredLeadType(linkKey: SejoliLinkKey): LeadType {
+function inferredLeadType(linkKey: ProductKey): LeadType {
   return ['previewPromotor', 'wsl1', 'wsl2', 'idDanAlat', 'paketPromotor'].includes(linkKey)
     ? 'promoter_candidate'
     : 'test_service';
 }
 
-function defaultProductKey(leadType: LeadType, linkKey: SejoliLinkKey, service: string) {
+function defaultProductKey(leadType: LeadType, linkKey: ProductKey, service: string) {
   const options = leadType === 'test_service' ? testServices : promoterServices;
   const matchingLabel = options.find((item) => item.label === service);
   const matchingKey = options.find((item) => item.key === linkKey);
@@ -65,22 +64,18 @@ export default function PublicInterestAction({
   service,
   leadType,
   className = '',
-  checkoutUrl = '',
   trackLead = false,
-  preserveCampaignParams = false,
-  requirePrecheckout = false,
-  captureLead = false,
-  navigateToCheckout,
   provinceCode = '',
   provinceName = '',
   regencyCode = '',
   regencyName = '',
 }: {
-  linkKey: SejoliLinkKey;
+  linkKey: ProductKey;
   label: string;
   service: string;
   leadType?: LeadType;
   className?: string;
+  /** Historical props are ignored: every public action opens the internal request form. */
   checkoutUrl?: string;
   trackLead?: boolean;
   preserveCampaignParams?: boolean;
@@ -101,28 +96,7 @@ export default function PublicInterestAction({
   const effectiveLeadType = leadType ?? inferredLeadType(linkKey);
   const selectedDefault = defaultProductKey(effectiveLeadType, linkKey, service);
 
-  function navigate(url: string) {
-    if (navigateToCheckout) navigateToCheckout(url);
-    else window.location.assign(url);
-  }
-
   function start() {
-    const target = checkoutUrl || sejoliLinks[linkKey];
-    const shouldCapture = Boolean(leadType) || captureLead || requirePrecheckout || !target;
-    if (!shouldCapture && target && isOfficialSejoliUrl(target)) {
-      const checkoutTarget = new URL(target);
-      if (preserveCampaignParams) {
-        const currentParams = new URLSearchParams(window.location.search);
-        currentParams.forEach((value, key) => {
-          if (key.toLowerCase().startsWith('utm_') || key.toLowerCase() === 'fbclid') {
-            checkoutTarget.searchParams.set(key, value.slice(0, 120));
-          }
-        });
-      }
-      if (trackLead) window.fbq?.('track', 'Lead', { content_name: service, content_category: 'Konsep STIFIn' });
-      navigate(checkoutTarget.toString());
-      return;
-    }
     setStartedAt(Date.now());
     setIdempotencyKey(crypto.randomUUID());
     setState('idle');
@@ -139,55 +113,48 @@ export default function PublicInterestAction({
     const productKey = String(form.get('productKey') || selectedDefault);
     const options = effectiveLeadType === 'test_service' ? testServices : promoterServices;
     const selectedService = options.find((item) => item.key === productKey)?.label || service;
-    const response = await fetch('/api/interests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        leadType: effectiveLeadType,
-        productKey,
-        name: form.get('name'),
-        phone: form.get('phone'),
-        email: form.get('email'),
-        city: form.get('city'),
-        service: selectedService,
-        notes: form.get('notes'),
-        website: form.get('website'),
-        provinceCode,
-        provinceName,
-        regencyCode,
-        regencyName,
-        consentToContact: form.get('consentToContact') === 'on',
-        consentToShare: effectiveLeadType === 'test_service' && form.get('consentToShare') === 'on',
-        sourcePath: window.location.pathname,
-        startedAt,
-        idempotencyKey,
-        ...campaignAttribution(),
-      }),
-    });
-    const responseResult = await response.json() as SubmissionResult;
-    if (!response.ok) {
-      setError(responseResult.error || 'Formulir belum dapat disimpan.');
+    try {
+      const response = await fetch('/api/interests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadType: effectiveLeadType,
+          productKey,
+          name: form.get('name'),
+          phone: form.get('phone'),
+          email: form.get('email'),
+          city: form.get('city'),
+          service: selectedService,
+          notes: form.get('notes'),
+          website: form.get('website'),
+          provinceCode,
+          provinceName,
+          regencyCode,
+          regencyName,
+          consentToContact: form.get('consentToContact') === 'on',
+          consentToShare: effectiveLeadType === 'test_service' && form.get('consentToShare') === 'on',
+          sourcePath: window.location.pathname,
+          startedAt,
+          idempotencyKey,
+          ...campaignAttribution(),
+        }),
+      });
+      const responseResult = await response.json() as SubmissionResult;
+      if (!response.ok) {
+        setError(responseResult.error || 'Formulir belum dapat disimpan.');
+        setState('idle');
+        return;
+      }
+      if (trackLead) window.fbq?.('track', 'Lead', { content_name: selectedService, content_category: effectiveLeadType });
+      setResult(responseResult);
+      setState('sent');
+    } catch {
+      setError('Permintaan belum dapat disimpan. Periksa koneksi dan coba kembali.');
       setState('idle');
-      return;
-    }
-    if (responseResult.checkoutUrl && !isOfficialSejoliUrl(responseResult.checkoutUrl)) {
-      setError('URL pembayaran tidak valid. Hubungi tim layanan.');
-      setState('idle');
-      return;
-    }
-    if (trackLead) window.fbq?.('track', 'Lead', { content_name: selectedService, content_category: effectiveLeadType });
-    setResult(responseResult);
-    setState('sent');
-    if (effectiveLeadType === 'test_service' && responseResult.checkoutUrl) {
-      navigate(responseResult.checkoutUrl);
     }
   }
 
   const serviceOptions = effectiveLeadType === 'test_service' ? testServices : promoterServices;
-  const safeCheckout = effectiveLeadType === 'test_service' && result?.checkoutUrl && isOfficialSejoliUrl(result.checkoutUrl)
-    ? result.checkoutUrl
-    : '';
-
   return <>
     <button className={className} type="button" onClick={start}>{label}</button>
     {open ? <div className="modal-backdrop" onMouseDown={() => setOpen(false)}>
@@ -196,17 +163,16 @@ export default function PublicInterestAction({
         {state === 'sent' ? <div className="interest-success">
           <span>✓</span>
           <h2 id="interest-title">Permintaan sudah tersimpan.</h2>
-          <p>Referensi <b>{result?.reference}</b>. Tim akan menindaklanjuti sesuai jalur yang Anda pilih.</p>
+          <p>Referensi <b>{result?.reference}</b>. Admin akan mengonfirmasi kebutuhan, harga, jadwal, dan instruksi pembayaran. Pengiriman formulir belum berarti pembayaran lunas.</p>
           {effectiveLeadType === 'test_service' && result?.match?.promoter ? <article className="interest-match-card">
             <small>PROMOTOR YANG DICOCOKKAN</small><b>{result.match.promoter.name}</b><span>{result.match.promoter.area}, {result.match.promoter.province}</span>
           </article> : null}
-          {safeCheckout ? <a className="public-cta big" href={safeCheckout}>Lanjut ke pembayaran →</a> : null}
           <button className="interest-secondary-action" type="button" onClick={() => setOpen(false)}>Selesai</button>
         </div> : <>
           <div className="modal-head">
             <span>{effectiveLeadType === 'test_service' ? 'LAYANAN TES STIFIn' : 'JALUR CALON PROMOTOR'}</span>
             <h2 id="interest-title">Mulai dari kebutuhan Anda.</h2>
-            <p>{effectiveLeadType === 'test_service' ? 'Data ini dipakai untuk mencari promotor, mengonfirmasi jadwal, lalu mengarahkan Anda ke checkout resmi.' : 'Data ini masuk ke antrean konsultasi calon promotor dan tidak diarahkan ke checkout.'}</p>
+            <p>{effectiveLeadType === 'test_service' ? 'Data ini dipakai untuk mencari promotor dan mengonfirmasi kebutuhan serta jadwal bersama admin.' : 'Data ini masuk ke antrean konsultasi tim untuk ditindaklanjuti.'}</p>
           </div>
           <form onSubmit={submit}>
             <label>Nama lengkap<input name="name" required minLength={3} placeholder="Nama Anda" /></label>
@@ -218,7 +184,7 @@ export default function PublicInterestAction({
             <label className="interest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
             <div className="privacy-note">Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
             {error ? <p className="interest-error" role="alert">{error}</p> : null}
-            <button className="public-cta big" type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Menyimpan…' : effectiveLeadType === 'test_service' ? 'Cari promotor & lanjut bayar' : 'Kirim permintaan →'}</button>
+            <button className="public-cta big" type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Menyimpan…' : 'Kirim permintaan →'}</button>
           </form>
         </>}
       </div>

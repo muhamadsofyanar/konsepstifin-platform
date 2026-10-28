@@ -34,7 +34,6 @@ describe('POST /api/interests', () => {
       reference: 'KSF-42',
       status: 'ditawarkan',
       match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
-      checkoutUrl: 'https://app.konsepstifin.com/product/tes/',
     });
     expect(JSON.stringify(body)).not.toMatch(/phone|email|pass|saldo/i);
   });

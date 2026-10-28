@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { LinkProps } from 'next/link';
 import MobileNavigation, { type MobileNavigationLink } from './mobile-navigation';
-import { platformLinks } from './site-config';
 
 type PublicPage = 'home' | 'test' | 'location' | 'education' | 'promoter' | 'affiliate';
 
@@ -64,9 +63,8 @@ export function PublicFooter() {
       <Link href="/privasi">Privasi</Link>
       <Link href="/ketentuan">Ketentuan</Link>
       <Link href="/affiliate">Affiliate</Link>
-      <a href={platformLinks.affiliateDashboard} target="_blank" rel="noopener noreferrer">Masuk Affiliate ↗</a>
     </div>
     <p>Edukasi, layanan Tes STIFIn offline, dan informasi jalur calon promotor di Indonesia.</p>
-    <small>Informasi di website bersifat edukatif. Checkout, akun member, dan affiliate dikelola melalui app.konsepstifin.com. Harga, fasilitas, komisi, dan persyaratan final mengikuti SEJOLI. Tes STIFIn bukan diagnosis medis atau psikologis.</small>
+    <small>Informasi di website bersifat edukatif. Permintaan layanan disimpan di website ini. Harga, jadwal, dan instruksi pembayaran dikonfirmasi admin; pembayaran transfer diverifikasi secara manual. Tes STIFIn bukan diagnosis medis atau psikologis.</small>
   </footer>;
 }

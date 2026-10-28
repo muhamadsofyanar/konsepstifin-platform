@@ -27,7 +27,7 @@ describe('submitInterest', () => {
     const createLead = vi.fn().mockResolvedValue({ id: 42 });
     const result = await submitInterest(raw, { findMatch: vi.fn().mockResolvedValue({ method: 'area', primary: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat', active: true, menerimaKunjungan: false, regionCodes: [] }, candidates: [] }), createLead, resolveCheckout: vi.fn().mockResolvedValue('https://app.konsepstifin.com/product/tes-personal/') });
     expect(createLead).toHaveBeenCalledWith(expect.objectContaining({ status: 'ditawarkan', match: expect.objectContaining({ assignedPromoterCode: 'P-1' }) }));
-    expect(result.reference).toBe('KSF-42'); expect(result.match?.promoter?.name).toBe('Promotor Aman');
+    expect(result).not.toHaveProperty('checkoutUrl'); expect(result.reference).toBe('KSF-42'); expect(result.match?.promoter?.name).toBe('Promotor Aman');
   });
   it('tetap checkout tanpa kandidat ketika sumber promotor gagal', async () => {
     const result = await submitInterest(raw, { findMatch: vi.fn().mockRejectedValue(new Error('upstream')), createLead: vi.fn().mockResolvedValue({ id: 43 }), resolveCheckout: vi.fn().mockResolvedValue('https://app.konsepstifin.com/product/tes-personal/') });
@@ -35,6 +35,8 @@ describe('submitInterest', () => {
   });
   it('tidak menghasilkan checkout ketika database atau URL produk gagal', async () => {
     await expect(submitInterest(raw, { findMatch: vi.fn().mockResolvedValue({ method: 'none', primary: null, candidates: [] }), createLead: vi.fn().mockRejectedValue(new Error('database down')), resolveCheckout: vi.fn().mockResolvedValue('https://app.konsepstifin.com/product/tes-personal/') })).rejects.toThrow('database down');
-    await expect(submitInterest(raw, { findMatch: vi.fn(), createLead: vi.fn(), resolveCheckout: vi.fn().mockRejectedValue(new Error('Checkout produk belum tersedia.')) })).rejects.toThrow('Checkout produk belum tersedia.');
+    const resolver = vi.fn().mockRejectedValue(new Error('Old checkout unavailable'));
+    await expect(submitInterest(raw, { createLead: vi.fn().mockResolvedValue({ id: 44 }), resolveCheckout: resolver })).resolves.toMatchObject({ reference: 'KSF-44' });
+    expect(resolver).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   promoterCandidateStatuses,
   testServiceStatuses,
@@ -8,9 +9,10 @@ import {
   type LeadType,
   type PaymentStatus,
 } from '@/lib/lead-domain';
-import type { LeadHistoryEntry, StoredLead } from '@/lib/interest-store';
+import type { LeadHistoryEntry, StoredLead, getCrmLeads } from '@/lib/interest-store';
 import { crmGroup, crmGroups, crmLabels, crmType, type CrmGroup } from '@/lib/crm-domain';
 import ContactCreate from './contact-create';
+import type { CommerceOrder } from '@/lib/commerce-store';
 
 const labels: Record<LeadStatus, string> = {
   baru: 'Baru', mencari_promotor: 'Mencari promotor', ditawarkan: 'Ditawarkan', diklaim: 'Diklaim',
@@ -23,7 +25,7 @@ const paymentLabels: Record<PaymentStatus, string> = {
   belum_dicek: 'Belum dicek', menunggu: 'Menunggu pembayaran', dibayar: 'Dibayar',
   gagal: 'Gagal', dikembalikan: 'Dikembalikan',
 };
-const paymentStatuses = Object.keys(paymentLabels) as PaymentStatus[];
+
 
 type Filters = {
   search: string; status: string; province: string; regency: string; service: string;
@@ -46,67 +48,87 @@ function asDateInput(value: string | null) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
 }
-function unique(leads: StoredLead[], key: 'provinceName' | 'regencyName' | 'service' | 'utmCampaign') {
-  return [...new Set(leads.map((lead) => lead[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id'));
-}
 function isOverdue(lead: StoredLead) {
   return !['selesai', 'ditutup'].includes(lead.status) && new Date(lead.responseDueAt).getTime() < Date.now();
 }
 
-export default function LeadManager({ databaseReady, initialLeads, initialError, initialHistories = {} }: {
+export default function LeadManager({ databaseReady, initialPage, initialError, initialHistories = {} }: {
   databaseReady: boolean;
-  initialLeads: StoredLead[];
+  initialPage: Awaited<ReturnType<typeof getCrmLeads>>;
   initialError: string;
   initialHistories?: Record<number, LeadHistoryEntry[]>;
 }) {
-  const [leads, setLeads] = useState(initialLeads);
+  const [result, setResult] = useState(initialPage);
+  const [page, setPage] = useState(1);
+  const [revision, setRevision] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const requestSequence = useRef(0);
+  const detailSequence = useRef(0);
+  const selectedRef = useRef<number | null>(null);
+  const firstRequest = useRef(true);
   const [activeGroup, setActiveGroup] = useState<CrmGroup>('prospect');
   const activeType = crmType(activeGroup);
   const [creating, setCreating] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [draft, setDraft] = useState<StoredLead | null>(null);
+  const [orders, setOrders] = useState<Record<number, (CommerceOrder | null)[]>>({});
   const [histories, setHistories] = useState(initialHistories);
   const [error, setError] = useState(initialError);
   const [saving, setSaving] = useState(false);
 
-  const typeLeads = useMemo(() => leads.filter((lead) => crmGroup(lead) === activeGroup), [activeGroup, leads]);
-  const shown = useMemo(() => typeLeads.filter((lead) => {
-    const haystack = `${lead.id} ${lead.name} ${lead.phone} ${lead.email} ${lead.assignedPromoterCode} ${lead.pic}`.toLocaleLowerCase('id-ID');
-    const created = lead.createdAt.slice(0, 10);
-    return (!filters.search || haystack.includes(filters.search.toLocaleLowerCase('id-ID')))
-      && (!filters.status || lead.status === filters.status)
-      && (!filters.province || lead.provinceName === filters.province)
-      && (!filters.regency || lead.regencyName === filters.regency)
-      && (!filters.service || lead.service === filters.service)
-      && (!filters.campaign || lead.utmCampaign === filters.campaign)
-      && (!filters.dateFrom || created >= filters.dateFrom)
-      && (!filters.dateTo || created <= filters.dateTo);
-  }), [filters, typeLeads]);
-  const metrics = useMemo(() => ({
-    baru: typeLeads.filter((lead) => lead.status === 'baru').length,
-    terlambat: typeLeads.filter(isOverdue).length,
-    milestone: typeLeads.filter((lead) => activeType === 'test_service' ? lead.status === 'dijadwalkan' : lead.status === 'aktivasi').length,
-    selesai: typeLeads.filter((lead) => lead.status === 'selesai').length,
-    ditutup: typeLeads.filter((lead) => lead.status === 'ditutup').length,
-  }), [activeType, typeLeads]);
+  const shown = result.items;
+  const metrics = result.metrics;
+  useEffect(() => {
+    if (firstRequest.current) { firstRequest.current = false; return; }
+    const sequence = ++requestSequence.current;
+    const controller = new AbortController();
+    const params = new URLSearchParams({group: activeGroup,page:String(page),q:filters.search,...Object.fromEntries(Object.entries(filters).filter(([key])=>key!=='search'))});
+    setLoading(true);
+    fetch(`/api/admin/leads?${params}`, {signal:controller.signal,cache:'no-store'}).then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Daftar belum dapat dimuat.');
+      if (!Array.isArray(data.items) || !data.groups || !data.options || !data.metrics) throw new Error('Respons daftar tidak lengkap.');
+      if(sequence===requestSequence.current) { setResult(data); setError(''); }
+    }).catch(error => {
+      if(sequence===requestSequence.current && !controller.signal.aborted) setError(error instanceof Error ? error.message : 'Daftar belum dapat dimuat.');
+    }).finally(()=>{if(sequence===requestSequence.current) setLoading(false);});
+    return ()=> { controller.abort(); requestSequence.current = sequence+1; };
+  },[activeGroup,filters,page,revision]);
+
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get('leadId'));
+    if (!Number.isSafeInteger(id) || id<1) return;
+    const controller = new AbortController(); const sequence = ++detailSequence.current;
+    fetch(`/api/admin/leads/${id}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{
+      const data=await response.json();
+      if (!response.ok || !data.lead) throw new Error(data.error || 'Lead belum dapat dibuka.');
+      if (sequence!==detailSequence.current) return;
+      selectedRef.current=id;setSelectedId(id);setDraft(data.lead);
+      setHistories(current=>({...current,[id]:data.history || []}));setOrders(current=>({...current,[id]:data.orders || []}));
+    }).catch(error=>{if(!controller.signal.aborted && sequence===detailSequence.current) setError(error instanceof Error?error.message:'Lead belum dapat dibuka.');});
+    return ()=>controller.abort();
+  },[]);
 
   function updateFilter(key: keyof Filters, value: string) {
+    setPage(1);
     setFilters((current) => ({ ...current, [key]: value, ...(key === 'province' ? { regency: '' } : {}) }));
   }
   function selectGroup(group: CrmGroup) {
-    setActiveGroup(group); setFilters(emptyFilters); setSelectedId(null); setDraft(null);
+    ++detailSequence.current; selectedRef.current = null; setPage(1); setActiveGroup(group); setFilters(emptyFilters); setSelectedId(null); setDraft(null);
   }
   async function openLead(lead: StoredLead) {
+    const sequence = ++detailSequence.current; selectedRef.current = lead.id;
     setSelectedId(lead.id); setDraft({ ...lead }); setError('');
     if (Object.prototype.hasOwnProperty.call(histories, lead.id)) return;
     try {
       const response = await fetch(`/api/admin/leads/${lead.id}`);
-      const result = await response.json() as { history?: LeadHistoryEntry[]; error?: string };
+      const result = await response.json() as { history?: LeadHistoryEntry[]; orders?: (CommerceOrder | null)[]; error?: string };
       if (!response.ok) throw new Error(result.error || 'Riwayat belum dapat dimuat.');
       setHistories((current) => ({ ...current, [lead.id]: result.history || [] }));
+      setOrders(current=>({...current,[lead.id]:result.orders || []}));
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : 'Riwayat belum dapat dimuat.');
+      if(sequence===detailSequence.current) setError(fetchError instanceof Error ? fetchError.message : 'Riwayat belum dapat dimuat.');
     }
   }
   function updateDraft<K extends keyof StoredLead>(key: K, value: StoredLead[K]) {
@@ -114,13 +136,12 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
   }
   async function save() {
     if (!draft) return;
+    const savedId = draft.id; const selectionVersion = detailSequence.current;
     setSaving(true); setError('');
     const payload = {
       name: draft.name, phone: draft.phone, email: draft.email, city: draft.city,
       status: draft.status, assignedPromoterCode: draft.assignedPromoterCode, pic: draft.pic,
-      scheduledAt: draft.scheduledAt, internalNotes: draft.internalNotes, paymentStatus: draft.paymentStatus,
-      sejoliOrderId: draft.sejoliOrderId, saleAmount: draft.saleAmount,
-      promoterPayout: draft.promoterPayout, otherCost: draft.otherCost,
+      scheduledAt: draft.scheduledAt, internalNotes: draft.internalNotes,
     };
     try {
       const response = await fetch(`/api/admin/leads/${draft.id}`, {
@@ -130,10 +151,8 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
       if (!response.ok) throw new Error(result.error || 'Perubahan belum tersimpan.');
       if (!result.lead) throw new Error('Respons penyimpanan tidak lengkap. Muat ulang sebelum mencoba lagi.');
       const updated = result.lead;
-      setLeads((items) => items.map((item) => item.id === updated.id ? updated : item));
-      setDraft(updated);
-      setActiveGroup(crmGroup(updated));
-      setFilters(emptyFilters);
+      setRevision(value=>value+1);
+      if(selectedRef.current===savedId && selectionVersion===detailSequence.current) setDraft(updated);
       setHistories(current => { const next = { ...current }; delete next[updated.id]; return next; });
       try {
         const historyResponse = await fetch(`/api/admin/leads/${updated.id}`);
@@ -141,27 +160,24 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
         if (historyResponse.ok && historyResult.history) setHistories(current => ({ ...current, [updated.id]: historyResult.history }));
       } catch { /* Riwayat dapat dimuat ulang saat detail dibuka lagi. */ }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Perubahan belum tersimpan.');
+      if(selectedRef.current===savedId && selectionVersion===detailSequence.current) setError(saveError instanceof Error ? saveError.message : 'Perubahan belum tersimpan.');
     } finally { setSaving(false); }
   }
 
   const statusOptions = statusesFor(activeType);
-  const margin = draft ? draft.saleAmount - draft.promoterPayout - draft.otherCost : 0;
-  const filteredRegencies = typeLeads.filter((lead) => !filters.province || lead.provinceName === filters.province);
+
 
   return <main className="lead-admin">
-    <header><div><span>PORTAL TIM · CRM</span><h1>Klien & Promotor</h1><p>Kelola relasi, tindak lanjut, dan perkembangan jaringan dalam satu dashboard.</p></div><nav><a href="/admin/promotor">Direktori nasional</a><a href="/admin/artikel">Artikel & AI</a><a href="https://app.konsepstifin.com/member-area/" target="_blank" rel="noreferrer">Transaksi Sejoli ↗</a></nav></header>
+    <header><div><span>PORTAL TIM · CRM</span><h1>Klien & Promotor</h1><p>Kelola relasi, tindak lanjut, dan perkembangan jaringan dalam satu dashboard.</p></div><nav><a href="/admin/promotor">Direktori nasional</a><a href="/admin/artikel">Artikel & AI</a><Link href="/admin/pesanan">Pesanan & Pembayaran</Link></nav></header>
     {!databaseReady && <p className="interest-error">DATABASE_URL belum dikonfigurasi.</p>}
     {error && <p className="interest-error" role="alert">{error}</p>}
 
     <div className="lead-tabs" role="tablist" aria-label="Jenis pipeline">
-      {crmGroups.map(group => <button key={group} role="tab" aria-selected={activeGroup === group} onClick={() => selectGroup(group)}>{crmLabels[group]} <b>{leads.filter(lead => crmGroup(lead) === group).length}</b></button>)}
+      {crmGroups.map(group => <button key={group} role="tab" aria-selected={activeGroup === group} onClick={() => selectGroup(group)}>{crmLabels[group]} <b>{result.groups[group]}</b></button>)}
     </div>
-    <div className="crm-toolbar"><p>Klien = tes selesai. Promotor Jaringan = proses aktivasi selesai. Status pembayaran dicatat terpisah dan belum tersinkron otomatis dengan Sejoli.</p><button type="button" disabled={!databaseReady} onClick={() => setCreating(true)}>+ Tambah data</button></div>
-    {leads.length >= 500 && <p className="crm-toolbar">Menampilkan maksimal 500 data terbaru; ringkasan dan pencarian hanya mencakup data yang dimuat.</p>}
+    <div className="crm-toolbar"><p>Klien = tes selesai. Promotor Jaringan = proses aktivasi selesai. Pembayaran dikelola melalui Pesanan & Pembayaran.</p><button type="button" disabled={!databaseReady} onClick={() => setCreating(true)}>+ Tambah data</button></div>
     {creating && <ContactCreate onClose={() => setCreating(false)} onCreated={lead => {
-      setLeads(current => [lead, ...current.filter(item => item.id !== lead.id)]);
-      selectGroup(crmGroup(lead)); setCreating(false); void openLead(lead);
+      selectGroup(crmGroup(lead)); setRevision(value=>value+1); setCreating(false); void openLead(lead);
     }} />}
 
     <section className="lead-metrics" aria-label="Ringkasan pipeline">
@@ -172,15 +188,16 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
     <section className="lead-filters" aria-label="Filter lead">
       <label>Cari lead<input value={filters.search} onChange={(event) => updateFilter('search', event.target.value)} placeholder="Nama, kontak, referensi" /></label>
       <details className="lead-status-filter"><summary>Status: {filters.status ? labels[filters.status as LeadStatus] : 'Semua'}</summary><div><button type="button" className={!filters.status ? 'active' : ''} onClick={() => updateFilter('status', '')}>Semua status</button>{statusOptions.map((status) => <button type="button" className={filters.status === status ? 'active' : ''} key={status} onClick={() => updateFilter('status', status)}>{labels[status]}</button>)}</div></details>
-      <label>Provinsi<select value={filters.province} onChange={(event) => updateFilter('province', event.target.value)}><option value="">Semua provinsi</option>{unique(typeLeads, 'provinceName').map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label>Kabupaten/kota<select value={filters.regency} onChange={(event) => updateFilter('regency', event.target.value)}><option value="">Semua kabupaten/kota</option>{unique(filteredRegencies, 'regencyName').map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label>Layanan<select value={filters.service} onChange={(event) => updateFilter('service', event.target.value)}><option value="">Semua layanan</option>{unique(typeLeads, 'service').map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label>Kampanye<select value={filters.campaign} onChange={(event) => updateFilter('campaign', event.target.value)}><option value="">Semua kampanye</option>{unique(typeLeads, 'utmCampaign').map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label>Provinsi<select value={filters.province} onChange={(event) => updateFilter('province', event.target.value)}><option value="">Semua provinsi</option>{result.options.province.map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label>Kabupaten/kota<select value={filters.regency} onChange={(event) => updateFilter('regency', event.target.value)}><option value="">Semua kabupaten/kota</option>{result.options.regency.map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label>Layanan<select value={filters.service} onChange={(event) => updateFilter('service', event.target.value)}><option value="">Semua layanan</option>{result.options.service.map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label>Kampanye<select value={filters.campaign} onChange={(event) => updateFilter('campaign', event.target.value)}><option value="">Semua kampanye</option>{result.options.campaign.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>Dari<input type="date" value={filters.dateFrom} onChange={(event) => updateFilter('dateFrom', event.target.value)} /></label>
       <label>Sampai<input type="date" value={filters.dateTo} onChange={(event) => updateFilter('dateTo', event.target.value)} /></label>
-      <button type="button" onClick={() => setFilters(emptyFilters)}>Reset filter</button>
+      <button type="button" onClick={() => {setFilters(emptyFilters);setPage(1);}}>Reset filter</button>
     </section>
 
+    <nav aria-label="Halaman lead"><button disabled={loading || page<=1} onClick={()=>setPage(value=>value-1)}>Sebelumnya</button><span> Halaman {page} · {result.total} data </span><button disabled={loading || page*result.pageSize>=result.total} onClick={()=>setPage(value=>value+1)}>Berikutnya</button>{loading && <span role="status">Memuat daftar…</span>}</nav>
     <div className={`lead-workspace ${draft ? 'has-detail' : ''}`}>
       <section className="lead-table" aria-label={`Daftar ${activeType === 'test_service' ? 'lead tes' : 'calon promotor'}`}>
         <div className="lead-row lead-head"><span>Lead</span><span>Wilayah dan layanan</span><span>Masuk</span><span>Status</span></div>
@@ -189,7 +206,7 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
       </section>
 
       {draft && <aside className="lead-detail" aria-label={`Detail Ref. KSF-${draft.id}`}>
-        <div className="lead-detail-head"><div><small>Ref. KSF-{draft.id}</small><h2>{draft.name}</h2><p>{draft.phone}{draft.email ? ` · ${draft.email}` : ''}</p></div><button type="button" aria-label="Tutup detail" onClick={() => { setSelectedId(null); setDraft(null); }}>×</button></div>
+        <div className="lead-detail-head"><div><small>Ref. KSF-{draft.id}</small><h2>{draft.name}</h2><p>{draft.phone}{draft.email ? ` · ${draft.email}` : ''}</p></div><button type="button" aria-label="Tutup detail" onClick={() => { ++detailSequence.current; selectedRef.current=null; setSelectedId(null); setDraft(null); }}>×</button></div>
         <section className="lead-detail-section"><h3>Pipeline dan penanggung jawab</h3>
           <label>Nama lengkap<input value={draft.name} onChange={event => updateDraft('name', event.target.value)} /></label>
           <label>Nomor WhatsApp<input value={draft.phone} onChange={event => updateDraft('phone', event.target.value)} /></label>
@@ -200,7 +217,7 @@ export default function LeadManager({ databaseReady, initialLeads, initialError,
           <label>Status<select value={draft.status} onChange={(event) => updateDraft('status', event.target.value as LeadStatus)}>{statusesFor(draft.leadType).map((status) => <option key={status} value={status}>{labels[status]}</option>)}</select></label>
           {draft.leadType === 'test_service' ? <><label>Promotor ditugaskan<input value={draft.assignedPromoterCode} onChange={(event) => updateDraft('assignedPromoterCode', event.target.value)} /></label><label>Jadwal<input type="datetime-local" value={asDateInput(draft.scheduledAt)} onChange={(event) => updateDraft('scheduledAt', event.target.value ? new Date(event.target.value).toISOString() : null)} /></label><div className="lead-candidates"><b>Kandidat hasil matching</b><small>Metode: {draft.matchMethod} · Cabang: {draft.matchedBranchCode || '—'}</small>{draft.promoterCandidates.length ? <ul>{draft.promoterCandidates.map((candidate) => <li key={candidate.code}><strong>{candidate.name}</strong><span>{candidate.code} · {candidate.branchCode} · {candidate.area}</span><button type="button" onClick={() => updateDraft('assignedPromoterCode', candidate.code)}>Tugaskan</button></li>)}</ul> : <p>Belum ada kandidat.</p>}</div></> : <><label>PIC<input value={draft.pic} onChange={(event) => updateDraft('pic', event.target.value)} /></label><p className="lead-note">Funnel calon promotor tidak masuk checkout layanan tes.</p></>}
         </section>
-        {draft.leadType === 'test_service' && <section className="lead-detail-section"><h3>Transaksi dan margin</h3><label>Status pembayaran<select value={draft.paymentStatus} onChange={(event) => updateDraft('paymentStatus', event.target.value as PaymentStatus)}>{paymentStatuses.map((status) => <option key={status} value={status}>{paymentLabels[status]}</option>)}</select></label><label>ID order SEJOLI<input value={draft.sejoliOrderId} onChange={(event) => updateDraft('sejoliOrderId', event.target.value)} /></label><div className="lead-money-grid"><label>Nilai penjualan<input type="number" min="0" value={draft.saleAmount} onChange={(event) => updateDraft('saleAmount', Number(event.target.value))} /></label><label>Bagian promotor<input type="number" min="0" value={draft.promoterPayout} onChange={(event) => updateDraft('promoterPayout', Number(event.target.value))} /></label><label>Biaya lain<input type="number" min="0" value={draft.otherCost} onChange={(event) => updateDraft('otherCost', Number(event.target.value))} /></label></div><div className="lead-margin"><span>Margin</span><b>{formatMoney(margin)}</b></div></section>}
+        <section className="lead-detail-section"><h3>Pesanan & Pembayaran</h3><Link href={`/admin/pesanan?leadId=${draft.id}`}>Lihat / buat pesanan terkait</Link>{orders[draft.id]?.filter(order=>order!==null).map(order=><p key={order.id}><Link href={`/admin/pesanan/${order.id}`}>{order.number}</Link> · {order.state} · {order.paymentStatus} · Total {formatMoney(order.total)} · Saldo {formatMoney(order.balance)}</p>)}<details><summary>Referensi transaksi lama (hanya baca)</summary><p>Status: {paymentLabels[draft.paymentStatus]} · ID order lama: {draft.sejoliOrderId || '—'}</p><p>Penjualan: {formatMoney(draft.saleAmount)} · Bagian promotor: {formatMoney(draft.promoterPayout)} · Biaya lain: {formatMoney(draft.otherCost)}</p></details></section>
         <section className="lead-detail-section"><h3>Atribusi dan persetujuan</h3><dl className="lead-facts"><div><dt>Sumber</dt><dd>{[draft.utmSource, draft.utmMedium, draft.utmCampaign].filter(Boolean).join(' · ') || 'Organik/tidak tersedia'}</dd></div><div><dt>Konten / istilah</dt><dd>{[draft.utmContent, draft.utmTerm].filter(Boolean).join(' · ') || '—'}</dd></div><div><dt>Halaman asal</dt><dd>{draft.sourcePath}</dd></div><div><dt>Referrer</dt><dd>{draft.referrer || '—'}</dd></div><div><dt>Persetujuan</dt><dd>{new Date(draft.consentAt).toLocaleString('id-ID')} · kontak {draft.consentToContact ? 'ya' : 'tidak'} · berbagi {draft.consentToShare ? 'ya' : 'tidak'}</dd></div><div><dt>Batas respons</dt><dd>{new Date(draft.responseDueAt).toLocaleString('id-ID')}</dd></div></dl><label>Catatan internal<textarea rows={4} value={draft.internalNotes} onChange={(event) => updateDraft('internalNotes', event.target.value)} /></label></section>
         <section className="lead-detail-section"><h3>Riwayat</h3>{histories[draft.id] ? (histories[draft.id].length ? <ol className="lead-history">{histories[draft.id].map((entry) => <li key={entry.id}><b>{entry.note || labels[entry.newStatus as LeadStatus] || entry.eventType}</b><span>{new Date(entry.createdAt).toLocaleString('id-ID')} · {entry.actor}</span></li>)}</ol> : <p className="lead-note">Belum ada riwayat tambahan.</p>) : <p className="lead-note">Memuat riwayat…</p>}</section>
         <button className="lead-save" type="button" disabled={saving} onClick={save}>{saving ? 'Menyimpan…' : 'Simpan perubahan'}</button>

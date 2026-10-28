@@ -1,7 +1,7 @@
 import { blocksToBody, normalizeArticleBody, type ArticleContentType, type ArticleInput, type ContentRole, type SearchIntent } from '@/lib/article-store';
 import type { ArticleBlock } from '@/app/edukasi/articles';
 import { findKnowledgeContext } from '@/lib/knowledge-store';
-import { isOfficialSejoliUrl } from '@/app/site-config';
+import { isInternalServiceUrl } from '@/app/site-config';
 
 export type ArticleGenerationRequest = {
   topic: string;
@@ -155,8 +155,8 @@ export function validateGenerationRequest(value: unknown): ArticleGenerationRequ
   if (contentType !== 'education' && (!productName || !productUrl)) {
     throw new Error('Nama dan alamat produk wajib diisi untuk artikel produk atau affiliate.');
   }
-  if (productUrl && !isOfficialSejoliUrl(productUrl)) {
-    throw new Error('Alamat produk wajib menggunakan https://app.konsepstifin.com/.');
+  if (productUrl && !isInternalServiceUrl(productUrl)) {
+    throw new Error('Alamat produk wajib menuju halaman layanan internal yang tersedia.');
   }
   return {
     topic, audience, objective, category, keywords, sourceNotes, primaryKeyword, searchIntent,

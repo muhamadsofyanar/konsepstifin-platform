@@ -47,11 +47,11 @@ suite('interest-store PostgreSQL integration', () => {
     expect(rows).toHaveLength(1); expect(rows[0].matched_promoter_name).toBe('Promotor Aman');
   });
 
-  it('mencatat audit pembayaran tanpa kolom margin', async () => {
+  it('mencatat audit kontak tanpa mengubah histori pembayaran', async () => {
     const lead = await store.getLeadByIdempotencyKey(key);
-    await store.updateLead(lead!.id, { status: 'diklaim', assignedPromoterCode: 'P-2', scheduledAt: null, internalNotes: 'Dikonfirmasi melalui WhatsApp', paymentStatus: 'dibayar', sejoliOrderId: 'ORD-100', saleAmount: 650001, promoterPayout: 500000, otherCost: 25000 }, 'admin@example.com');
+    await store.updateLead(lead!.id, { status: 'diklaim', assignedPromoterCode: 'P-2', scheduledAt: null, internalNotes: 'Dikonfirmasi melalui WhatsApp' }, 'admin@example.com');
     const history = await sql`SELECT event_type, details FROM lead_status_history WHERE lead_id=${lead!.id} ORDER BY id DESC LIMIT 1`;
-    expect(history[0].event_type).toBe('admin_update'); expect(history[0].details.paymentStatus).toEqual({ from: 'belum_dicek', to: 'dibayar' });
+    expect(history[0].event_type).toBe('admin_update'); expect(history[0].details.assignedPromoterCode).toEqual({ from: 'P-1', to: 'P-2' });
     const columns = await sql`SELECT column_name FROM information_schema.columns WHERE table_name='public_interest_leads'`;
     expect(columns.map((row) => row.column_name)).not.toContain('margin');
   });

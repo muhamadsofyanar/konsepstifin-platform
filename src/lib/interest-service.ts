@@ -1,4 +1,3 @@
-import { isOfficialSejoliUrl } from '@/app/site-config';
 import { matchPromoters, type PromoterMatch, type PublicPromoter } from '@/lib/promoter-domain';
 import {
   createInterestLead,
@@ -20,6 +19,7 @@ export type SubmissionDependencies = {
   createLead?: LeadCreator;
   findMatch?: MatchResolver;
   findPromoters?: PromoterResolver;
+  /** Accepted only for old callers; public submissions never resolve a checkout URL. */
   resolveCheckout?: CheckoutResolver;
 };
 
@@ -79,14 +79,9 @@ export async function submitInterest(payload: unknown, dependencies: SubmissionD
       reference: `KSF-${lead.id}`,
       status: lead.status ?? status,
       match: null,
-      checkoutUrl: '',
     };
   }
 
-  const checkoutUrl = dependencies.resolveCheckout ? await dependencies.resolveCheckout(interest.productKey) : '';
-  if (checkoutUrl && !isOfficialSejoliUrl(checkoutUrl)) {
-    throw new Error('Checkout produk belum tersedia.');
-  }
   const match = await resolveMatch(interest, dependencies);
   const status = match.primary ? 'ditawarkan' as const : 'mencari_promotor' as const;
   const lead = await createLead({ interest, idempotencyKey, status, match: snapshot(match) });
@@ -95,6 +90,5 @@ export async function submitInterest(payload: unknown, dependencies: SubmissionD
     reference: `KSF-${lead.id}`,
     status: lead.status ?? status,
     match: publicMatch(match),
-    checkoutUrl,
   };
 }

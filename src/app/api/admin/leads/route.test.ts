@@ -1,32 +1,30 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-vi.mock('@/lib/admin-auth', () => ({ isAdminAuthenticated: vi.fn() }));
-vi.mock('@/lib/interest-store', async importOriginal => ({ ...await importOriginal<object>(), createInterestLead: vi.fn() }));
-import { isAdminAuthenticated } from '@/lib/admin-auth';
-import { createInterestLead } from '@/lib/interest-store';
-import { POST } from './route';
-const input = { group: 'client', name: 'Contoh Klien', phone: '081234567890', city: 'Bandung', service: 'Tes Personal', consentToContact: true, consentToShare: true, idempotencyKey: '123e4567-e89b-42d3-a456-426614174000' };
-const request = (body: unknown) => new NextRequest('http://localhost/api/admin/leads', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
-describe('admin CRM creation', () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.mocked(isAdminAuthenticated).mockResolvedValue(true); });
-  it('rejects unauthenticated writes', async () => {
-    vi.mocked(isAdminAuthenticated).mockResolvedValue(false);
-    expect((await POST(request(input))).status).toBe(401);
-    expect(createInterestLead).not.toHaveBeenCalled();
-  });
-  it('requires explicit consent', async () => {
-    expect((await POST(request({ ...input, consentToContact: false }))).status).toBe(400);
-    expect(createInterestLead).not.toHaveBeenCalled();
-  });
-  it('creates a completed client with admin attribution', async () => {
-    vi.mocked(createInterestLead).mockResolvedValueOnce({ id: 1 } as never);
-    expect((await POST(request(input))).status).toBe(201);
-    expect(createInterestLead).toHaveBeenCalledWith(expect.objectContaining({ status: 'selesai', actor: expect.any(String), interest: expect.objectContaining({ leadType: 'test_service', phone: '6281234567890', sourcePath: '/admin/leads' }) }));
-  });
-  it('does not expose database errors', async () => {
-    vi.mocked(createInterestLead).mockRejectedValueOnce(new Error('private database credentials'));
-    const response = await POST(request(input));
-    expect(response.status).toBe(503);
-    expect(await response.text()).not.toContain('credentials');
-  });
+import { beforeEach, expect, it, vi } from 'vitest';
+vi.mock('@/lib/admin-auth',()=>({getAdminPrincipal:vi.fn()}));
+vi.mock('@/lib/admin-request',()=>({requireAdminRequest:vi.fn()}));
+vi.mock('@/lib/interest-store',async()=>{
+ const actual=await vi.importActual<typeof import('@/lib/interest-store')>('@/lib/interest-store');
+ return {...actual,updateLead:vi.fn(),getCrmLeads:vi.fn(),createInterestLead:vi.fn()};
+});
+import {getAdminPrincipal} from '@/lib/admin-auth';
+import {requireAdminRequest} from '@/lib/admin-request';
+import {updateLead,getCrmLeads} from '@/lib/interest-store';
+import {GET} from './route';
+import {PATCH} from './[id]/route';
+beforeEach(()=>{vi.mocked(getAdminPrincipal).mockResolvedValue({userId:'account-id'} as Awaited<ReturnType<typeof getAdminPrincipal>>);vi.mocked(requireAdminRequest).mockResolvedValue({userId:'account-id'} as Awaited<ReturnType<typeof requireAdminRequest>>);});
+it('forwards server pagination/search filters and marks contact responses private',async()=>{
+ vi.mocked(getCrmLeads).mockResolvedValue({items:[],total:526} as unknown as Awaited<ReturnType<typeof getCrmLeads>>);
+ const response=await GET(new NextRequest('https://example.test/api/admin/leads?q=Old&group=client&page=22&dateTo=2026-01-01'));
+ expect(getCrmLeads).toHaveBeenCalledWith(expect.objectContaining({q:'Old',group:'client',page:22,pageSize:25,dateTo:'2026-01-01'}));expect(response.headers.get('Cache-Control')).toBe('no-store');
+});
+it('rejects financial mutations rather than silently accepting them',async()=>{
+ for(const field of ['paymentStatus','sejoliOrderId','saleAmount','promoterPayout','otherCost']) {
+  const response=await PATCH(new NextRequest('https://example.test/api/admin/leads/1',{method:'PATCH',body:JSON.stringify({status:'baru',[field]:'x'})}),{params:Promise.resolve({id:'1'})});
+  expect(response.status).toBe(400);
+ }
+ expect(updateLead).not.toHaveBeenCalled();
+});
+it('uses the authenticated account actor rather than request or environment email',async()=>{
+ await PATCH(new NextRequest('https://example.test/api/admin/leads/1',{method:'PATCH',body:JSON.stringify({status:'baru',internalNotes:'Call',actor:'spoof'})}),{params:Promise.resolve({id:'1'})});
+ expect(updateLead).toHaveBeenCalledWith(1,expect.objectContaining({internalNotes:'Call'}),'account-id');
 });

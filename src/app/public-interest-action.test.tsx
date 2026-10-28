@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PublicInterestAction from './public-interest-action';
@@ -46,7 +46,7 @@ describe('PublicInterestAction dua funnel', () => {
     expect(screen.queryByRole('link', { name: /pembayaran/i })).not.toBeInTheDocument();
   });
 
-  it('mengirim attribution dan baru mengarahkan checkout tes setelah lead tersimpan', async () => {
+  it('menyimpan attribution dan referensi tanpa mengarahkan checkout lama', async () => {
     const navigateToCheckout = vi.fn();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
       ok: true,
@@ -58,11 +58,11 @@ describe('PublicInterestAction dua funnel', () => {
     render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" checkoutUrl="https://app.konsepstifin.com/product/tes-stifin-personal/" label="Pesan" service="Tes STIFIn Personal" requirePrecheckout navigateToCheckout={navigateToCheckout} />);
     await userEvent.click(screen.getByRole('button', { name: 'Pesan' }));
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole('button', { name: 'Cari promotor & lanjut bayar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Kirim permintaan →' }));
 
-    await waitFor(() => expect(navigateToCheckout).toHaveBeenCalledWith(
-      'https://app.konsepstifin.com/product/tes-stifin-personal/',
-    ));
+    expect(await screen.findByText(/KSF-42/)).toBeInTheDocument();
+    expect(navigateToCheckout).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: /pembayaran/i })).not.toBeInTheDocument();
     const request = vi.mocked(fetch).mock.calls[0];
     const body = JSON.parse(String((request[1] as RequestInit).body));
     expect(body).toMatchObject({
@@ -99,9 +99,20 @@ describe('PublicInterestAction dua funnel', () => {
     render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" label="Pesan" service="Tes STIFIn Personal" />);
     await userEvent.click(screen.getByRole('button', { name: 'Pesan' }));
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole('button', { name: 'Cari promotor & lanjut bayar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Kirim permintaan →' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Database tidak tersedia.');
     expect(screen.queryByRole('link', { name: /lanjut ke pembayaran/i })).not.toBeInTheDocument();
   });
+  it('menampilkan kegagalan jaringan tanpa mengklaim permintaan tersimpan', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failed')));
+    render(<PublicInterestAction linkKey="tesPersonal" label="Pesan" service="Tes STIFIn Personal" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Pesan' }));
+    await fillRequiredFields();
+    await userEvent.click(screen.getByRole('button', { name: 'Kirim permintaan →' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Permintaan belum dapat disimpan');
+    expect(screen.queryByText('Permintaan sudah tersimpan.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kirim permintaan →' })).toBeEnabled();
+  });
+
 });

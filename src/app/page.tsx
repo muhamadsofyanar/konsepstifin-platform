@@ -32,7 +32,7 @@ const journeys = [
   },
   {
     number: '04', eyebrow: 'JALUR REKOMENDASI', title: 'Program Affiliate',
-    description: 'Belum siap menjadi promotor? Mulai dengan merekomendasikan layanan melalui tautan referral dan sistem pencatatan SEJOLI.',
+    description: 'Belum siap menjadi promotor? Pelajari cara merekomendasikan layanan dan diskusikan ketentuan kerja sama dengan tim.',
     href: '/affiliate', action: 'Saya ingin mengenal affiliate', tone: 'leaf',
   },
 ];
