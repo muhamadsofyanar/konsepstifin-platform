@@ -1,6 +1,6 @@
 {
   "name": "konsepstifin-platform",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,7 +15,9 @@
     "identity:verify": "node scripts/identity-admin.mjs verify",
     "test:unit:node": "node --test tests/*.test.mjs",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:smoke": "node scripts/smoke-release.mjs"
+    "test:smoke": "node scripts/smoke-release.mjs",
+    "test:network": "node --test --test-concurrency=2 tests/network/*.test.mjs",
+    "network:import": "node scripts/promoter-admin.mjs import"
   },
   "dependencies": {
     "next": "16.2.10",

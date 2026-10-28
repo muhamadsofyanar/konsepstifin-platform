@@ -14,4 +14,10 @@ describe('private API proxy',()=>{
   expect(proxy(new NextRequest('https://konsepstifin.com/api/admin/products')).headers.get('Cache-Control')).toBe('no-store');
   expect(proxy(new NextRequest('https://konsepstifin.com/admin/login')).headers.get('Cache-Control')).toBe('no-store');
  });
+ it('protects activation URLs from referrer and third-party script leakage',()=>{
+  const response=proxy(new NextRequest('https://konsepstifin.com/akun/aktivasi'));
+  expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
+  expect(response.headers.get('Content-Security-Policy')).toContain("connect-src 'self'");
+  expect(response.headers.get('Content-Security-Policy')).toContain("script-src 'self' 'unsafe-inline'");
+ });
 });

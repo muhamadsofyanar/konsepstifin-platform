@@ -10,16 +10,19 @@ const validPixelId = pixelId && /^\d+$/.test(pixelId) ? pixelId : '';
 export default function MetaPixel() {
   const pathname = usePathname();
   const firstPageView = useRef(true);
+  const privatePage = pathname === '/admin' || pathname.startsWith('/admin/')
+    || pathname === '/akun' || pathname.startsWith('/akun/');
 
   useEffect(() => {
+    if (privatePage) return;
     if (firstPageView.current) {
       firstPageView.current = false;
       return;
     }
     window.fbq?.('track', 'PageView');
-  }, [pathname]);
+  }, [pathname, privatePage]);
 
-  if (!validPixelId) return null;
+  if (!validPixelId || privatePage) return null;
 
   return <>
     <Script id="meta-pixel" strategy="afterInteractive">{`

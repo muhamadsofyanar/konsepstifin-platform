@@ -42,7 +42,7 @@ export function PublicHeader({
       </nav>
       <div>
         <MobileNavigation links={mobileLinks} ctaHref={ctaHref} ctaLabel={ctaLabel} />
-        <Link className="text-button" href="/admin/login">Admin</Link>
+        <a className="text-button" href="/admin/login">Admin</a>
         <Link className="public-cta" href={ctaHref}>{ctaLabel}</Link>
       </div>
     </header>
@@ -60,6 +60,7 @@ export function PublicFooter() {
       <Link href="/promotor">Cari Promotor</Link>
       <Link href="/tentang">Tentang</Link>
       <Link href="/kontak">Kontak</Link>
+      <a href="/akun/login">Masuk Promotor</a>
       <Link href="/privasi">Privasi</Link>
       <Link href="/ketentuan">Ketentuan</Link>
       <Link href="/affiliate">Affiliate</Link>

@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/'],
+      disallow: ['/admin/', '/akun/', '/api/'],
     },
     sitemap: 'https://konsepstifin.com/sitemap-index.xml',
     host: 'https://konsepstifin.com',

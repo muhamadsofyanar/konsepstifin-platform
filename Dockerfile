@@ -19,6 +19,7 @@ COPY --from=builder /app/.next/static ./.next/static
 # Operator commands run from this exact runner, using Node 24 native TypeScript support.
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/src/lib/identity ./src/lib/identity
+COPY --from=builder /app/src/lib/network-domain.ts /app/src/lib/network-service.ts ./src/lib/
 COPY --from=deps /app/node_modules/postgres ./node_modules/postgres
 RUN mkdir -p /app/storage/stifin-sources && chown -R node:node /app
 USER node

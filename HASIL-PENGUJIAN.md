@@ -1,3 +1,38 @@
+# Hasil terbaru KonsepSTIFIn 0.7.0
+
+Tanggal: 28 Oktober 2026. Fitur baru: Kepala Cabang dan sepuluh akun promotor, keanggotaan cabang, undangan, aktivasi, dan portal promotor. Data resmi dibaca untuk pencocokan; akun produksi belum dibuat dari lingkungan pengerjaan.
+
+| Pemeriksaan 0.7.0 | Hasil |
+| --- | --- |
+| npm test | 175 lulus; 6 integrasi lama dilewati karena TEST_DATABASE_URL khusus uji tidak tersedia |
+| npm run test:network | 7 lulus, 0 gagal: SQL, operator, dan actual postgres.js wire |
+| npm run test:identity | 78 lulus, 0 gagal |
+| npm run test:unit:node | 45 lulus, 0 gagal; sebagian duplikat cakupan identity |
+| npm run typecheck | Lulus |
+| npm run lint | Lulus |
+| npm run build | Build produksi berhasil |
+| npm run test:smoke | Lulus termasuk paket operator baru dan portal promotor |
+| Review independen | Tidak ditemukan P1/P2 pada fitur jaringan/aktivasi |
+| git diff --check | Lulus |
+
+Smoke test menyiapkan data sintetis sebelas identitas berkode sesuai format jaringan, bukan data pribadi promotor. Akun kepala yang sudah ada dipakai kembali, sepuluh akun baru menunggu aktivasi, pengulangan impor tidak menggandakan akun, aktivasi hanya sekali, promotor berhasil login dan membaca lead sendiri, serta akses API admin ditolak.
+
+Uji native mencakup penolakan kode/cabang/jumlah tidak sesuai, data resmi nonaktif, benturan email/kode/mapping, anggota tambahan tidak dikenal, owner nonaktif, rollback atomik, hash token, expiry/reissue, perlindungan akun admin, pencabutan sesi, serta keunikan satu cabang per kode kabupaten/kota.
+
+Perbaikan melalui RED/GREEN juga mencakup penolakan sumber nonaktif dan pemeriksaan token sebelum scrypt. Halaman portal menginisialisasi tabel lead lama agar akun yang baru diimpor tidak bergantung pada admin lebih dahulu membuka CRM.
+
+Meta Pixel tidak dimuat atau dipanggil pada halaman admin/akun. Tautan dari halaman publik menuju portal menggunakan navigasi dokumen penuh agar tracker publik tidak terbawa. Halaman aktivasi memakai token fragment, no-referrer, no-store, noindex, dan CSP pembatas koneksi pihak ketiga.
+
+Batas validasi tetap: tidak menjalankan Docker Alpine sebenarnya atau inspeksi visual Chromium. Database uji PGlite memakai satu backend sehingga bukan bukti seluruh interleaving PostgreSQL multi-transaksi independen. Enam tes integrasi lama tetap opt-in pada database khusus uji. Periksa staging sebelum memakai produksi.
+
+Saldo, harga, stok dan transaksi voucher belum dibangun. Tidak ada saldo nol fiktif, refill, email/WhatsApp, maupun perubahan database produksi yang dilakukan oleh pembuatan paket ini.
+
+Lihat AKUN-PROMOTOR.md untuk perintah migrasi dan import pada Coolify.
+
+---
+
+## Catatan pengujian rilis sebelumnya
+
 # Hasil pengujian KonsepSTIFIn 0.6.0
 
 Tanggal: 28 Oktober 2026. Pengujian menggunakan source paket ini dan data sintetis. Tidak mengakses database produksi, mengunggah GitHub, atau redeploy Coolify.

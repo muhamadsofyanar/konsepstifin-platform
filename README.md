@@ -1,6 +1,8 @@
-# KonsepSTIFIn 0.6.0
+# KonsepSTIFIn 0.7.0
 
 Portal admin satu pintu pada aplikasi Next.js yang sama: ringkasan, CRM, pesanan/pembayaran manual, konten/layanan, dan pengaturan. Pemesanan baru tidak bergantung pada SEJOLI. Akun admin memakai sesi PostgreSQL yang dapat dicabut.
+
+Untuk aplikasi yang sudah memakai 0.6.0, baca **[AKUN-PROMOTOR.md](AKUN-PROMOTOR.md)**: pembaruan akun Kepala Cabang + 10 promotor, import, dan aktivasi.
 
 Mulai dari **[MULAI-DI-SINI.md](MULAI-DI-SINI.md)** untuk unggah manual GitHub, konfigurasi Coolify, migrasi, penyiapan admin, backup, dan rollback.
 
