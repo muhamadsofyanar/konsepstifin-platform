@@ -28,6 +28,9 @@ export class LearningService {
     private async lockUser(q: CommerceQuery, user: string) { if (!(await q.query('SELECT id FROM platform_users WHERE id=$1 AND active=true FOR UPDATE', [user])).length)
         throw new LearningError('Akun aktif diperlukan.'); }
     async catalog(admin = false) { return this.db.query(`SELECT id,slug,title,description,kind,state,price,access_days,commission_bps,attribution_enabled,source_product_key,price_note FROM learning_products ${admin ? '' : "WHERE state='published'"} ORDER BY source_product_key NULLS LAST,id DESC LIMIT 200`); }
+    async publicProduct(identifier: string, service = false) {
+        return (await this.db.query(`SELECT id,slug,title,description,kind,state,price,access_days,commission_bps,attribution_enabled,source_product_key,price_note FROM learning_products WHERE ${service ? 'source_product_key' : 'slug'}=$1 AND state='published' ${service ? '' : 'AND source_product_key IS NULL'}`, [identifier]))[0] ?? null;
+    }
     async saveProduct(input: Row, actor: string): Promise<Row & {
         id: number;
     }> {
@@ -72,7 +75,7 @@ export class LearningService {
             if (download) await q.query("UPDATE learning_lessons SET title=$1,file_path=$2,state=$3,preview=false,unlock_days=0,required=false WHERE id=$4", [title, ebookFile, state === 'published' ? 'published' : 'draft', download.id]);
             else await q.query("INSERT INTO learning_lessons(product_id,module,title,kind,file_path,required,preview,state) VALUES($1,'Ebook',$2,'file',$3,false,false,$4)", [rows[0].id, title, ebookFile, state === 'published' ? 'published' : 'draft']);
         }
-        if (current?.source_product_key) await q.query('UPDATE public_products SET title=$1,description=$2,price=$3,active=$4,updated_at=now() WHERE product_key=$5', [title, args[2], 'Rp' + price.toLocaleString('id-ID'), state === 'published', current.source_product_key]);
+        if (current?.source_product_key) await q.query('UPDATE public_products SET title=$1,description=$2,price=$3,active=$4,features=COALESCE($6::text::jsonb,features),bonuses=COALESCE($7::text::jsonb,bonuses),price_note=COALESCE($8,price_note),eyebrow=COALESCE($9,eyebrow),updated_at=now() WHERE product_key=$5', [title, args[2], 'Rp' + price.toLocaleString('id-ID'), state === 'published', current.source_product_key, typeof input.featuresText==='string'?JSON.stringify(text(input.featuresText,20000,true).split('\n').map(s=>s.trim()).filter(Boolean)):null,typeof input.bonusesText==='string'?JSON.stringify(text(input.bonusesText,20000,true).split('\n').map(s=>s.trim()).filter(Boolean)):null,typeof input.priceNote==='string'?text(input.priceNote,500,true):null,typeof input.eyebrow==='string'?text(input.eyebrow,200,true):null]);
         if (kind === 'ebook') await q.query("UPDATE learning_lessons SET preview=false,unlock_days=0,required=false,state=CASE WHEN kind='file' THEN state ELSE 'archived' END WHERE product_id=$1", [rows[0].id]);
         await this.audit(q, actor, 'product.save', rows[0].id, { title, price, bps, days }); return { ...rows[0], id: Number(rows[0].id) }; });
     }

@@ -1,4 +1,4 @@
-import { ensureProductSchema } from '@/lib/product-store';
+import { ensureProductSchema, getManagedProducts } from '@/lib/product-store';
 import { cookies } from 'next/headers';
 import { getLearningService } from '@/lib/learning-store';
 import { learningGuard, learningJson, learningFailure } from '@/lib/learning-http';
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
             return learningJson({ users: await s.searchUsers(u.searchParams.get('q') ?? '') });
         if (view === 'setup')
             return learningJson(await s.readiness());
-        if (view === 'admin') { await ensureProductSchema(); return learningJson(await s.adminData()); }
+        if (view === 'admin') { await ensureProductSchema(); const data=await s.adminData();const legacy=await getManagedProducts();return learningJson({...data,products:data.products.map(p=>({...p,...(p.source_product_key?{serviceDetails:legacy.find(l=>l.productKey===p.source_product_key)}:{})}))}); }
         if (view === 'dashboard')
             return learningJson(await s.dashboard(user));
         if (view === 'partner')

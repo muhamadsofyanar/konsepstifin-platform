@@ -74,3 +74,8 @@ it('CRM service purchase credits the original referring partner after full payme
  await c.command(o.id,{action:'refund',key:'rf',amount:1550000,reason:'Refund',reference:'RF'},'admin');await s.processPending();
  expect((await s.partner(partner)).commissions.map(e=>e.amount)).toEqual([-155000,155000]);
 });
+it('public detail resolves only the selected published product and excludes lesson bodies or file paths',async()=>{
+ const p=await product({slug:'detail-publik'});await lesson(p.id,{kind:'file',filePath:'secret.pdf'});
+ const detail=await s.publicProduct('detail-publik');expect(detail?.id).toBe(p.id);expect(JSON.stringify(detail)).not.toContain('secret.pdf');
+ await s.saveProduct({...p,state:'archived'},'admin');expect(await s.publicProduct('detail-publik')).toBeNull();
+});

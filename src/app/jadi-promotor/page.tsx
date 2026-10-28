@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import PublicInterestAction from '../public-interest-action';
 import { PublicFooter, PublicHeader } from '../public-site-shell';
 import { faqItems } from '../site-config';
 import { getPublicManagedProducts } from '@/lib/product-store';
@@ -62,18 +61,17 @@ export default async function PromoterLandingPage() {
       <section id="tahapan" className="section promoter-section">
         <div className="section-heading"><span>PROGRAM, MANFAAT & BIAYA</span><h2>Mulai dari mengenal profesinya, bukan langsung membeli alat.</h2><p>Setiap kartu memakai katalog layanan yang dikelola admin. Permintaan masuk ke antrean konsultasi untuk mengonfirmasi tahapan, jadwal, dan biaya.</p></div>
         <div className="promoter-path">{promoterSteps.map((step, index) => {
-          const tracksPromotorLead = ['wsl1', 'wsl2', 'idDanAlat', 'paketPromotor'].includes(step.productKey);
           return <article key={step.productKey}>
             <div className="step-top"><b>{String(index + 1).padStart(2, '0')}</b><span>{step.eyebrow}</span></div>
             <h3>{step.title}</h3>
             <div className="promoter-price"><b>{step.price}</b><small>{step.priceNote}</small></div>
             <p>{step.description}</p><ul>{step.features.map((benefit) => <li key={benefit}>✓ {benefit}</li>)}</ul>
-            <PublicInterestAction leadType="promoter_candidate" captureLead linkKey={step.productKey} label={`${step.action} →`} service={step.productKey === 'previewPromotor' ? 'Preview Calon Promotor' : step.productKey === 'idDanAlat' ? 'Informasi ID & Alat' : step.title} trackLead={tracksPromotorLead} preserveCampaignParams />
+            <Link href={'/produk/layanan/'+step.productKey}>{step.action} →</Link>
           </article>;
         })}</div>
         <div className="promoter-investment">
           <div><span>{packageProduct ? 'PAKET TERPADU DI KATALOG' : 'TOTAL TAHAP UTAMA'}</span><strong>{rupiah.format(mainInvestment)}</strong><small>{packageProduct ? 'WSL 1 + WSL 2 + ID aplikasi & scanner sesuai rincian Paket Lengkap.' : 'WSL 1 + WSL 2 + ID & scanner. Tes Personal dan biaya lain berada di luar rincian ini.'}</small></div>
-          <div className="promoter-investment-detail">{packageProduct && individualInvestment > packageInvestment && <div className="investment-saving"><small>Total harga tahap terpisah</small><s>{rupiah.format(individualInvestment)}</s><b>Selisih katalog {rupiah.format(packageSavings)}</b></div>}<p>Pemenuhan tahap tetap mengikuti kelulusan dan persyaratan yang berlaku. Harga final dikonfirmasi bersama admin.</p>{packageProduct && <PublicInterestAction leadType="promoter_candidate" captureLead className="investment-checkout" linkKey="paketPromotor" label="Konsultasikan Paket Lengkap →" service={packageProduct.title} trackLead preserveCampaignParams />}</div>
+          <div className="promoter-investment-detail">{packageProduct && individualInvestment > packageInvestment && <div className="investment-saving"><small>Total harga tahap terpisah</small><s>{rupiah.format(individualInvestment)}</s><b>Selisih katalog {rupiah.format(packageSavings)}</b></div>}<p>Pemenuhan tahap tetap mengikuti kelulusan dan persyaratan yang berlaku. Harga final dikonfirmasi bersama admin.</p>{packageProduct && <Link className="investment-checkout" href="/produk/layanan/paketPromotor">Konsultasikan Paket Lengkap →</Link>}</div>
         </div>
         <div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & scanner</b><span>Aktivasi sesuai syarat</span></div></div>
       </section>
@@ -89,7 +87,7 @@ export default async function PromoterLandingPage() {
 
       <section className="section faq-section"><div className="section-heading"><span>PERTANYAAN UMUM</span><h2>Sebelum memilih jalur.</h2></div><div className="faq-list">{promoterFaq.map(([question, answer], index) => <details key={question} open={index === 0}><summary>{question}<span>＋</span></summary><p>{answer}</p></details>)}</div></section>
 
-      <section className="final-cta"><div><span>MULAI DARI INFORMASI, BUKAN TRANSAKSI</span><h2>Minta penjelasan Preview dan tahapan berikutnya sebelum berkomitmen.</h2><p>Permintaan Anda masuk ke pipeline calon promotor. Tim menindaklanjuti peran, proses belajar, biaya, dan ketentuan yang berlaku melalui konsultasi dengan admin.</p></div><div><PublicInterestAction leadType="promoter_candidate" captureLead className="public-cta big" linkKey="previewPromotor" label="Minta informasi Preview →" service="Preview Calon Promotor" /><Link href="/edukasi">Pelajari STIFIn lebih dulu</Link></div></section>
+      <section className="final-cta"><div><span>MULAI DARI INFORMASI, BUKAN TRANSAKSI</span><h2>Minta penjelasan Preview dan tahapan berikutnya sebelum berkomitmen.</h2><p>Permintaan Anda masuk ke pipeline calon promotor. Tim menindaklanjuti peran, proses belajar, biaya, dan ketentuan yang berlaku melalui konsultasi dengan admin.</p></div><div><Link className="public-cta big" href="/produk/layanan/previewPromotor">Minta informasi Preview →</Link><Link href="/edukasi">Pelajari STIFIn lebih dulu</Link></div></section>
     </main>
     <PublicFooter />
   </div>;

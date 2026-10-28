@@ -1,3 +1,9 @@
+# Rilis terkini: KonsepSTIFIn 0.10.1
+
+Video di dalam materi, desain sertifikat siap cetak, halaman detail produk yang sama dari landing page/katalog/affiliate, serta satu pusat mitra dan satu editor produk admin.
+
+Mulai dari [panduan 0.10.1](docs/UPGRADE-0.10.1.md) dan [audit 0.10.1](docs/AUDIT-0.10.1.md). Dari 0.10.0 yang sudah bermigrasi sampai 008, tidak ada migrasi database baru. Dokumentasi versi di bawah adalah riwayat.
+
 # KonsepSTIFIn 0.10.0
 
 Katalog gabungan layanan tes dan produk digital, produk promosi affiliate, komisi layanan melalui CRM dan pesanan, slug otomatis, ebook privat, hapus/arsip, serta pembaruan tampilan ruang kerja.

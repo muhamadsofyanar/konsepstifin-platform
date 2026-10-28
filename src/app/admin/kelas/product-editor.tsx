@@ -11,6 +11,7 @@ export default function ProductEditor({ product: p, lessons, onDone, onCancel }:
   const [file, setFile] = useState(String(lessons.find(l => l.kind === 'file')?.file_path ?? ''));
   const [uploading, setUploading] = useState(false), [error, setError] = useState('');
   const service = Boolean(p?.source_product_key);
+  const details=(p?.serviceDetails??{}) as DataRow;
   async function upload(selected?: File) {
     if (!selected) return;
     if (selected.size > 20 * 1024 * 1024) { setError('Ukuran file maksimal 20 MB.'); return; }
@@ -34,6 +35,7 @@ export default function ProductEditor({ product: p, lessons, onDone, onCancel }:
       <Input name="accessDays" label="Masa akses hari (kosong = tanpa batas)" type="number" required={false} defaultValue={String(p?.access_days ?? '')}/>
     </div>
     <label>Deskripsi<textarea name="description" defaultValue={String(p?.description ?? '')} maxLength={20000}/></label>
+    {service && <><div className="lr-fields"><Input name="eyebrow" label="Label layanan" defaultValue={String(details.eyebrow??'')}/><Input name="priceNote" label="Catatan harga / jumlah peserta" defaultValue={String(details.priceNote??p?.price_note??'')} required={false} maxLength={500}/></div><label>Manfaat layanan (satu per baris)<textarea name="featuresText" maxLength={20000} defaultValue={Array.isArray(details.features)?details.features.join('\n'):''}/></label><label>Bonus (satu per baris)<textarea name="bonusesText" maxLength={20000} defaultValue={Array.isArray(details.bonuses)?details.bonuses.join('\n'):''}/></label></>}
     {kind === 'ebook' ? <section className="lr-upload"><span className="lr-eyebrow">FILE EBOOK PRIVAT</span><h3>Unggah buku yang diterima pembeli</h3><p>PDF atau EPUB, maksimal 20 MB. Pembeli mendapat tombol unduh setelah akses aktif.</p><label>File ebook<input type="file" accept=".pdf,.epub" disabled={uploading} onChange={e => void upload(e.target.files?.[0])}/></label>{uploading && <p role="status">Mengunggah ebook…</p>}{file && <p role="status">✓ File siap: {file.split('/').pop()}</p>}<Notice message={error} error/><p className="lr-muted">File perlu diunggah sebelum produk diterbitkan. Simpan perubahan untuk menghubungkan file ke produk.</p></section> : <p className="lr-inline-notice">{kind === 'course' ? 'Setelah disimpan, susun modul, video, teks, dan latihan di menu Modul & materi.' : kind === 'bundle' ? 'Bundel hanya bisa disimpan sebagai draf pada rilis ini.' : 'Koordinasi jadwal dan pelaksanaan dilakukan pengelola. Produk ini tidak otomatis memberikan sertifikat kelas.'}</p>}
     <div className="lr-fields"><label>Kebijakan atribusi<select name="attributionEnabled" defaultValue={p?.attribution_enabled ? 'true' : 'false'}><option value="false">Nonaktif</option><option value="true">Aktifkan referral dan komisi produk</option></select></label><label>Komisi penjualan (%)<input name="commissionPercent" type="number" min="0" max="100" step="0.01" defaultValue={Number(p?.commission_bps ?? 0) / 100} required/></label></div>
     <p className="lr-muted">Komisi mengikuti pembayaran lunas, bukan sekadar klik. Aturan disimpan saat pesanan dibuat. Refund dicatat sebagai koreksi komisi.</p>

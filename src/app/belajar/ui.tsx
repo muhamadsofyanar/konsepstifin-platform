@@ -4,13 +4,16 @@ import { useEffect, useState, type FormEvent } from 'react';
 export type DataRow = Record<string, unknown>;
 export const rupiah = (v: unknown) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(v ?? 0));
 export const date = (v: unknown) => v ? new Date(typeof v === 'number' ? v : String(v)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : 'Tanpa batas';
-export async function query(view: string) {
-    const r = await fetch('/api/learning?' + view, { cache: 'no-store' });
+export async function readLearningJson(url: string) {
+    let r = await fetch(url, { cache: 'no-store' });
+    // Retry one transient server failure for read-only loading. Mutations are never retried here.
+    if (r.status >= 500) r = await fetch(url, { cache: 'no-store' });
     const d = await r.json();
     if (!r.ok)
         throw new Error(d.message);
     return d;
 }
+export function query(view: string) { return readLearningJson('/api/learning?' + view); }
 export async function action(input: DataRow) {
     const r = await fetch('/api/learning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
     const d = await r.json();

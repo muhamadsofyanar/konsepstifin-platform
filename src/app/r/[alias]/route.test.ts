@@ -15,4 +15,5 @@ it('does not refresh an existing valid first referral and never sets an invalid 
  visit.mockResolvedValue({valid:false,token:null});expect((await GET(new NextRequest('https://example.test/r/unknown'),{params:Promise.resolve({alias:'unknown'})})).headers.get('set-cookie')).toBeNull();
 });
 
-it('keeps referral redirect relative behind a container host and retains the selected product',async()=>{visit.mockResolvedValue({valid:true,token:null});const r=await GET(new NextRequest('http://0.0.0.0:3000/r/budi?to=/belajar&product=paketKeluarga'),{params:Promise.resolve({alias:'budi'})});expect(r.headers.get('location')).toBe('/belajar?product=paketKeluarga');});
+it('keeps referral redirect relative behind a container host and retains the selected product',async()=>{visit.mockResolvedValue({valid:true,token:null});const r=await GET(new NextRequest('http://0.0.0.0:3000/r/budi?to=/belajar&product=paketKeluarga'),{params:Promise.resolve({alias:'budi'})});expect(r.headers.get('location')).toBe('/produk/layanan/paketKeluarga');});
+it('keeps a digital product named wsl1 separate from the WSL service',async()=>{visit.mockResolvedValue({valid:true,token:null});const r=await GET(new NextRequest('https://example.test/r/budi?product=wsl1&kind=digital'),{params:Promise.resolve({alias:'budi'})});expect(r.headers.get('location')).toBe('/produk/wsl1');});

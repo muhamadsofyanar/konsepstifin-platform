@@ -1,3 +1,9 @@
+# Rilis terkini: KonsepSTIFIn 0.10.1
+
+Video di dalam materi, desain sertifikat siap cetak, halaman detail produk yang sama dari landing page/katalog/affiliate, serta satu pusat mitra dan satu editor produk admin.
+
+Mulai dari [panduan 0.10.1](docs/UPGRADE-0.10.1.md) dan [audit 0.10.1](docs/AUDIT-0.10.1.md). Dari 0.10.0 yang sudah bermigrasi sampai 008, tidak ada migrasi database baru. Dokumentasi versi di bawah adalah riwayat.
+
 # Rilis terkini: 0.10.0
 
 Untuk paket ini ikuti **docs/UPGRADE-0.10.0.md** dan **PETUNJUK-UPGRADE-0.10.0.txt**. Migrasi 008 wajib. Dokumentasi di bawah dipertahankan sebagai referensi historis.
