@@ -25,6 +25,8 @@ const promoterServices = [
 type SubmissionResult = {
   error?: string;
   reference?: string;
+  referralRecorded?: boolean;
+  referralAlias?: string;
   status?: string;
   match?: {
     method?: string;
@@ -145,6 +147,7 @@ export default function PublicInterestAction({
         setState('idle');
         return;
       }
+      if (!responseResult.reference || !/^KSF-[0-9]+$/.test(responseResult.reference)) { setError('Permintaan belum mendapat nomor referensi. Muat ulang halaman dan coba kembali.'); setState('idle'); return; }
       if (trackLead) window.fbq?.('track', 'Lead', { content_name: selectedService, content_category: effectiveLeadType });
       setResult(responseResult);
       setState('sent');
@@ -164,6 +167,7 @@ export default function PublicInterestAction({
           <span>✓</span>
           <h2 id="interest-title">Permintaan sudah tersimpan.</h2>
           <p>Referensi <b>{result?.reference}</b>. Admin akan mengonfirmasi kebutuhan, harga, jadwal, dan instruksi pembayaran. Pengiriman formulir belum berarti pembayaran lunas.</p>
+          <p className="interest-referral-status">{result?.referralRecorded ? `Asal referral tercatat: /r/${result.referralAlias}. Pengajuan dapat diperiksa di Aktivitas referral mitra.` : 'Tidak ada sumber referral yang terverifikasi pada pengajuan ini. Jika Anda diundang mitra, hubungi pengelola dengan nomor referensi di atas.'}</p>
           {effectiveLeadType === 'test_service' && result?.match?.promoter ? <article className="interest-match-card">
             <small>PROMOTOR YANG DICOCOKKAN</small><b>{result.match.promoter.name}</b><span>{result.match.promoter.area}, {result.match.promoter.province}</span>
           </article> : null}
@@ -182,7 +186,7 @@ export default function PublicInterestAction({
             <label className="interest-consent"><input type="checkbox" name="consentToContact" required /> Saya setuju nomor WhatsApp digunakan tim untuk menindaklanjuti permintaan ini.</label>
             <label className="interest-consent"><input type="checkbox" name="consentToShare" required={effectiveLeadType === 'test_service'} /> {effectiveLeadType === 'test_service' ? 'Saya setuju nomor WhatsApp dibagikan kepada promotor yang ditugaskan untuk melayani permintaan ini.' : 'Opsional: Saya setuju data kontak dibagikan kepada promotor pengundang untuk mendampingi pendaftaran ini.'}</label>
             <label className="interest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-            <div className="privacy-note">Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
+            <div className="privacy-note">Asal tautan mitra yang valid dicatat untuk atribusi pengajuan. Pembagian kontak mengikuti persetujuan di atas. Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
             {error ? <p className="interest-error" role="alert">{error}</p> : null}
             <button className="public-cta big" type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Menyimpan…' : 'Kirim permintaan →'}</button>
           </form>

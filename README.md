@@ -1,4 +1,10 @@
-# Rilis terkini: KonsepSTIFIn 0.10.3
+# Rilis terkini: KonsepSTIFIn 0.10.4
+
+Perbaikan pengajuan layanan dari affiliate, terutama ID & Alat dan jalur calon promotor. Sumber referral disimpan terpisah dari izin berbagi kontak. Konfirmasi menampilkan KSF dan alias tersimpan. Aktivitas mitra menampilkan daftar pengajuan tanpa data kontak klien.
+
+Baca [panduan upgrade dan uji 0.10.4](docs/UPGRADE-0.10.4.md). Tidak ada migrasi baru jika 009 sudah berhasil. Jika belum, jalankan migrasi sampai 009. Paket lengkap ini sudah mencakup seluruh perbaikan 0.10.3. Bagian di bawah adalah riwayat.
+
+# Riwayat: KonsepSTIFIn 0.10.3
 
 Pendaftaran peserta kini terhubung ke affiliate, dengan tab Aktivitas referral dan pemeriksaan asal pendaftaran untuk admin. Materi/video dipindahkan ke halaman ruang belajar tersendiri. Tautan, formulir daftar, menu, akses ponsel, dan navigasi kembali juga diperbaiki.
 

@@ -41,3 +41,11 @@ it('persists referral source separately and preserves it across admin reassignme
  const reassigned=await updateLead(lead.id,{status:'dihubungi',assignedPromoterCode:'NEW'},'admin');expect(reassigned.assignedPromoterCode).toBe('NEW');expect(reassigned.sourcePartnerCode).toBe('ORIGIN');expect(reassigned.sourcePartnerUserId).toBe(source.userId);
  const repeated=await createInterestLead({...command,source:{...source,promoterCode:'ATTEMPT'}});expect(repeated.id).toBe(lead.id);expect(repeated.sourcePartnerCode).toBe('ORIGIN');
 });
+
+it('keeps ID Alat referral attribution without assigning or sharing a nonconsenting contact',async()=>{
+ const source={userId:'00000000-0000-4000-8000-000000000001',promoterCode:'KHU-ABU-10',alias:'khu-abu-10',name:'Mitra',branchCode:'JML-CAB-62',area:''};
+ const interest={leadType:'promoter_candidate' as const,productKey:'idDanAlat',name:'ID Alat Private',phone:'628123456789',email:'private@example.test',provinceCode:'',provinceName:'',regencyCode:'',regencyName:'',city:'Bandung',service:'Informasi ID & Alat',notes:'Private note',sourcePath:'/produk/layanan/idDanAlat',utmSource:'',utmMedium:'',utmCampaign:'',utmContent:'',utmTerm:'',referrer:'',consentToContact:true,consentToShare:false};
+ const lead=await createInterestLead({idempotencyKey:'123e4567-e89b-42d3-a456-426614174097',interest,source,match:{matchMethod:'referral',assignedPromoterCode:'KHU-ABU-10'}});
+ expect(lead.sourceReferralAlias).toBe('khu-abu-10');expect(lead.sourcePartnerCode).toBe('KHU-ABU-10');expect(lead.assignedPromoterCode).toBe('');expect(lead.consentToShare).toBe(false);
+ const rows=(await db.query("SELECT id FROM public_interest_leads WHERE assigned_promoter_code='KHU-ABU-10' AND consent_to_share=true AND id=$1",[lead.id])).rows;expect(rows).toHaveLength(0);
+});

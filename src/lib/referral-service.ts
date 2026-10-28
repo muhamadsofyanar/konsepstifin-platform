@@ -83,7 +83,9 @@ export class ReferralService {
     EXISTS(SELECT 1 FROM commerce_ledger r WHERE r.order_id=o.id AND r.kind='refund') AS has_refund,
     COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance
     FROM learning_purchases p LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE p.partner_user_id=$1 ORDER BY p.id DESC LIMIT 100`,[userId]);
-   return {counts:Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,Number(v)])),registrations,purchases};
+   const requests=await q(`SELECT id,service,status,created_at FROM public_interest_leads
+    WHERE source_partner_user_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100`,[userId]);
+   return {requests,counts:Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,Number(v)])),registrations,purchases};
   });
  }
  async visit(value: string,existingToken?: string) {

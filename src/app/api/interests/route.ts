@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       reference: result.reference,
+      referralRecorded: 'sourcePartnerUserId' in result.lead && Boolean(result.lead.sourcePartnerUserId),
+      referralAlias: 'sourceReferralAlias' in result.lead ? result.lead.sourceReferralAlias : '',
       status: result.status,
       match: isTestLead ? result.match : null,
     }, { status: 201 });

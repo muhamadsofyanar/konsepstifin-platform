@@ -77,8 +77,8 @@ export async function submitInterest(payload: unknown, dependencies: SubmissionD
 
   if (interest.leadType === 'promoter_candidate') {
     const status = 'baru' as const;
-    const source = interest.consentToShare ? dependencies.referralSource : null;
-    const lead = await createLead({ interest, idempotencyKey, status, match: source?.promoterCode ? referralSnapshot(source) : null, source });
+    const source = dependencies.referralSource;
+    const lead = await createLead({ interest, idempotencyKey, status, match: interest.consentToShare && source?.promoterCode ? referralSnapshot(source) : null, source });
     return {
       lead,
       reference: `KSF-${lead.id}`,
@@ -87,7 +87,7 @@ export async function submitInterest(payload: unknown, dependencies: SubmissionD
     };
   }
 
-  const source = interest.consentToShare ? dependencies.referralSource : null;
+  const source = dependencies.referralSource;
   const match = source?.promoterCode ? { method: 'referral' as const, primary: { code: source.promoterCode, name: source.name, branchCode: source.branchCode, area: source.area, province: '', active: true, regionCodes: [], mappingSource: 'unresolved' as const }, candidates: [] } : await resolveMatch(interest, dependencies);
   const status = match.primary ? 'ditawarkan' as const : 'mencari_promotor' as const;
   const lead = await createLead({ interest, idempotencyKey, status, match: source?.promoterCode ? referralSnapshot(source) : snapshot(match), source });

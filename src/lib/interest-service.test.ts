@@ -53,5 +53,5 @@ it('assigns consenting promoter registrations but does not share nonconsenting r
  const source={userId:'00000000-0000-4000-8000-000000000001',promoterCode:'KHU-ABU-01',alias:'budi',name:'Budi',branchCode:'JML-CAB-62',area:'Sumedang'};
  const createLead=vi.fn().mockResolvedValue({id:82});const registration={...raw,leadType:'promoter_candidate',productKey:'wsl1',service:'WSL 1'};
  await submitInterest(registration,{createLead,referralSource:source});expect(createLead).toHaveBeenLastCalledWith(expect.objectContaining({source,match:expect.objectContaining({assignedPromoterCode:source.promoterCode})}));
- await submitInterest({...registration,consentToShare:false},{createLead,referralSource:source});expect(createLead).toHaveBeenLastCalledWith(expect.objectContaining({source:null,match:null}));
+ await submitInterest({...registration,consentToShare:false},{createLead,referralSource:source});expect(createLead).toHaveBeenLastCalledWith(expect.objectContaining({source,match:null}));
 });

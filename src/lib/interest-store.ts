@@ -475,8 +475,8 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
   const idempotencyKey = validateIdempotencyKey(command.idempotencyKey);
   const status = defaultStatus({ ...command, interest });
   if (!validStatuses(interest.leadType).includes(status)) throw new Error('Status tidak sesuai dengan jenis lead.');
-  const source = interest.consentToShare ? command.source : null;
-  const match = interest.leadType === 'test_service' || source ? command.match : null;
+  const source = command.source;
+  const match = interest.consentToShare ? command.match : null;
   const candidates = mapCandidates(match?.candidates ?? []);
   const sql = getDatabaseClient();
 

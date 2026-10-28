@@ -25,6 +25,8 @@ describe('POST /api/interests', () => {
     vi.mocked(submitInterest).mockResolvedValue({
       lead: { id: 42, leadType: 'test_service', status: 'ditawarkan' },
       reference: 'KSF-42',
+      referralRecorded: false,
+      referralAlias: '',
       status: 'ditawarkan',
       match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
       checkoutUrl: 'https://app.konsepstifin.com/product/tes/',
@@ -36,6 +38,8 @@ describe('POST /api/interests', () => {
     expect(body).toEqual({
       ok: true,
       reference: 'KSF-42',
+      referralRecorded: false,
+      referralAlias: '',
       status: 'ditawarkan',
       match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
     });
@@ -51,7 +55,7 @@ describe('POST /api/interests', () => {
       checkoutUrl: 'https://evil.example/checkout',
     } as Awaited<ReturnType<typeof submitInterest>>);
     const response = await POST(request({ leadType: 'promoter_candidate' }));
-    expect(await response.json()).toEqual({ ok: true, reference: 'KSF-43', status: 'baru', match: null });
+    expect(await response.json()).toEqual({ ok: true, reference: 'KSF-43', referralRecorded: false, referralAlias: '', status: 'baru', match: null });
   });
 
   it('menyembunyikan detail PostgreSQL dari respons publik', async () => {

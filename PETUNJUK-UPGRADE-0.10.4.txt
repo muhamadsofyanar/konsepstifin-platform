@@ -1,0 +1,18 @@
+KonsepSTIFIn 0.10.4 | source lengkap
+
+Perbaikan pengajuan layanan dari tautan affiliate, termasuk ID & Alat.
+Baca docs/UPGRADE-0.10.4.md dan HASIL-PENGUJIAN-0.10.4.txt.
+
+- Unggah isi folder ke root repository aplikasi yang sama, lalu redeploy.
+- Paket sudah mencakup 0.10.3. Tidak perlu redeploy versi lama dahulu.
+- Jika migrasi 009 sudah berhasil: tidak ada migrasi baru.
+- Jika belum sampai 009: di terminal container versi baru jalankan:
+  IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+- Refresh paksa browser. /api/health harus menampilkan version 0.10.4.
+- Uji tautan referral dalam jendela privat, kirim formulir sampai ada KSF.
+- Periksa alias pada konfirmasi dan KSF pada /akun/mitra?tab=activity.
+
+Kontak tetap tidak dibuka kepada promotor tanpa persetujuan berbagi.
+Pengajuan bukan pembelian dan belum menghasilkan komisi.
+Data pengajuan lama yang tidak memiliki sumber tidak dihubungkan ulang otomatis.
+Pertahankan database, akun, harga, transaksi dan volume yang sudah digunakan.

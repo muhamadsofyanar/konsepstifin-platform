@@ -13,6 +13,8 @@ async function fillRequiredFields({ share = true }: { share?: boolean } = {}) {
   if (share) await userEvent.click(screen.getByLabelText(/dibagikan kepada promotor yang ditugaskan/i));
 }
 
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+
 describe('PublicInterestAction dua funnel', () => {
   beforeEach(() => {
     vi.stubGlobal('crypto', { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000' });
@@ -124,4 +126,20 @@ it('sends only explicit optional referral-sharing consent for promoter registrat
  const sharing=screen.getByLabelText(/Opsional: Saya setuju data kontak/i);expect(sharing).not.toBeChecked();await userEvent.click(sharing);
  await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));await screen.findByText(/KSF-90/);
  const body=JSON.parse(String(fetcher.mock.calls[0][1].body));expect(body.consentToShare).toBe(true);expect(body).not.toHaveProperty('sourcePartnerCode');expect(body).not.toHaveProperty('referralToken');
+});
+
+it('shows the stored referral on an ID Alat request while keeping sharing optional',async()=>{
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({reference:'KSF-104',referralRecorded:true,referralAlias:'khu-abu-10'}),{status:201})));
+ render(<PublicInterestAction linkKey="idDanAlat" service="ID Aplikasi & Scanner Promotor" label="Ajukan layanan ini →"/>);
+ await userEvent.click(screen.getByRole('button',{name:'Ajukan layanan ini →'}));
+ expect(screen.getByRole('combobox')).toHaveValue('idDanAlat');
+ fireEvent.change(screen.getByLabelText('Nama lengkap'),{target:{value:'Klien ID Alat'}});fireEvent.change(screen.getByLabelText('Nomor WhatsApp'),{target:{value:'081234567890'}});fireEvent.change(screen.getByLabelText('Kota/domisili'),{target:{value:'Bandung'}});await userEvent.click(screen.getByLabelText(/digunakan tim/));
+ const share=screen.getByLabelText(/Opsional:/);expect(share).not.toBeRequired();expect(share).not.toBeChecked();
+ await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));expect(await screen.findByText(/Asal referral tercatat: \/r\/khu-abu-10/)).toBeVisible();
+});
+it('does not announce a successful save when the response has no stored reference',async()=>{
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({ok:true}),{status:200})));
+ render(<PublicInterestAction linkKey="idDanAlat" service="ID & Alat" label="Ajukan"/>);await userEvent.click(screen.getByRole('button',{name:'Ajukan'}));
+ fireEvent.change(screen.getByLabelText('Nama lengkap'),{target:{value:'Klien Baru'}});fireEvent.change(screen.getByLabelText('Nomor WhatsApp'),{target:{value:'081234567890'}});fireEvent.change(screen.getByLabelText('Kota/domisili'),{target:{value:'Bandung'}});await userEvent.click(screen.getByLabelText(/digunakan tim/));
+ await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));expect(await screen.findByText(/belum mendapat nomor referensi/)).toBeVisible();expect(screen.queryByText('Permintaan sudah tersimpan.')).not.toBeInTheDocument();
 });
