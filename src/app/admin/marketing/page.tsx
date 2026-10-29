@@ -7,8 +7,10 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Marketing WhatsApp | Konsep STIFIn' };
 export default async function MarketingPage() {
   if (!await getAdminPrincipal()) redirect('/admin/login');
-  let contacts: Awaited<ReturnType<typeof listMarketingContacts>> = [];
-  let campaigns: Awaited<ReturnType<typeof listMarketingCampaigns>> = [];
+  type MarketingContact = (Awaited<ReturnType<typeof listMarketingContacts>>)[number];
+  type MarketingCampaign = (Awaited<ReturnType<typeof listMarketingCampaigns>>)[number];
+  let contacts: MarketingContact[] = [];
+  let campaigns: MarketingCampaign[] = [];
   let error = '';
   try { [contacts, campaigns] = await Promise.all([listMarketingContacts(), listMarketingCampaigns(20)]); } catch { error = 'Data marketing belum tersedia. Jalankan migrasi 011-integrations.sql.'; }
   return <main className="portal-page">
