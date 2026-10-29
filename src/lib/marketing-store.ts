@@ -81,7 +81,8 @@ export async function listMarketingCampaigns(limit = 20) {
       COUNT(o.id) FILTER (WHERE o.status='sending')::int AS sending_count,
       COUNT(o.id) FILTER (WHERE o.status='sent')::int AS sent_count,
       COUNT(o.id) FILTER (WHERE o.status='failed')::int AS failed_count,
-      COUNT(o.id) FILTER (WHERE o.status='unknown')::int AS unknown_count
+      COUNT(o.id) FILTER (WHERE o.status='unknown')::int AS unknown_count,
+      COUNT(o.id) FILTER (WHERE o.status='awaiting_inbound')::int AS awaiting_inbound_count
     FROM marketing_campaigns c
     LEFT JOIN notification_outbox o ON o.campaign_id=c.id
     GROUP BY c.id

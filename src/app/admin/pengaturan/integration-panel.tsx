@@ -4,13 +4,13 @@ import { useRouter } from 'next/navigation';
 type UnmatchedEvent = { event_id: string; event_type: string; amount: number | null; reference: string; processing_note: string; received_at: string; order_id: number | null };
 type PublicSettings = {
   moota: { baseUrl: string; apiTokenConfigured: boolean; webhookSecretConfigured: boolean; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
-  starsender: { apiKeyConfigured: boolean; apiUrl: string };
+  starsender: { apiKeyConfigured: boolean; apiUrl: string; webhookSecretConfigured: boolean };
 };
-type Props = { moota: { apiConfigured: boolean; webhookConfigured: boolean; receiveMoneyPathConfigured: boolean; bankAccountConfigured: boolean }; starsender: { configured: boolean; endpoint: string }; settings: PublicSettings; isOwner: boolean; webhookUrl: string };
-export default function IntegrationPanel({ moota, starsender, settings: initial, isOwner, webhookUrl }: Props) {
+type Props = { moota: { apiConfigured: boolean; webhookConfigured: boolean; receiveMoneyPathConfigured: boolean; bankAccountConfigured: boolean }; starsender: { configured: boolean; endpoint: string }; settings: PublicSettings; isOwner: boolean; webhookUrl: string; starsenderWebhookUrl: string };
+export default function IntegrationPanel({ moota, starsender, settings: initial, isOwner, webhookUrl, starsenderWebhookUrl }: Props) {
   const router = useRouter();
   const [settings, setSettings] = useState(initial);
-  const [apiToken, setApiToken] = useState(''), [webhookSecret, setWebhookSecret] = useState(''), [senderKey, setSenderKey] = useState('');
+  const [apiToken, setApiToken] = useState(''), [webhookSecret, setWebhookSecret] = useState(''), [senderKey, setSenderKey] = useState(''), [senderWebhookSecret, setSenderWebhookSecret] = useState('');
   const [clearSecrets, setClearSecrets] = useState<string[]>([]);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [events, setEvents] = useState<UnmatchedEvent[]>([]), [eventsOpen, setEventsOpen] = useState(false);
@@ -20,10 +20,10 @@ export default function IntegrationPanel({ moota, starsender, settings: initial,
     event.preventDefault(); setBusy(true); setMessage(''); setError('');
     try {
       const response = await fetch('/api/admin/integrations/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        moota: { ...settings.moota, apiToken, webhookSecret }, starsender: { ...settings.starsender, apiKey: senderKey }, clearSecrets,
+        moota: { ...settings.moota, apiToken, webhookSecret }, starsender: { ...settings.starsender, apiKey: senderKey, webhookSecret: senderWebhookSecret }, clearSecrets,
       }) });
       const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Pengaturan integrasi gagal disimpan.');
-      setSettings(data.settings); setApiToken(''); setWebhookSecret(''); setSenderKey(''); setClearSecrets([]);
+      setSettings(data.settings); setApiToken(''); setWebhookSecret(''); setSenderKey(''); setSenderWebhookSecret(''); setClearSecrets([]);
       setMessage('Pengaturan integrasi tersimpan. Perubahan berlaku tanpa redeploy.'); router.refresh();
     } catch (e) { setError(e instanceof Error ? e.message : 'Pengaturan integrasi gagal disimpan.'); }
     finally { setBusy(false); }
@@ -50,7 +50,7 @@ export default function IntegrationPanel({ moota, starsender, settings: initial,
     <p>API key dan secret dapat diubah dari halaman ini tanpa redeploy. Nilai rahasia tidak pernah ditampilkan kembali setelah disimpan. Kosongkan kolom secret untuk mempertahankan nilai lama.</p>
     {!isOwner && <p className="portal-error">Hanya akun pemilik platform yang dapat mengubah kredensial integrasi.</p>}
     <div className="portal-columns"><div><h3>Moota API V2 / Terima Uang</h3><ul><li>API token: {status(moota.apiConfigured)}</li><li>Secret webhook: {status(moota.webhookConfigured)}</li><li>Path Create Terima Uang: {status(moota.receiveMoneyPathConfigured)}</li><li>ID rekening Moota: {status(moota.bankAccountConfigured)}</li></ul><p><strong>URL webhook:</strong><br/><code>{webhookUrl || 'PLATFORM_ORIGIN belum diatur'}</code></p><button type="button" onClick={test} disabled={busy || !moota.apiConfigured}>Tes koneksi Moota</button></div>
-      <div><h3>StarSender WhatsApp</h3><p>API key: {status(starsender.configured)}</p><p>Endpoint: <code>{settings.starsender.apiUrl}</code></p><p>Dipakai untuk notifikasi transaksi dan kampanye marketing sesuai persetujuan kontak.</p><a href="https://docs.starsender.online/docs/message-api/kirim-pesan/" target="_blank" rel="noopener noreferrer">Dokumentasi StarSender ↗</a></div></div>
+      <div><h3>StarSender WhatsApp</h3><p>Device API key: {status(starsender.configured)}</p><p>Webhook pesan masuk: {status(settings.starsender.webhookSecretConfigured)}</p><p>Endpoint: <code>{settings.starsender.apiUrl}</code></p><p>Pesan otomatis hanya dikirim setelah pelanggan memulai chat dalam 24 jam terakhir. Kampanye tetap memerlukan persetujuan promosi terpisah.</p>{starsenderWebhookUrl ? <p><strong>URL webhook pesan masuk:</strong><br/><code style={{overflowWrap:'anywhere'}}>{starsenderWebhookUrl}</code><br/><button type="button" onClick={() => void navigator.clipboard?.writeText(starsenderWebhookUrl)}>Salin URL webhook</button></p> : <p>Isi secret webhook minimal 32 karakter, simpan, lalu salin URL webhook yang muncul.</p>}<a href="https://docs.starsender.online/docs/message-api/kirim-pesan/" target="_blank" rel="noopener noreferrer">Dokumentasi StarSender ↗</a></div></div>
     <form className="portal-form" onSubmit={save} style={{ marginTop: 18 }}><fieldset disabled={busy || !isOwner}>
       <h3>Konfigurasi Moota</h3>
       <label>URL dasar API<input type="url" required value={settings.moota.baseUrl} onChange={e => setSettings({ ...settings, moota: { ...settings.moota, baseUrl: e.target.value } })} placeholder="https://app.moota.co" /></label>
@@ -66,6 +66,9 @@ export default function IntegrationPanel({ moota, starsender, settings: initial,
       <label>Endpoint API<input type="url" required value={settings.starsender.apiUrl} onChange={e => setSettings({ ...settings, starsender: { ...settings.starsender, apiUrl: e.target.value } })} /></label>
       <label>API key StarSender<input type="password" autoComplete="new-password" value={senderKey} onChange={e => { setSenderKey(e.target.value); toggleClear('starsender.apiKey', false); }} placeholder={settings.starsender.apiKeyConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Tempel Device API key StarSender'} /></label>
       {settings.starsender.apiKeyConfigured && <label><input type="checkbox" checked={clearSecrets.includes('starsender.apiKey')} onChange={e => toggleClear('starsender.apiKey', e.target.checked)} /> Hapus API key StarSender yang tersimpan</label>}
+      <label>Secret webhook pesan masuk<input type="password" autoComplete="new-password" value={senderWebhookSecret} onChange={e => { setSenderWebhookSecret(e.target.value); toggleClear('starsender.webhookSecret', false); }} placeholder={settings.starsender.webhookSecretConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Gunakan secret acak minimal 32 karakter'} /></label>
+      <button type="button" onClick={() => { const bytes = crypto.getRandomValues(new Uint8Array(32)); setSenderWebhookSecret(Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')); toggleClear('starsender.webhookSecret', false); }}>Buat secret acak</button>
+      {settings.starsender.webhookSecretConfigured && <label><input type="checkbox" checked={clearSecrets.includes('starsender.webhookSecret')} onChange={e => toggleClear('starsender.webhookSecret', e.target.checked)} /> Hapus secret webhook StarSender</label>}
       <button className="portal-primary" type="submit">{busy ? 'Menyimpan…' : 'Simpan integrasi tanpa redeploy'}</button>
     </fieldset></form>
     <div style={{ marginTop: 16 }}><button type="button" onClick={() => void loadUnmatched()}>Lihat webhook yang perlu rekonsiliasi</button></div>

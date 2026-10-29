@@ -9,11 +9,11 @@ function getDatabaseClient() {
 }
 
 type MootaConfig = { baseUrl: string; apiToken: string; webhookSecret: string; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
-type StarSenderConfig = { apiKey: string; apiUrl: string };
+type StarSenderConfig = { apiKey: string; apiUrl: string; webhookSecret: string };
 export type IntegrationConfig = { moota: MootaConfig; starsender: StarSenderConfig };
 export type PublicIntegrationSettings = {
   moota: { baseUrl: string; apiTokenConfigured: boolean; webhookSecretConfigured: boolean; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
-  starsender: { apiKeyConfigured: boolean; apiUrl: string };
+  starsender: { apiKeyConfigured: boolean; apiUrl: string; webhookSecretConfigured: boolean };
 };
 
 const envConfig = (): IntegrationConfig => ({
@@ -29,6 +29,7 @@ const envConfig = (): IntegrationConfig => ({
   starsender: {
     apiKey: (process.env.STARSENDER_API_KEY || '').trim(),
     apiUrl: (process.env.STARSENDER_API_URL || 'https://api.starsender.online/api/send').trim(),
+    webhookSecret: (process.env.STARSENDER_WEBHOOK_SECRET || '').trim(),
   },
 });
 
@@ -76,7 +77,7 @@ export async function getPublicIntegrationSettings(): Promise<PublicIntegrationS
   const c = await getIntegrationConfig();
   return {
     moota: { baseUrl: c.moota.baseUrl, apiTokenConfigured: Boolean(c.moota.apiToken), webhookSecretConfigured: Boolean(c.moota.webhookSecret), bankAccountId: c.moota.bankAccountId, receiveMoneyCreatePath: c.moota.receiveMoneyCreatePath, bankAccountField: c.moota.bankAccountField, timeoutMs: c.moota.timeoutMs },
-    starsender: { apiKeyConfigured: Boolean(c.starsender.apiKey), apiUrl: c.starsender.apiUrl },
+    starsender: { apiKeyConfigured: Boolean(c.starsender.apiKey), apiUrl: c.starsender.apiUrl, webhookSecretConfigured: Boolean(c.starsender.webhookSecret) },
   };
 }
 function safeUrl(value: unknown, label: string) {
@@ -106,7 +107,9 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
   const starsender: StarSenderConfig = {
     apiKey: secret(senderInput.apiKey, current.starsender.apiKey, 'starsender.apiKey'),
     apiUrl: safeUrl(senderInput.apiUrl ?? current.starsender.apiUrl, 'URL API StarSender'),
+    webhookSecret: secret(senderInput.webhookSecret, current.starsender.webhookSecret, 'starsender.webhookSecret'),
   };
+  if (starsender.webhookSecret && starsender.webhookSecret.length < 32) throw new Error('Secret webhook StarSender minimal 32 karakter.');
   const config: IntegrationConfig = { moota, starsender };
   const encrypted = encrypt(config);
   const sql = getDatabaseClient();
@@ -115,7 +118,7 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
       VALUES ('all',${encrypted.iv},${encrypted.ciphertext},${encrypted.tag},${actor}::uuid,now())
       ON CONFLICT(provider) DO UPDATE SET iv=EXCLUDED.iv,ciphertext=EXCLUDED.ciphertext,auth_tag=EXCLUDED.auth_tag,updated_by=EXCLUDED.updated_by,updated_at=now()`;
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details)
-      VALUES (${actor}::uuid,'integration.settings.updated','external-integrations',${JSON.stringify({mootaApiTokenConfigured:Boolean(moota.apiToken),mootaWebhookConfigured:Boolean(moota.webhookSecret),starsenderConfigured:Boolean(starsender.apiKey),clearedSecrets:clear})}::jsonb)`;
+      VALUES (${actor}::uuid,'integration.settings.updated','external-integrations',${JSON.stringify({mootaApiTokenConfigured:Boolean(moota.apiToken),mootaWebhookConfigured:Boolean(moota.webhookSecret),starsenderConfigured:Boolean(starsender.apiKey),starsenderWebhookConfigured:Boolean(starsender.webhookSecret),clearedSecrets:clear})}::jsonb)`;
   });
   return getPublicIntegrationSettings();
 }

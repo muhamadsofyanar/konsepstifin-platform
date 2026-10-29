@@ -1,21 +1,31 @@
-# KonsepSTIFIn 0.10.9
+# KonsepSTIFIn 0.10.10
 
-Rilis ini berfokus pada pengurangan friksi calon klien, penerapan promo pusat, dan pengelolaan kredensial integrasi dari dashboard admin.
+Rilis ini menambahkan kebijakan WhatsApp inbound-first untuk mengurangi pesan keluar yang tidak diharapkan dan menunggu pelanggan memulai percakapan terlebih dahulu.
 
 ## Perubahan utama
 
-- Formulir calon klien disederhanakan menjadi nama, WhatsApp, dan kota sebagai isian utama. Layanan yang sudah dipilih tidak perlu dipilih ulang. Email dan catatan tambahan berada di bagian opsional.
-- Beranda mengutamakan dua jalur utama: Tes STIFIn serta Workshop/Kemitraan.
-- Promo Family Test periode 28 Oktober sampai 31 Desember 2026 mendukung skema 3+1, 4+1, 7+2, dan skema tambahan yang ditentukan pemilik melalui admin. Harga jual minimal tetap Rp500.000 per tes berbayar.
-- Year-End Workshop menampilkan WSL 1 Rp500.000, WSL 2 Rp2.500.000, dan WST Rp1.000.000 selama promo aktif.
-- Promo yang dipilih dicatat ke catatan lead setelah server memvalidasi skema dan periode. Harga akhir tetap dikonfirmasi admin.
-- API token Moota, secret webhook, dan API key StarSender dapat dikelola melalui Admin > Pengaturan. Secret disimpan terenkripsi di database dan tidak dikembalikan ke browser. Perubahan kredensial berlaku tanpa redeploy.
-- Pengaturan promo pusat dapat diubah dari Admin > Pengaturan tanpa redeploy.
+- Webhook StarSender V3 untuk mencatat pesan masuk dari pelanggan secara idempoten.
+- Outbox WhatsApp hanya mengirim setelah nomor pelanggan mengirim pesan dalam 24 jam terakhir. Jika belum, pesan berstatus `awaiting_inbound` dan akan dilepas ke antrean saat pelanggan mengirim pesan.
+- Kata `STOP`, `BERHENTI`, atau `UNSUBSCRIBE` menghentikan antrean pesan untuk nomor tersebut. `MULAI` atau `START` membuka kembali pesan layanan, tetapi tidak otomatis memberikan persetujuan marketing.
+- Kampanye marketing tetap mensyaratkan persetujuan promosi eksplisit dan memeriksanya kembali saat pengiriman.
+- Secret webhook StarSender bisa dibuat dari Admin > Pengaturan > Integrasi Eksternal dan disimpan terenkripsi, tanpa redeploy.
+- Integrasi Moota, promo Family Test, Year-End Workshop, dan formulir lead dari 0.10.9 tetap disertakan.
+
+## Konfigurasi Moota
+
+Buat Personal Token bernama `KonsepSTIFIn Production`. Untuk integrasi yang menggunakan endpoint API, panduan Moota menyebut scope `API`, `User_read`, `Bank_read`, dan `Mutation_read`. Scope `API` memiliki akses luas. Simpan token hanya pada Admin > Pengaturan > Integrasi Eksternal. Konfigurasikan webhook Moota memakai URL yang ditampilkan admin dan secret yang sama dengan kolom Secret webhook. Path pembuatan Terima Uang masih harus dicocokkan dengan dokumentasi endpoint aktif Moota, jangan mengisi path berdasarkan tebakan.
 
 ## Upgrade
 
-Baca [panduan upgrade 0.10.9](docs/UPGRADE-0.10.9.md) sebelum deployment. Migration `012-integrations-promotions.sql` perlu dijalankan satu kali pada database produksi setelah backup menggunakan `IDENTITY_ADMIN_CONFIRM=yes node scripts/apply-migration.mjs 012-integrations-promotions.sql`. Jangan menghapus database atau volume file yang sudah ada.
+1. Backup database dan file sebelum deployment.
+2. Deploy source 0.10.10 dari branch `main`.
+3. Setelah backup, jalankan migrasi satu kali: `IDENTITY_ADMIN_CONFIRM=yes node scripts/apply-migration.mjs 013-whatsapp-inbound-first.sql`. Migrasi 012 harus sudah diterapkan dari rilis 0.10.9.
+4. Buka Admin > Pengaturan > Integrasi Eksternal. Isi Device API Key StarSender, buat secret webhook, simpan, lalu salin URL webhook pesan masuk ke pengaturan webhook device StarSender.
+5. Pastikan webhook StarSender mengirim event pesan masuk ke URL tersebut. Kirim chat uji dari nomor pribadi ke nomor resmi KonsepSTIFIn. Pesan keluar tidak dikirim sebelum event inbound tercatat.
+6. Tes pembayaran dan promo di staging sebelum penggunaan produksi.
 
-## Pengujian
+## Batasan dan keamanan
 
-26 file TypeScript/TSX yang berubah berhasil diparse tanpa kesalahan sintaks. Build Next.js, typecheck penuh, lint, dan seluruh test suite belum terverifikasi di lingkungan pengembangan ini karena `npm ci` tidak selesai dalam batas waktu yang tersedia. Coolify harus menunjukkan build sukses sebelum rilis dianggap tervalidasi.
+Inbound-first mengurangi pesan yang tidak diminta, tetapi tidak menjamin nomor bebas pemblokiran. Dokumentasi StarSender menyatakan penggunaan yang tidak wajar dapat berisiko menyebabkan pemblokiran. Untuk kebutuhan produksi dengan jaminan kebijakan yang lebih jelas, evaluasi WhatsApp Business Platform resmi. Pesan marketing tetap memerlukan consent dan opt-out harus dihormati.
+
+Build produksi, typecheck penuh, dan test suite belum dapat diverifikasi di lingkungan kerja ini karena instalasi dependensi timeout. Jangan menganggap rilis tervalidasi sebelum build Coolify dan uji staging berhasil.

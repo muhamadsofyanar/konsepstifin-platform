@@ -2,8 +2,8 @@
 import { useMemo, useState, type FormEvent } from 'react';
 
 type Contact = { id: number; name: string; phone: string; service: string; status: string; whatsapp_marketing_consent: boolean; whatsapp_marketing_consent_at: string | null };
-type Campaign = { id: string; title: string; recipient_count: number; created_at: string; pending_count: number; sending_count: number; sent_count: number; failed_count: number; unknown_count: number };
-function mapCampaign(row: Record<string, unknown>): Campaign { return { id: String(row.id ?? ''), title: String(row.title ?? ''), recipient_count: Number(row.recipient_count ?? 0), created_at: String(row.created_at ?? ''), pending_count: Number(row.pending_count ?? 0), sending_count: Number(row.sending_count ?? 0), sent_count: Number(row.sent_count ?? 0), failed_count: Number(row.failed_count ?? 0), unknown_count: Number(row.unknown_count ?? 0) }; }
+type Campaign = { id: string; title: string; recipient_count: number; created_at: string; pending_count: number; sending_count: number; sent_count: number; failed_count: number; unknown_count: number; awaiting_inbound_count: number };
+function mapCampaign(row: Record<string, unknown>): Campaign { return { id: String(row.id ?? ''), title: String(row.title ?? ''), recipient_count: Number(row.recipient_count ?? 0), created_at: String(row.created_at ?? ''), pending_count: Number(row.pending_count ?? 0), sending_count: Number(row.sending_count ?? 0), sent_count: Number(row.sent_count ?? 0), failed_count: Number(row.failed_count ?? 0), unknown_count: Number(row.unknown_count ?? 0), awaiting_inbound_count: Number(row.awaiting_inbound_count ?? 0) }; }
 export default function MarketingManager({ initialContacts, initialCampaigns }: { initialContacts: Array<Record<string, unknown>>; initialCampaigns: Array<Record<string, unknown>> }) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts.map(row => ({ id: Number(row.id), name: String(row.name ?? ''), phone: String(row.phone ?? ''), service: String(row.service ?? ''), status: String(row.status ?? ''), whatsapp_marketing_consent: row.whatsapp_marketing_consent === true, whatsapp_marketing_consent_at: row.whatsapp_marketing_consent_at ? String(row.whatsapp_marketing_consent_at) : null })));
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns.map(mapCampaign));
@@ -64,7 +64,7 @@ export default function MarketingManager({ initialContacts, initialCampaigns }: 
     </section>
     <section className="portal-card">
       <h2>Buat kampanye</h2>
-      <p>Pesan hanya masuk antrean untuk kontak terpilih yang masih memiliki persetujuan promosi aktif. Batas 100 penerima per kampanye.</p>
+      <p>Pesan hanya dikirim jika kontak memiliki persetujuan promosi aktif dan telah memulai chat dalam 24 jam terakhir. Jika belum, pesan menunggu sampai pelanggan mengirim pesan ke nomor KonsepSTIFIn. Batas 100 penerima per kampanye.</p>
       <form className="portal-form" onSubmit={sendCampaign}>
         <label>Judul internal<input required maxLength={120} value={title} onChange={e => setTitle(e.target.value)} /></label>
         <label>Isi pesan<textarea required maxLength={2000} rows={8} value={message} onChange={e => setMessage(e.target.value)} placeholder="Gunakan {{nama}} untuk personalisasi nama penerima." /></label>
@@ -76,9 +76,9 @@ export default function MarketingManager({ initialContacts, initialCampaigns }: 
       <h3 style={{ marginTop: 24 }}>Riwayat kampanye</h3>
       <p><small>Menampilkan 20 kampanye terakhir. Status dapat diperbarui setelah worker memproses antrean.</small></p>
       <button type="button" onClick={() => void refreshCampaigns().catch(e => setError(e instanceof Error ? e.message : 'Riwayat kampanye gagal dimuat.'))}>Perbarui status</button>
-      <div style={{ overflowX: 'auto', marginTop: 12 }}><table><thead><tr><th>Kampanye</th><th>Dibuat</th><th>Antrean</th><th>Terkirim</th><th>Gagal</th><th>Perlu cek</th></tr></thead><tbody>
-        {campaigns.map(campaign => <tr key={campaign.id}><td><strong>{campaign.title}</strong><br /><small>{campaign.recipient_count} penerima</small></td><td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString('id-ID') : '—'}</td><td>{campaign.pending_count + campaign.sending_count}<br /><small>{campaign.pending_count} menunggu · {campaign.sending_count} diproses</small></td><td>{campaign.sent_count}</td><td>{campaign.failed_count}</td><td>{campaign.unknown_count}</td></tr>)}
-        {!campaigns.length && <tr><td colSpan={6}>Belum ada kampanye.</td></tr>}
+      <div style={{ overflowX: 'auto', marginTop: 12 }}><table><thead><tr><th>Kampanye</th><th>Dibuat</th><th>Antrean</th><th>Terkirim</th><th>Gagal</th><th>Menunggu chat</th><th>Perlu cek</th></tr></thead><tbody>
+        {campaigns.map(campaign => <tr key={campaign.id}><td><strong>{campaign.title}</strong><br /><small>{campaign.recipient_count} penerima</small></td><td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString('id-ID') : '—'}</td><td>{campaign.pending_count + campaign.sending_count}<br /><small>{campaign.pending_count} menunggu · {campaign.sending_count} diproses</small></td><td>{campaign.sent_count}</td><td>{campaign.failed_count}</td><td>{campaign.awaiting_inbound_count}</td><td>{campaign.unknown_count}</td></tr>)}
+        {!campaigns.length && <tr><td colSpan={7}>Belum ada kampanye.</td></tr>}
       </tbody></table></div>
     </section>
   </div>;

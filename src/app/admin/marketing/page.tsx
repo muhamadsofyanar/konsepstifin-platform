@@ -13,9 +13,9 @@ export default async function MarketingPage() {
   let contacts: MarketingContact[] = [];
   let campaigns: MarketingCampaign[] = [];
   let error = '';
-  try { [contacts, campaigns] = await Promise.all([listMarketingContacts(), listMarketingCampaigns(20)]); } catch { error = 'Data marketing belum tersedia. Jalankan migrasi 011-integrations.sql.'; }
+  try { [contacts, campaigns] = await Promise.all([listMarketingContacts(), listMarketingCampaigns(20)]); } catch { error = 'Data marketing belum tersedia. Jalankan migrasi 011-integrations.sql dan 013-whatsapp-inbound-first.sql.'; }
   return <main className="portal-page">
-    <header className="portal-heading"><div><span className="portal-eyebrow">MARKETING / WHATSAPP</span><h1>Kampanye StarSender</h1><p>Kelola persetujuan promosi dan kirim pesan ke kontak yang sudah memberikan persetujuan eksplisit.</p></div><span className="portal-version">{senderStatus.configured ? 'API terkonfigurasi' : 'API belum dikonfigurasi'}</span></header>
+    <header className="portal-heading"><div><span className="portal-eyebrow">MARKETING / WHATSAPP</span><h1>Kampanye StarSender</h1><p>Kelola persetujuan promosi. Pengiriman juga menunggu pesan masuk dari pelanggan dalam 24 jam terakhir; persetujuan marketing tetap wajib untuk kampanye.</p></div><span className="portal-version">{senderStatus.configured ? 'API terkonfigurasi' : 'API belum dikonfigurasi'}</span></header>
     {!senderStatus.configured && <p className="portal-error" role="alert">API StarSender belum diatur. Buka Pengaturan Admin → Integrasi eksternal untuk memasukkan API key tanpa redeploy.</p>}
     {error && <p className="portal-error" role="alert">{error}</p>}
     <MarketingManager initialContacts={contacts as unknown as Array<Record<string, unknown>>} initialCampaigns={campaigns as unknown as Array<Record<string, unknown>>} />
