@@ -1,0 +1,7 @@
+KonsepSTIFIn 0.10.14 - hasil pemeriksaan
+
+- Error JSX yang dilaporkan Coolify diperbaiki dengan Boolean(p.moota_invoice_error).
+- package.json dan package-lock.json valid secara JSON dan versi keduanya 0.10.14.
+- Label versi admin diperbarui menjadi 0.10.14.
+- Build Next.js produksi dan typecheck penuh BELUM terverifikasi lokal karena npm ci timeout.
+- Build Coolify berikutnya harus memverifikasi perbaikan dan mengungkap kemungkinan error lanjutan.
