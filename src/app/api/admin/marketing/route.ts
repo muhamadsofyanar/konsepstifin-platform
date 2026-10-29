@@ -1,6 +1,6 @@
 import { getAdminPrincipal } from '@/lib/admin-auth';
 import { requireAdminRequest } from '@/lib/admin-request';
-import { createMarketingCampaign, listMarketingContacts, setMarketingConsent } from '@/lib/marketing-store';
+import { createMarketingCampaign, listMarketingCampaigns, listMarketingContacts, setMarketingConsent } from '@/lib/marketing-store';
 import { starsenderStatus } from '@/lib/starsender-client';
 export const dynamic = 'force-dynamic';
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff' } });
@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   if (!await getAdminPrincipal()) return json({ message: 'Akses admin diperlukan.' }, 401);
   try {
     const url = new URL(request.url);
-    return json({ contacts: await listMarketingContacts(url.searchParams.get('q') || ''), starsender: starsenderStatus() });
+    const [contacts, campaigns] = await Promise.all([listMarketingContacts(url.searchParams.get('q') || ''), listMarketingCampaigns(20)]);
+    return json({ contacts, campaigns, starsender: starsenderStatus() });
   } catch { return json({ message: 'Daftar kontak marketing belum dapat dimuat. Pastikan migrasi 011 sudah dijalankan.' }, 503); }
 }
 export async function POST(request: Request) {

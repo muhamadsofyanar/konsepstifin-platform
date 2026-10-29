@@ -2,8 +2,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
 
 type Contact = { id: number; name: string; phone: string; service: string; status: string; whatsapp_marketing_consent: boolean; whatsapp_marketing_consent_at: string | null };
-export default function MarketingManager({ initialContacts }: { initialContacts: Array<Record<string, unknown>> }) {
+type Campaign = { id: string; title: string; recipient_count: number; created_at: string; pending_count: number; sending_count: number; sent_count: number; failed_count: number; unknown_count: number };
+function mapCampaign(row: Record<string, unknown>): Campaign { return { id: String(row.id ?? ''), title: String(row.title ?? ''), recipient_count: Number(row.recipient_count ?? 0), created_at: String(row.created_at ?? ''), pending_count: Number(row.pending_count ?? 0), sending_count: Number(row.sending_count ?? 0), sent_count: Number(row.sent_count ?? 0), failed_count: Number(row.failed_count ?? 0), unknown_count: Number(row.unknown_count ?? 0) }; }
+export default function MarketingManager({ initialContacts, initialCampaigns }: { initialContacts: Array<Record<string, unknown>>; initialCampaigns: Array<Record<string, unknown>> }) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts.map(row => ({ id: Number(row.id), name: String(row.name ?? ''), phone: String(row.phone ?? ''), service: String(row.service ?? ''), status: String(row.status ?? ''), whatsapp_marketing_consent: row.whatsapp_marketing_consent === true, whatsapp_marketing_consent_at: row.whatsapp_marketing_consent_at ? String(row.whatsapp_marketing_consent_at) : null })));
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns.map(mapCampaign));
   const [selected, setSelected] = useState<number[]>([]);
   const [search, setSearch] = useState('');
   const [title, setTitle] = useState('');
@@ -13,6 +16,12 @@ export default function MarketingManager({ initialContacts }: { initialContacts:
   const [notice, setNotice] = useState('');
   const filtered = useMemo(() => { const q = search.trim().toLocaleLowerCase('id-ID'); return contacts.filter(c => !q || `${c.name} ${c.phone} ${c.service}`.toLocaleLowerCase('id-ID').includes(q)); }, [contacts, search]);
   const consented = filtered.filter(c => c.whatsapp_marketing_consent);
+  async function refreshCampaigns() {
+    const response = await fetch('/api/admin/marketing', { cache: 'no-store' });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Riwayat kampanye belum dapat dimuat.');
+    setCampaigns(Array.isArray(result.campaigns) ? result.campaigns.map(mapCampaign) : []);
+  }
   async function post(body: Record<string, unknown>) {
     const response = await fetch('/api/admin/marketing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const result = await response.json();
@@ -37,6 +46,8 @@ export default function MarketingManager({ initialContacts }: { initialContacts:
     try {
       const result = await post({ action: 'campaign', title, message, leadIds: selected });
       setNotice(result.message); setTitle(''); setMessage(''); setSelected([]);
+      try { await refreshCampaigns(); }
+      catch { setError('Kampanye berhasil masuk antrean, tetapi riwayat belum dapat diperbarui. Gunakan tombol Perbarui status.'); }
     } catch (e) { setError(e instanceof Error ? e.message : 'Kampanye gagal dimasukkan ke antrean.'); }
     finally { setBusy(''); }
   }
@@ -61,7 +72,14 @@ export default function MarketingManager({ initialContacts }: { initialContacts:
         <button className="portal-primary" type="submit" disabled={Boolean(busy) || selected.length === 0}>{busy === 'campaign' ? 'Memasukkan ke antrean…' : 'Jadwalkan pengiriman sekarang'}</button>
       </form>
       {error && <p className="portal-error" role="alert">{error}</p>}{notice && <p className="portal-success" role="status">{notice}</p>}
-      <p><small>Pengiriman diproses worker. Status kirim dapat dilihat pada tabel notification_outbox di database. Pesan dengan hasil jaringan ambigu tidak dikirim ulang otomatis untuk mengurangi risiko duplikasi.</small></p>
+      <p><small>Pengiriman diproses worker. Pesan dengan hasil jaringan ambigu tidak dikirim ulang otomatis untuk mengurangi risiko duplikasi.</small></p>
+      <h3 style={{ marginTop: 24 }}>Riwayat kampanye</h3>
+      <p><small>Menampilkan 20 kampanye terakhir. Status dapat diperbarui setelah worker memproses antrean.</small></p>
+      <button type="button" onClick={() => void refreshCampaigns().catch(e => setError(e instanceof Error ? e.message : 'Riwayat kampanye gagal dimuat.'))}>Perbarui status</button>
+      <div style={{ overflowX: 'auto', marginTop: 12 }}><table><thead><tr><th>Kampanye</th><th>Dibuat</th><th>Antrean</th><th>Terkirim</th><th>Gagal</th><th>Perlu cek</th></tr></thead><tbody>
+        {campaigns.map(campaign => <tr key={campaign.id}><td><strong>{campaign.title}</strong><br /><small>{campaign.recipient_count} penerima</small></td><td>{campaign.created_at ? new Date(campaign.created_at).toLocaleString('id-ID') : '—'}</td><td>{campaign.pending_count + campaign.sending_count}<br /><small>{campaign.pending_count} menunggu · {campaign.sending_count} diproses</small></td><td>{campaign.sent_count}</td><td>{campaign.failed_count}</td><td>{campaign.unknown_count}</td></tr>)}
+        {!campaigns.length && <tr><td colSpan={6}>Belum ada kampanye.</td></tr>}
+      </tbody></table></div>
     </section>
   </div>;
 }

@@ -72,3 +72,20 @@ export async function createMarketingCampaign(input: { title: string; message: s
   });
   return { campaignId, queued };
 }
+export async function listMarketingCampaigns(limit = 20) {
+  const sql = getDatabaseClient();
+  const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+  return await sql`
+    SELECT c.id,c.title,c.recipient_count,c.created_by,c.created_at,
+      COUNT(o.id) FILTER (WHERE o.status='pending')::int AS pending_count,
+      COUNT(o.id) FILTER (WHERE o.status='sending')::int AS sending_count,
+      COUNT(o.id) FILTER (WHERE o.status='sent')::int AS sent_count,
+      COUNT(o.id) FILTER (WHERE o.status='failed')::int AS failed_count,
+      COUNT(o.id) FILTER (WHERE o.status='unknown')::int AS unknown_count
+    FROM marketing_campaigns c
+    LEFT JOIN notification_outbox o ON o.campaign_id=c.id
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+    LIMIT ${boundedLimit}`;
+}
+
