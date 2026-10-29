@@ -1,16 +1,36 @@
-# KonsepSTIFIn 0.10.16
+# KonsepSTIFIn 0.10.17
 
-Rilis perbaikan runtime worker. `src/lib/voucher-service.ts` menggunakan ekstensi `.ts` secara eksplisit ketika mengimpor `starsender-client`, sesuai resolusi ESM Node.js 24. Docker build juga menjalankan pemeriksaan import runtime sebelum build Next.js agar error serupa terdeteksi saat build, bukan setelah container berjalan.
+Rilis peningkatan UI/UX untuk perjalanan pengunjung, pelanggan, calon promotor, dan promotor aktif. Basisnya adalah source 0.10.16 yang telah berhasil dideploy pada produksi.
 
-## Upgrade
+## Perubahan utama
 
-1. Masukkan source rilis ini ke branch `main` repository `muhamadsofyanar/konsepstifin-platform`.
-2. Jalankan deployment Coolify.
-3. Tidak ada migrasi database baru. Jika migrasi 014 dari 0.10.13 belum diterapkan, ikuti `UPGRADE-KONSEPSTIFIN-0.10.13.md` setelah backup database.
-4. Pastikan build melewati pemeriksaan `Voucher worker runtime imports OK`.
-5. Setelah container sehat, periksa `/api/health` dan pastikan versi `0.10.16`.
-6. Periksa log worker voucher, notifikasi WhatsApp, dan email.
+- Menambahkan jalur masuk yang membedakan pelanggan/anggota dan promotor aktif di beranda.
+- Menampilkan tautan Masuk dan Daftar secara jelas untuk pengunjung yang belum login.
+- Merapikan footer menjadi kelompok Jelajahi, Berkembang Bersama, serta Akun & Bantuan.
+- Memperjelas CTA calon promotor, termasuk jalur masuk bagi promotor yang sudah aktif.
+- Memperhalus halaman detail produk, informasi harga, proses, FAQ, dan panel pengajuan.
+- Menjaga desain responsif, fokus keyboard, dan dukungan reduced motion.
+- Tidak mengubah alur checkout, Moota, StarSender, Mailketing, struktur database, atau kredensial.
+
+## Upgrade ke 0.10.17
+
+1. Backup repository dan database produksi.
+2. Masukkan seluruh isi arsip rilis ke repository `muhamadsofyanar/konsepstifin-platform`, branch `main`.
+3. Commit semua perubahan dalam satu commit.
+4. Deploy satu kali melalui Coolify.
+5. Pastikan healthcheck berstatus `healthy` dan `/api/health` menampilkan `0.10.17`.
+6. Uji beranda, daftar akun, login, detail produk, jalur calon promotor, portal anggota, checkout, dan pengaturan admin di desktop serta HP.
+
+## Database dan environment
+
+- Tidak ada migrasi database baru.
+- Tidak ada environment variable baru.
+- Kredensial integrasi tidak perlu dimasukkan ulang.
+- Promo pusat tetap mengambil data dari pengaturan admin.
 
 ## Status pengujian
 
-Perbaikan import diterapkan berdasarkan log runtime Coolify. Build produksi dan API live belum diverifikasi di lingkungan lokal ini karena `npm ci` mengalami timeout. Build Coolify berikutnya menjadi verifikasi final.
+- Pemeriksaan sintaks TypeScript/JSX untuk file yang diubah: lulus.
+- Pemeriksaan keseimbangan kurung CSS: lulus.
+- Versi `package.json` dan `package-lock.json`: konsisten pada `0.10.17`.
+- Build produksi Next.js: belum terverifikasi lokal. Instalasi dependency (`npm ci`) mengalami timeout di lingkungan kerja ini. Wajib menunggu hasil build dan healthcheck Coolify sebelum menyatakan rilis produksi lolos.

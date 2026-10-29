@@ -60,3 +60,44 @@
  .learning-app .lr-product-bottom-cta>.lr-button{width:100%}
  .learning-app .lr-product-contact-strip{align-items:stretch;flex-direction:column}
 }
+
+/* 0.10.17: product decision pages use a clearer premium hierarchy. */
+.learning-app.lr-product-detail{max-width:1320px;margin:0 auto;padding-top:30px;padding-bottom:72px;background:linear-gradient(180deg,#f5f9f6 0%,#f0f6f2 100%)}
+.learning-app.lr-product-detail .lr-breadcrumb{align-items:center;gap:8px;margin-bottom:22px;color:#789083;font-size:11px}
+.learning-app.lr-product-detail .lr-breadcrumb a{display:inline-flex;align-items:center;padding:7px 10px;border:1px solid #dce8df;border-radius:999px;background:#fff;color:#38684f;text-decoration:none}
+.learning-app.lr-product-detail .lr-breadcrumb a:hover{border-color:#b7d4c1;background:#f7fbf8}
+.learning-app.lr-product-detail .lr-product-layout{grid-template-columns:minmax(0,1.35fr) minmax(300px,.75fr);gap:22px;align-items:start}
+.learning-app.lr-product-detail .lr-product-main-card,.learning-app.lr-product-detail .lr-product-purchase{border:1px solid #dbe8df;border-radius:20px;box-shadow:0 12px 32px rgba(20,65,43,.055);padding:30px}
+.learning-app.lr-product-detail .lr-product-main-card{background:#fff}
+.learning-app.lr-product-detail .lr-product-purchase{position:sticky;top:100px;background:linear-gradient(160deg,#fff 0%,#f8fcf9 100%)}
+.learning-app.lr-product-detail .lr-course-cover{height:112px;margin:-30px -30px 25px;padding:24px 30px;background:radial-gradient(circle at 92% 18%,rgba(172,220,188,.28),transparent 28%),linear-gradient(125deg,#0f4b36,#17694c);color:#e8f5ec;font-size:10px;font-weight:800;letter-spacing:1.6px}
+.learning-app.lr-product-detail .lr-course-cover b{display:grid;place-items:center;width:54px;height:54px;border:1px solid #ffffff50;border-radius:17px;color:#d2e9d8;font-size:32px;opacity:.85}
+.learning-app.lr-product-detail .lr-eyebrow{color:#2d7b58}
+.learning-app.lr-product-detail h1{font-size:clamp(32px,3.5vw,46px);line-height:1.1;letter-spacing:-.045em;color:#123d2e;margin:10px 0 16px}
+.learning-app.lr-product-detail .lr-product-description{font-size:15px;line-height:1.85;color:#5d7467}
+.learning-app.lr-product-detail .lr-product-purchase .lr-price{font-size:clamp(24px,2.7vw,34px);line-height:1.2;letter-spacing:-.04em;color:#124c36;margin:16px 0 10px;overflow-wrap:anywhere}
+.learning-app.lr-product-detail .lr-product-purchase>p{font-size:12px;line-height:1.75;color:#687d70}
+.learning-app.lr-product-detail .lr-product-purchase>.lr-button{min-height:50px;border-radius:11px;font-weight:750;box-shadow:0 8px 18px rgba(8,98,71,.14)}
+.learning-app.lr-product-detail .lr-product-purchase .lr-muted{padding:12px 13px;border-radius:10px;background:#f1f7f3;font-size:11px;line-height:1.75}
+.learning-app.lr-product-detail .lr-inline-notice{border:1px solid #d5e8da;border-left:3px solid #19815b;border-radius:12px;background:#f3f9f4;padding:17px 18px}
+.learning-app.lr-product-detail .lr-product-detail-section{border-radius:18px;border-color:#dce8df;box-shadow:0 8px 24px rgba(20,65,43,.035);padding:32px}
+.learning-app.lr-product-detail .lr-product-steps li{background:#f9fcfa;border-color:#e0ebe3;border-radius:13px;padding:19px}
+.learning-app.lr-product-detail .lr-product-steps li>b{width:34px;height:34px;flex-basis:34px;border-radius:10px;background:#e2f1e7;color:#176847}
+.learning-app.lr-product-detail .lr-product-before-order{background:linear-gradient(135deg,#edf6f0,#f8fbf8)}
+.learning-app.lr-product-detail .lr-product-contact-strip{border:1px solid #d5e7da;background:#e7f3eb;border-radius:13px}
+.learning-app.lr-product-detail .lr-product-faq details{border-color:#dce8df;border-radius:12px;box-shadow:0 3px 12px rgba(20,65,43,.025)}
+.learning-app.lr-product-detail .lr-product-faq summary{display:flex;justify-content:space-between;gap:15px;align-items:center}
+.learning-app.lr-product-detail .lr-product-faq summary::after{content:'+';font-size:19px;color:#087b60;flex:0 0 auto}
+.learning-app.lr-product-detail .lr-product-faq details[open] summary::after{content:'−'}
+.learning-app.lr-product-detail .lr-product-bottom-cta{border:1px solid #1c6548;border-radius:19px;background:radial-gradient(ellipse at 100% 0%,#1d7050 0%,transparent 42%),linear-gradient(120deg,#0d432f,#13583f);box-shadow:0 16px 35px rgba(12,70,47,.12);padding:32px}
+.learning-app.lr-product-detail .lr-product-bottom-cta .lr-button{border-radius:11px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+@media(max-width:800px){
+ .learning-app.lr-product-detail{padding:18px 14px 42px}
+ .learning-app.lr-product-detail .lr-product-layout{grid-template-columns:minmax(0,1fr);gap:14px}
+ .learning-app.lr-product-detail .lr-product-main-card,.learning-app.lr-product-detail .lr-product-purchase{padding:22px;border-radius:16px}
+ .learning-app.lr-product-detail .lr-course-cover{height:88px;margin:-22px -22px 20px;padding:18px 22px}
+ .learning-app.lr-product-detail .lr-course-cover b{width:44px;height:44px;border-radius:13px;font-size:27px}
+ .learning-app.lr-product-detail .lr-product-purchase{position:static}
+ .learning-app.lr-product-detail .lr-product-detail-section{padding:22px 17px;border-radius:16px;margin:16px 0}
+ .learning-app.lr-product-detail .lr-product-bottom-cta{padding:24px 19px}
+}

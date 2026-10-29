@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 type AccountLinkState = { href: string; label: string };
-const guest: AccountLinkState = { href: '/akun/login', label: 'Masuk' };
+const guest: AccountLinkState = { href: '/akun/login?next=%2Fakun', label: 'Masuk' };
 
 export default function PublicAccountLink() {
   const [account, setAccount] = useState<AccountLinkState>(guest);
@@ -33,6 +33,8 @@ export default function PublicAccountLink() {
     });
     return () => { active = false; };
   }, []);
+
+  if (account.href === guest.href) return <><Link className="text-button" href={account.href}>Masuk</Link><Link className="text-button public-register-link" href="/akun/daftar">Daftar akun</Link></>;
 
   return <Link className="text-button" href={account.href}>{account.label}</Link>;
 }

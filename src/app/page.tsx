@@ -34,7 +34,7 @@ export default async function Home() {
         <div className="hub-hero-copy">
           <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
           <h1>Tes STIFIn untuk memahami diri dan keluarga.<br/><em>Mulai dari kebutuhan Anda.</em></h1>
-          <p>Bandingkan layanan personal, pasangan, keluarga, atau sekolah. Tim membantu mengonfirmasi pilihan, wilayah, jadwal, dan biaya sebelum Anda berkomitmen.</p>
+          <p>Pilih layanan sesuai kebutuhan. Anda dapat mengajukan permintaan tanpa akun; tim akan mengonfirmasi promotor, lokasi, jadwal, promo, dan biaya sebelum pembayaran.</p>
           <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin#layanan">Pilih layanan Tes STIFIn →</Link><PublicInterestAction className="public-cta big home-help-cta" linkKey="tesPersonal" label="Bantu saya memilih" service="Bantuan memilih layanan STIFIn" leadType="test_service" familyPromo={promo.familyActive ? { minimumPaidTestPrice: promo.settings.minimumPaidTestPrice, schemes: promo.settings.familySchemes } : undefined} /></div><div className="public-proof-strip"><span>✓ Tes tatap muka</span><span>✓ Pembahasan bersama promotor</span><span>✓ Jadwal dikonfirmasi</span></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
@@ -44,6 +44,18 @@ export default async function Home() {
       </section>
 
       <PublicPromotionBanner />
+
+      <section className="home-entry-paths" aria-labelledby="home-entry-paths-title">
+        <div className="home-entry-heading"><span>SUDAH TERDAFTAR?</span><h2 id="home-entry-paths-title">Lanjutkan dari akun yang sesuai.</h2><p>Pengunjung baru dapat langsung melihat layanan. Jika sudah memiliki akun, pilih jalur masuk di bawah.</p></div>
+        <div className="home-entry-grid">
+          <article className="home-entry-card">
+            <span className="home-entry-icon" aria-hidden="true">01</span><div><h3>Pelanggan atau anggota</h3><p>Masuk untuk memeriksa aktivitas, kelas, pembelian, atau pesanan yang terkait dengan akun Anda.</p></div><Link href="/akun/login?next=%2Fakun">Masuk ke akun <span aria-hidden="true">→</span></Link>
+          </article>
+          <article className="home-entry-card featured">
+            <span className="home-entry-icon" aria-hidden="true">02</span><div><h3>Promotor aktif</h3><p>Buka pusat promotor untuk melanjutkan aktivitas sesuai peran dan akses yang telah diberikan.</p></div><Link href="/akun/login?next=%2Fakun">Masuk ke portal promotor <span aria-hidden="true">→</span></Link>
+          </article>
+        </div>
+      </section>
 
       <section className="life-situations" aria-label="Kebutuhan calon peserta Tes STIFIn">
         <article><small>DI RUMAH</small><p>“Sudah dijelaskan berkali-kali, kenapa cara menangkapnya tetap berbeda?”</p><span>Pahami cara belajar dan berkomunikasi.</span></article>
@@ -63,6 +75,7 @@ export default async function Home() {
           <Link href={item.href}>{item.action} <span>→</span></Link>
         </article>)}
       </section>
+
 
       <ActivityGallery />
 

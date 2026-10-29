@@ -836,3 +836,15 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 @media(max-width:900px){.sidebar{width:220px}.main-area{margin-left:220px}.topbar{padding-inline:22px}.content{padding:24px 22px 40px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.portal-bar .crm-portal-nav{padding:14px 15px;gap:12px}.portal-links{gap:4px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}.portal-links a{white-space:nowrap}.portal-account{width:100%;justify-content:space-between;margin-left:0}.portal-account span{max-width:70%}.portal-page{padding:23px 14px 42px}.portal-heading{align-items:flex-start;flex-direction:column;gap:12px}.portal-heading .portal-primary{white-space:normal}.portal-card{padding:19px}.portal-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.portal-stat{padding:15px}.portal-stat strong{font-size:22px;margin:10px 0}.portal-status-grid{grid-template-columns:1fr 1fr}.crm-create{margin:14px;padding:17px}.crm-toolbar{margin:14px;padding-inline:14px}.app-shell{display:block}.sidebar{position:relative;inset:auto;width:auto;min-height:0;padding:12px 14px;box-shadow:none;border-right:0;border-bottom:1px solid var(--line)}.sidebar nav{display:flex;flex-direction:row;overflow-x:auto;gap:5px;padding:8px 0}.sidebar nav button{white-space:nowrap;flex:0 0 auto;padding:9px 11px}.workspace,.sidebar-bottom{display:none}.main-area{margin-left:0}.topbar{height:auto;min-height:58px;padding:12px 15px;position:relative}.content{padding:20px 14px 35px}.page-title{gap:12px;flex-direction:column;margin-bottom:18px}.page-title h1{font-size:23px}.metric-grid{gap:10px}.metric{padding:15px}.metric>b{font-size:22px}.dashboard-grid,.dashboard-grid.lower{grid-template-columns:1fr;gap:12px}.pipeline{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.panel-head{padding:17px 16px 12px}.table-tools{flex-wrap:wrap}.search-box{flex-basis:100%}}
 @media(prefers-reduced-motion:reduce){:where(button,a,.metric,.portal-stat){transition:none!important}}
+
+
+/* 0.10.17: account entry pages explain the shared-account model. */
+.portal-auth{max-width:600px;padding-top:56px}
+.portal-auth>.portal-brand{display:inline-flex;align-items:center;gap:10px;color:#174d39;text-decoration:none;font-size:24px;letter-spacing:-.04em}
+.portal-auth .portal-card{border:1px solid #dce8df;border-radius:22px;box-shadow:0 20px 55px rgba(18,59,42,.075);background:linear-gradient(160deg,#fff 0%,#fbfdfb 100%)}
+.portal-auth .portal-card>h1{font-size:clamp(29px,4vw,38px);line-height:1.12;letter-spacing:-.045em;color:#123b2e;margin:10px 0 12px}
+.portal-auth .portal-card>p{font-size:13px;line-height:1.8;color:#5f7668}
+.portal-auth .portal-auth-context{padding:12px 14px;border:1px solid #dce9df;border-radius:10px;background:#f2f8f3;color:#496d57!important}
+.portal-auth .portal-form button{width:100%;min-height:48px;border-radius:10px;background:#087b60;box-shadow:0 7px 18px rgba(8,91,65,.12)}
+.portal-auth .portal-form button:hover{background:#075e4a}
+@media(max-width:700px){.portal-auth{padding:28px 16px 48px}.portal-auth .portal-card{padding:24px 19px;border-radius:17px}}
