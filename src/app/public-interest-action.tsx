@@ -14,6 +14,8 @@ const testServices = [
   { key: 'bantuanTes', label: 'Bantuan memilih layanan STIFIn' },
 ] as const;
 
+const OFFICIAL_WHATSAPP_NUMBER = '6281333362649';
+
 const promoterServices = [
   { key: 'previewPromotor', label: 'Preview Calon Promotor' },
   { key: 'wsl1', label: 'WSL 1' },
@@ -114,6 +116,7 @@ export default function PublicInterestAction({
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState('');
   const [result, setResult] = useState<SubmissionResult | null>(null);
+  const [whatsappMessage, setWhatsappMessage] = useState('');
   const effectiveLeadType = leadType ?? inferredLeadType(linkKey);
   const selectedDefault = defaultProductKey(effectiveLeadType, linkKey, service);
   const [selectedProductKey, setSelectedProductKey] = useState<string>(selectedDefault);
@@ -140,6 +143,7 @@ export default function PublicInterestAction({
     setState('idle');
     setError('');
     setResult(null);
+    setWhatsappMessage('');
     setSelectedProductKey(selectedDefault);
     setSelectedPromoKey(familyPromo?.schemes[0]?.key || '');
     setOpen(true);
@@ -199,6 +203,22 @@ export default function PublicInterestAction({
         return;
       }
       if (trackLead) window.fbq?.('track', 'Lead', { content_name: selectedService, content_category: effectiveLeadType });
+      const submittedName = String(form.get('name') || '').trim();
+      const submittedPhone = String(form.get('phone') || '').trim();
+      const submittedCity = String(form.get('city') || '').trim();
+      const whatsappLines = [
+        'Assalamu’alaikum Admin KonsepSTIFIn.',
+        `Saya telah mengisi formulir ${selectedService} melalui KonsepSTIFIn.com.`,
+        `Nama: ${submittedName}`,
+        `Nomor WhatsApp: ${submittedPhone}`,
+        `Kota/domisili: ${submittedCity}`,
+        `Nomor referensi: ${responseResult.reference}`,
+        effectiveLeadType === 'promoter_candidate'
+          ? 'Mohon kirimkan panduan tahapan pendaftaran promotor, persyaratan, biaya, dan langkah selanjutnya.'
+          : 'Mohon konfirmasi kebutuhan, harga, jadwal, dan langkah selanjutnya.',
+        'Terima kasih.'
+      ];
+      setWhatsappMessage(whatsappLines.join('\n'));
       setResult(responseResult);
       setState('sent');
     } catch {
@@ -234,7 +254,7 @@ export default function PublicInterestAction({
           <span>✓</span>
           <h2 id="interest-title">Permintaan sudah tersimpan.</h2>
           <p>Nomor referensi <b>{result?.reference}</b>. Simpan nomor ini untuk tindak lanjut. Tim akan mengonfirmasi kebutuhan, harga, jadwal, dan instruksi pembayaran. Pengiriman formulir belum berarti pembayaran lunas.</p>
-          {result?.whatsappContact ? <div className="interest-whatsapp-next"><b>Agar instruksi bisa dikirim melalui WhatsApp</b><p>Mulai chat dengan nomor resmi KonsepSTIFIn terlebih dahulu. Tekan tombol di bawah, lalu kirim pesan yang sudah disiapkan. Setelah chat masuk, instruksi layanan dapat dikirim dalam jendela percakapan WhatsApp.</p><a className="public-cta" href={`https://wa.me/${result.whatsappContact}?text=${encodeURIComponent(`Assalamu'alaikum, saya sudah mengajukan permintaan ${result.reference}. Mohon instruksi selanjutnya.`)}`} target="_blank" rel="noopener noreferrer">Mulai chat WhatsApp ↗</a></div> : <p className="interest-referral-status">Untuk menerima instruksi WhatsApp, hubungi nomor resmi yang tercantum di halaman Kontak dan kirim nomor referensi ini terlebih dahulu.</p>}
+          <div className="interest-whatsapp-next"><b>Lanjutkan melalui WhatsApp</b><p>Tekan tombol di bawah. WhatsApp akan terbuka dengan pesan konfirmasi yang sudah disiapkan, termasuk nama layanan dan nomor referensi Anda. Periksa pesan tersebut, lalu tekan <b>Kirim</b> agar tim dapat menindaklanjuti permintaan Anda.</p><a className="public-cta" href={`https://wa.me/${OFFICIAL_WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noopener noreferrer">Konfirmasi melalui WhatsApp ↗</a><small>Nomor resmi KonsepSTIFIn: +62 813-3336-2649</small></div>
           <p className="interest-referral-status">{result?.referralRecorded ? `Asal referral tercatat: /r/${result.referralAlias}. Pengajuan dapat diperiksa di Aktivitas referral mitra.` : 'Jika Anda datang melalui undangan mitra, asal referral akan mengikuti data atribusi yang berhasil diverifikasi sistem.'}</p>
           {effectiveLeadType === 'test_service' && result?.match?.promoter ? <article className="interest-match-card">
             <small>PROMOTOR YANG DICOCOKKAN</small><b>{result.match.promoter.name}</b><span>{result.match.promoter.area}, {result.match.promoter.province}</span>

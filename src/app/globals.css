@@ -848,3 +848,4 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 .portal-auth .portal-form button{width:100%;min-height:48px;border-radius:10px;background:#087b60;box-shadow:0 7px 18px rgba(8,91,65,.12)}
 .portal-auth .portal-form button:hover{background:#075e4a}
 @media(max-width:700px){.portal-auth{padding:28px 16px 48px}.portal-auth .portal-card{padding:24px 19px;border-radius:17px}}
+.interest-whatsapp-next>small{display:block;margin-top:10px;color:#527267;font-size:12px}

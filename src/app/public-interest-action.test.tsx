@@ -170,3 +170,25 @@ it('menampilkan skema Family Test setelah layanan dipilih pada formulir bantuan'
   expect(screen.getByLabelText('Skema Promo Family Test')).toBeInTheDocument();
   expect(screen.getByText(/minimum pembayaran Rp1\.500\.000/i)).toBeInTheDocument();
 });
+
+it('always offers a WhatsApp confirmation link with prefilled service, contact and reference', async () => {
+  mockSubmissionResponse({ ok: true, reference: 'KSF-207', status: 'baru', match: null });
+  render(<PublicInterestAction leadType="promoter_candidate" linkKey="paketPromotor" label="Daftar paket promotor" service="Paket Promotor" />);
+  await userEvent.click(screen.getByRole('button', { name: 'Daftar paket promotor' }));
+  fireEvent.change(screen.getByLabelText('Nama lengkap'), { target: { value: 'Sofyan Ar' } });
+  fireEvent.change(screen.getByLabelText('Nomor WhatsApp'), { target: { value: '081333362649' } });
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'sofyan@example.com' } });
+  fireEvent.change(screen.getByLabelText('Kota/domisili'), { target: { value: 'Bandung' } });
+  await userEvent.click(screen.getByLabelText(/digunakan tim untuk menindaklanjuti/i));
+  await userEvent.click(screen.getByRole('button', { name: 'Kirim permintaan →' }));
+
+  const whatsapp = await screen.findByRole('link', { name: /konfirmasi melalui whatsapp/i });
+  const href = new URL(whatsapp.getAttribute('href')!);
+  expect(href.origin + href.pathname).toBe('https://wa.me/6281333362649');
+  expect(href.searchParams.get('text')).toContain('Paket Promotor');
+  expect(href.searchParams.get('text')).toContain('Sofyan Ar');
+  expect(href.searchParams.get('text')).toContain('081333362649');
+  expect(href.searchParams.get('text')).toContain('Bandung');
+  expect(href.searchParams.get('text')).toContain('KSF-207');
+  expect(href.searchParams.get('text')).toContain('panduan tahapan pendaftaran promotor');
+});
