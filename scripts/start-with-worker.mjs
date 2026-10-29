@@ -1,4 +1,4 @@
-/** Container entrypoint: web and voucher queue share the container lifecycle. */
+/** Container entrypoint: web, fulfillment, and notification workers share the container lifecycle. */
 import {spawn} from 'node:child_process';
 const children=[];
 let stopping=false;
@@ -18,3 +18,7 @@ worker.on('exit',code=>{if(!stopping){console.error('Voucher worker exited; rest
 const learningWorker=spawn(process.execPath,['scripts/learning-worker.mjs'],{stdio:'inherit',env:process.env});children.push(learningWorker);
 learningWorker.on('error',()=>{console.error('Learning worker could not start.');stop('SIGTERM',1);});
 learningWorker.on('exit',code=>{if(!stopping){console.error('Learning worker exited.');stop('SIGTERM',code||1);}});
+
+const notificationWorker=spawn(process.execPath,['scripts/notification-worker.mjs'],{stdio:'inherit',env:process.env});children.push(notificationWorker);
+notificationWorker.on('error',()=>{console.error('Notification worker could not start.');stop('SIGTERM',1);});
+notificationWorker.on('exit',code=>{if(!stopping){console.error('Notification worker exited.');stop('SIGTERM',code||1);}});

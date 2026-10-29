@@ -1,0 +1,14 @@
+KonsepSTIFIn 0.10.6 - status pemeriksaan sumber
+
+Pemeriksaan yang berhasil:
+- Transpilasi sintaks TypeScript/TSX untuk 16 file yang berkaitan dengan Moota, StarSender, marketing, pengaturan, navigasi, dan pesanan: 0 diagnostic sintaks.
+- Pemeriksaan sintaks Node untuk scripts/notification-worker.mjs dan scripts/start-with-worker.mjs: lulus.
+- Pemeriksaan manual struktur migration 011 dan pemakaian environment variable: selesai.
+
+Pemeriksaan yang belum dapat dijalankan:
+- npm test, npm run typecheck, npm run lint, npm run build, dan npm run test:smoke belum dapat diverifikasi karena dependensi tidak tersedia di lingkungan ini. npm ci --offline berhenti karena paket zod-validation-error@4.0.2 tidak tersedia di cache dan akses registry tidak tersedia.
+- Tidak ada tes koneksi Moota/StarSender langsung karena token akun pengguna tidak disediakan.
+- Pembuatan invoice Moota belum dapat diuji live. MOOTA_RECEIVE_MONEY_CREATE_PATH harus diisi memakai path create aktif dari dokumentasi Moota, karena operasi Terima Uang yang lama ditandai deprecated.
+
+Kesimpulan pengujian:
+Source lulus pemeriksaan sintaks pada file baru/diubah. Rilis belum boleh dianggap lolos build produksi sampai seluruh pengujian aplikasi dijalankan pada Node 24 dengan dependensi terpasang, migrasi 011 diterapkan di staging, dan endpoint Moota dikonfirmasi terhadap skema API akun yang aktif.
