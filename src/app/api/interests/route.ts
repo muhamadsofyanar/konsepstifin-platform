@@ -8,6 +8,7 @@ import { createInterestLead } from '@/lib/interest-store';
 import { getPromotersForRegion } from '@/lib/promoter-store';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getActivePromotion, familyScheme } from '@/lib/promotion-store';
+import { getPublicIntegrationSettings } from '@/lib/integration-settings';
 
 export function publicInterestErrorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : 'Permintaan belum dapat disimpan.';
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
       createLead: createInterestLead,
     });
     const isTestLead = result.lead.leadType === 'test_service';
+    let whatsappContact = '';
+    try { whatsappContact = (await getPublicIntegrationSettings()).starsender.businessNumber || ''; } catch { /* A settings read must not turn a saved lead into a failed submission. */ }
     return NextResponse.json({
       ok: true,
       reference: result.reference,
@@ -74,6 +77,7 @@ export async function POST(request: NextRequest) {
       referralAlias: 'sourceReferralAlias' in result.lead ? result.lead.sourceReferralAlias : '',
       status: result.status,
       match: isTestLead ? result.match : null,
+      whatsappContact,
     }, { status: 201 });
   } catch (error) {
     return publicInterestErrorResponse(error);

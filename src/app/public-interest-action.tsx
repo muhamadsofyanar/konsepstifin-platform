@@ -41,6 +41,7 @@ type SubmissionResult = {
   referralRecorded?: boolean;
   referralAlias?: string;
   status?: string;
+  whatsappContact?: string;
   match?: {
     method?: string;
     promoter?: { code: string; name: string; branchCode: string; area: string; province: string } | null;
@@ -233,6 +234,7 @@ export default function PublicInterestAction({
           <span>✓</span>
           <h2 id="interest-title">Permintaan sudah tersimpan.</h2>
           <p>Nomor referensi <b>{result?.reference}</b>. Simpan nomor ini untuk tindak lanjut. Tim akan mengonfirmasi kebutuhan, harga, jadwal, dan instruksi pembayaran. Pengiriman formulir belum berarti pembayaran lunas.</p>
+          {result?.whatsappContact ? <div className="interest-whatsapp-next"><b>Agar instruksi bisa dikirim melalui WhatsApp</b><p>Mulai chat dengan nomor resmi KonsepSTIFIn terlebih dahulu. Tekan tombol di bawah, lalu kirim pesan yang sudah disiapkan. Setelah chat masuk, instruksi layanan dapat dikirim dalam jendela percakapan WhatsApp.</p><a className="public-cta" href={`https://wa.me/${result.whatsappContact}?text=${encodeURIComponent(`Assalamu'alaikum, saya sudah mengajukan permintaan ${result.reference}. Mohon instruksi selanjutnya.`)}`} target="_blank" rel="noopener noreferrer">Mulai chat WhatsApp ↗</a></div> : <p className="interest-referral-status">Untuk menerima instruksi WhatsApp, hubungi nomor resmi yang tercantum di halaman Kontak dan kirim nomor referensi ini terlebih dahulu.</p>}
           <p className="interest-referral-status">{result?.referralRecorded ? `Asal referral tercatat: /r/${result.referralAlias}. Pengajuan dapat diperiksa di Aktivitas referral mitra.` : 'Jika Anda datang melalui undangan mitra, asal referral akan mengikuti data atribusi yang berhasil diverifikasi sistem.'}</p>
           {effectiveLeadType === 'test_service' && result?.match?.promoter ? <article className="interest-match-card">
             <small>PROMOTOR YANG DICOCOKKAN</small><b>{result.match.promoter.name}</b><span>{result.match.promoter.area}, {result.match.promoter.province}</span>

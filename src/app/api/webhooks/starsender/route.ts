@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         WHERE status IN ('pending','awaiting_inbound') AND regexp_replace(recipient_phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})`;
     } else {
       await sql`UPDATE notification_outbox SET status='pending',available_at=now(),last_error='',updated_at=now()
-        WHERE status='awaiting_inbound' AND regexp_replace(recipient_phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})`;
+        WHERE status='awaiting_inbound' AND (expires_at IS NULL OR expires_at>now()) AND regexp_replace(recipient_phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})`;
     }
     return Response.json({ message: 'Pesan masuk tercatat.', duplicate: false, optedOut: Boolean(session?.opted_out_at) }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
   } catch {

@@ -9,11 +9,13 @@ function getDatabaseClient() {
 }
 
 type MootaConfig = { baseUrl: string; apiToken: string; webhookSecret: string; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
-type StarSenderConfig = { apiKey: string; apiUrl: string; webhookSecret: string };
-export type IntegrationConfig = { moota: MootaConfig; starsender: StarSenderConfig };
+type StarSenderConfig = { apiKey: string; apiUrl: string; webhookSecret: string; businessNumber: string };
+type MailketingConfig = { apiToken: string; apiUrl: string; fromName: string; fromEmail: string };
+export type IntegrationConfig = { moota: MootaConfig; starsender: StarSenderConfig; mailketing: MailketingConfig };
 export type PublicIntegrationSettings = {
   moota: { baseUrl: string; apiTokenConfigured: boolean; webhookSecretConfigured: boolean; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
-  starsender: { apiKeyConfigured: boolean; apiUrl: string; webhookSecretConfigured: boolean };
+  starsender: { apiKeyConfigured: boolean; apiUrl: string; webhookSecretConfigured: boolean; businessNumber: string };
+  mailketing: { apiTokenConfigured: boolean; apiUrl: string; fromName: string; fromEmail: string };
 };
 
 const envConfig = (): IntegrationConfig => ({
@@ -22,7 +24,7 @@ const envConfig = (): IntegrationConfig => ({
     apiToken: (process.env.MOOTA_API_TOKEN || '').trim(),
     webhookSecret: (process.env.MOOTA_WEBHOOK_SECRET || '').trim(),
     bankAccountId: (process.env.MOOTA_BANK_ACCOUNT_ID || '').trim(),
-    receiveMoneyCreatePath: (process.env.MOOTA_RECEIVE_MONEY_CREATE_PATH || '').trim(),
+    receiveMoneyCreatePath: (process.env.MOOTA_RECEIVE_MONEY_CREATE_PATH || '/api/v2/create-transaction').trim(),
     bankAccountField: (process.env.MOOTA_BANK_ACCOUNT_FIELD || 'bank_id').trim(),
     timeoutMs: Math.min(30000, Math.max(3000, Number(process.env.MOOTA_API_TIMEOUT_MS) || 12000)),
   },
@@ -30,6 +32,13 @@ const envConfig = (): IntegrationConfig => ({
     apiKey: (process.env.STARSENDER_API_KEY || '').trim(),
     apiUrl: (process.env.STARSENDER_API_URL || 'https://api.starsender.online/api/send').trim(),
     webhookSecret: (process.env.STARSENDER_WEBHOOK_SECRET || '').trim(),
+    businessNumber: (process.env.STARSENDER_BUSINESS_NUMBER || '').trim(),
+  },
+  mailketing: {
+    apiToken: (process.env.MAILKETING_API_TOKEN || '').trim(),
+    apiUrl: (process.env.MAILKETING_API_URL || 'https://api.mailketing.co.id/api/v2/send').trim(),
+    fromName: (process.env.MAILKETING_FROM_NAME || 'KonsepSTIFIn').trim(),
+    fromEmail: (process.env.MAILKETING_FROM_EMAIL || '').trim(),
   },
 });
 
@@ -52,9 +61,13 @@ function decrypt(row: Record<string, unknown>): IntegrationConfig {
   const raw = Buffer.concat([decipher.update(Buffer.from(String(row.ciphertext), 'base64')), decipher.final()]).toString('utf8');
   const value = JSON.parse(raw) as Partial<IntegrationConfig>;
   const fallback = envConfig();
+  const moota = { ...fallback.moota, ...(value.moota || {}) };
+  // Current Moota API V2 create operation; preserve a saved custom path when provided.
+  if (!moota.receiveMoneyCreatePath.trim()) moota.receiveMoneyCreatePath = '/api/v2/create-transaction';
   return {
-    moota: { ...fallback.moota, ...(value.moota || {}) },
+    moota,
     starsender: { ...fallback.starsender, ...(value.starsender || {}) },
+    mailketing: { ...fallback.mailketing, ...(value.mailketing || {}) },
   };
 }
 async function storedConfig(): Promise<IntegrationConfig | null> {
@@ -77,7 +90,8 @@ export async function getPublicIntegrationSettings(): Promise<PublicIntegrationS
   const c = await getIntegrationConfig();
   return {
     moota: { baseUrl: c.moota.baseUrl, apiTokenConfigured: Boolean(c.moota.apiToken), webhookSecretConfigured: Boolean(c.moota.webhookSecret), bankAccountId: c.moota.bankAccountId, receiveMoneyCreatePath: c.moota.receiveMoneyCreatePath, bankAccountField: c.moota.bankAccountField, timeoutMs: c.moota.timeoutMs },
-    starsender: { apiKeyConfigured: Boolean(c.starsender.apiKey), apiUrl: c.starsender.apiUrl, webhookSecretConfigured: Boolean(c.starsender.webhookSecret) },
+    starsender: { apiKeyConfigured: Boolean(c.starsender.apiKey), apiUrl: c.starsender.apiUrl, webhookSecretConfigured: Boolean(c.starsender.webhookSecret), businessNumber: c.starsender.businessNumber },
+    mailketing: { apiTokenConfigured: Boolean(c.mailketing.apiToken), apiUrl: c.mailketing.apiUrl, fromName: c.mailketing.fromName, fromEmail: c.mailketing.fromEmail },
   };
 }
 function safeUrl(value: unknown, label: string) {
@@ -87,11 +101,22 @@ function safeUrl(value: unknown, label: string) {
   if (url.protocol !== 'https:' || url.username || url.password || url.hash) throw new Error(`${label} harus menggunakan HTTPS dan tidak boleh berisi kredensial.`);
   return url.toString().replace(/\/$/, '');
 }
+function normalizeBusinessNumber(value: unknown) {
+  let number = String(value ?? '').replace(/[^0-9]/g, '');
+  if (!number) return '';
+  if (number.startsWith('00')) number = number.slice(2);
+  if (number.startsWith('0')) number = `62${number.slice(1)}`;
+  else if (number.startsWith('8')) number = `62${number}`;
+  if (!/^62[0-9]{8,13}$/.test(number)) throw new Error('Nomor WhatsApp resmi harus memakai format Indonesia, misalnya 6281234567890.');
+  return number;
+}
+
 export async function saveIntegrationSettings(actor: string, input: Record<string, unknown>) {
   const current = await getIntegrationConfig();
   const clear = Array.isArray(input.clearSecrets) ? input.clearSecrets.map(String) : [];
   const mootaInput = input.moota && typeof input.moota === 'object' ? input.moota as Record<string, unknown> : {};
   const senderInput = input.starsender && typeof input.starsender === 'object' ? input.starsender as Record<string, unknown> : {};
+  const mailketingInput = input.mailketing && typeof input.mailketing === 'object' ? input.mailketing as Record<string, unknown> : {};
   const secret = (next: unknown, old: string, key: string) => clear.includes(key) ? '' : String(next ?? '').trim() || old;
   const moota: MootaConfig = {
     baseUrl: safeUrl(mootaInput.baseUrl ?? current.moota.baseUrl, 'URL dasar Moota'),
@@ -108,9 +133,20 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
     apiKey: secret(senderInput.apiKey, current.starsender.apiKey, 'starsender.apiKey'),
     apiUrl: safeUrl(senderInput.apiUrl ?? current.starsender.apiUrl, 'URL API StarSender'),
     webhookSecret: secret(senderInput.webhookSecret, current.starsender.webhookSecret, 'starsender.webhookSecret'),
+    businessNumber: normalizeBusinessNumber(senderInput.businessNumber ?? current.starsender.businessNumber),
   };
   if (starsender.webhookSecret && starsender.webhookSecret.length < 32) throw new Error('Secret webhook StarSender minimal 32 karakter.');
-  const config: IntegrationConfig = { moota, starsender };
+  const mailketing: MailketingConfig = {
+    apiToken: secret(mailketingInput.apiToken, current.mailketing.apiToken, 'mailketing.apiToken'),
+    apiUrl: safeUrl(mailketingInput.apiUrl ?? current.mailketing.apiUrl, 'URL API Mailketing'),
+    fromName: String(mailketingInput.fromName ?? current.mailketing.fromName).trim().slice(0, 255),
+    fromEmail: String(mailketingInput.fromEmail ?? current.mailketing.fromEmail).trim().slice(0, 255).toLowerCase(),
+  };
+  if (mailketing.fromEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mailketing.fromEmail)) throw new Error('Email pengirim Mailketing tidak valid.');
+  const mailketingUrl = new URL(mailketing.apiUrl);
+  if (mailketingUrl.hostname !== 'api.mailketing.co.id' || mailketingUrl.pathname !== '/api/v2/send') throw new Error('Endpoint Mailketing harus https://api.mailketing.co.id/api/v2/send.');
+  if (mailketing.apiToken && (!mailketing.fromName || !mailketing.fromEmail)) throw new Error('Nama dan email pengirim Mailketing wajib diisi jika API token diaktifkan.');
+  const config: IntegrationConfig = { moota, starsender, mailketing };
   const encrypted = encrypt(config);
   const sql = getDatabaseClient();
   await sql.begin(async tx => {
@@ -118,7 +154,7 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
       VALUES ('all',${encrypted.iv},${encrypted.ciphertext},${encrypted.tag},${actor}::uuid,now())
       ON CONFLICT(provider) DO UPDATE SET iv=EXCLUDED.iv,ciphertext=EXCLUDED.ciphertext,auth_tag=EXCLUDED.auth_tag,updated_by=EXCLUDED.updated_by,updated_at=now()`;
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details)
-      VALUES (${actor}::uuid,'integration.settings.updated','external-integrations',${JSON.stringify({mootaApiTokenConfigured:Boolean(moota.apiToken),mootaWebhookConfigured:Boolean(moota.webhookSecret),starsenderConfigured:Boolean(starsender.apiKey),starsenderWebhookConfigured:Boolean(starsender.webhookSecret),clearedSecrets:clear})}::jsonb)`;
+      VALUES (${actor}::uuid,'integration.settings.updated','external-integrations',${JSON.stringify({mootaApiTokenConfigured:Boolean(moota.apiToken),mootaWebhookConfigured:Boolean(moota.webhookSecret),starsenderConfigured:Boolean(starsender.apiKey),starsenderWebhookConfigured:Boolean(starsender.webhookSecret),starsenderBusinessNumberConfigured:Boolean(starsender.businessNumber),mailketingConfigured:Boolean(mailketing.apiToken),mailketingSenderConfigured:Boolean(mailketing.fromEmail),clearedSecrets:clear})}::jsonb)`;
   });
   return getPublicIntegrationSettings();
 }

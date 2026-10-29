@@ -3,6 +3,7 @@ import { CommerceService, type CommerceDatabase, type CommerceQuery } from './co
 import {voucherCommerceGuard} from './voucher-service.ts';
 import {LearningService} from './learning-service';
 import {processVoucherOrder} from './voucher-store.ts';
+import { createMootaPaymentForOrder } from './moota-store.ts';
 function database() {
  const sql=getDatabaseClient();
  const query:CommerceQuery['query']=async(text,params=[])=>await sql.unsafe(text,params as never[]) as unknown as Record<string,unknown>[];
@@ -14,7 +15,12 @@ export const getOrder=(id:number)=>commerce().get(id);
 export const listOrders=(options:{page?:number;leadId?:number}={})=>commerce().list(options);
 export const createOrder=async(input:Parameters<CommerceService['create']>[0],actor:string)=>{return commerce().create(input,actor);};
 export const commandOrder=async(id:number,input:Parameters<CommerceService['command']>[1],actor:string)=>{
- const order=await commerce().command(id,input,actor);
+ let order=await commerce().command(id,input,actor);
+ // Issuing a customer order immediately prepares its Moota payment link. The issued order remains durable if Moota is temporarily unavailable.
+ if(input.action==='issue'&&order?.state==='issued'&&order.paymentStatus!=='paid'&&!order.mootaPaymentUrl){
+  try { order=(await createMootaPaymentForOrder(id,actor)).order; }
+  catch { order=(await commerce().get(id))??order; }
+ }
  // Receipt has committed. A failed delivery cannot roll back or misreport the receipt.
  if(input.action==='receipt'&&order?.paymentStatus==='paid'){try{await processVoucherOrder(id);}catch{/* Pending delivery is recoverable by the worker; payment remains committed. */}}
  if(['receipt','refund','correction'].includes(input.action)){try{await new LearningService(database()).reconcile(id);}catch{/* Durable SQL trigger keeps reconciliation queued for the worker. */}}

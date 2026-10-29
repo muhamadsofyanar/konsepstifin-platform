@@ -2,7 +2,7 @@ export class VoucherError extends Error {}
 export type VoucherMode='test'|'live'|'off';
 export type VoucherBalance={voucher:number;free:number;checkedAt:string};
 export type VoucherSettings={unitPrice:number;maxQuantity:number;mode:VoucherMode};
-export type VoucherOrder={id:number;number:string;quantity:number;unitPrice:number;total:number;balance:number;paymentStatus:string;fulfillmentStatus:string;mode:string;promoterCode:string;promoterName:string;createdAt:string;lastError:string|null};
+export type VoucherOrder={id:number;number:string;quantity:number;unitPrice:number;total:number;balance:number;paymentStatus:string;fulfillmentStatus:string;mode:string;promoterCode:string;promoterName:string;createdAt:string;lastError:string|null;paymentUrl:string|null;paymentExpiresAt:string|null;invoiceStatus:string};
 export function voucherMode(value=process.env.STIFIN_VOUCHER_MODE):VoucherMode{if(!value)return 'test';if(['test','live','off'].includes(value))return value as VoucherMode;throw new VoucherError('Konfigurasi mode voucher tidak valid.');}
 function integer(value:unknown){if((typeof value!=='number'&&typeof value!=='string')||!/^\d+$/.test(String(value)))throw new VoucherError('Format saldo voucher tidak dikenali.');const n=Number(value);if(!Number.isSafeInteger(n)||n<0)throw new VoucherError('Format saldo voucher tidak dikenali.');return n;}
 /** Only explicit balance keys or an exact two-element legacy payload. Never harvest metadata numbers. */

@@ -1,0 +1,28 @@
+KonsepSTIFIn 0.10.13 - hasil pemeriksaan lokal
+
+LULUS
+- JSON package.json dan package-lock.json valid; versi keduanya 0.10.13.
+- Syntax check Node untuk scripts/email-notification-worker.mjs.
+- Syntax check Node untuk scripts/notification-worker.mjs.
+- Syntax check Node untuk scripts/start-with-worker.mjs.
+- Syntax check Node type stripping untuk src/lib/moota-store.ts.
+- Syntax check Node type stripping untuk src/lib/moota-client.ts.
+- Syntax check Node type stripping untuk src/lib/integration-settings.ts.
+- Syntax check Node type stripping untuk src/lib/mailketing-client.ts.
+- Syntax check Node type stripping untuk src/lib/voucher-service.ts.
+- Syntax check Node type stripping untuk src/lib/commerce-store.ts.
+- Syntax check Node type stripping untuk src/lib/commerce-service.ts.
+- Syntax check Node type stripping untuk src/lib/learning-service.ts.
+- TypeScript parser tidak menemukan error sintaks pada file TS/TSX yang diperiksa.
+
+BELUM DIVERIFIKASI
+- npm ci mengalami timeout pada lingkungan kerja.
+- Build Next.js produksi.
+- Typecheck penuh dan lint.
+- Seluruh test suite.
+- API live Moota (buat tagihan dan callback pembayaran).
+- API live StarSender inbound dan pengiriman pesan.
+- API live Mailketing dan pengiriman email.
+- Transaksi staging sampai status lunas dan pemenuhan voucher/akses.
+
+Penting: syntax check bukan pengganti build produksi. Jalankan build Coolify dan checklist staging setelah migrasi 014. Jangan mengaktifkan checkout produksi sebelum satu transaksi uji berhasil sampai webhook dan ledger.

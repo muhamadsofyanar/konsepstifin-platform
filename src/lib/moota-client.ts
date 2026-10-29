@@ -25,8 +25,13 @@ function object(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 function nestedData(value: unknown): Record<string, unknown> {
-  const root = object(value);
-  return object(root.data ?? root.result ?? root.invoice ?? root.payment ?? root);
+  let current = object(value);
+  for (let i = 0; i < 4; i++) {
+    const next = current.data ?? current.result ?? current.invoice ?? current.payment ?? current.transaction;
+    if (!next || typeof next !== 'object' || Array.isArray(next)) break;
+    current = object(next);
+  }
+  return current;
 }
 function firstString(value: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
@@ -85,6 +90,7 @@ export async function createMootaInvoice(input: MootaInvoiceInput): Promise<Moot
   if (!bankId) throw new Error('MOOTA_BANK_ACCOUNT_ID belum dikonfigurasi.');
   if (!Number.isSafeInteger(input.amount) || input.amount < 1) throw new Error('Nominal tagihan Moota tidak valid.');
   const bankField = config.bankAccountField.trim() || 'bank_id';
+  const requestedExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const payload: Record<string, unknown> = {
     [bankField]: bankId,
     name: input.customerName,
@@ -92,25 +98,25 @@ export async function createMootaInvoice(input: MootaInvoiceInput): Promise<Moot
     email: input.customerEmail,
     description: `${input.description} | ${input.orderNumber}`.slice(0, 500),
     amount: input.amount,
-    expired_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    expired_at: requestedExpiry,
     note: `KonsepSTIFIn order ${input.orderNumber}`,
     unique_code: false,
   };
   const response = await request(path, 'POST', payload);
   const data = nestedData(response);
-  const invoiceId = firstString(data, ['invoice_id', 'invoiceId', 'id', 'reference', 'payment_id', 'uuid']);
-  const paymentUrl = firstString(data, ['payment_url', 'paymentUrl', 'url', 'link', 'payment_link', 'checkout_url']);
+  const invoiceId = firstString(data, ['invoice_id', 'invoiceId', 'transaction_id', 'transactionId', 'id', 'reference', 'payment_id', 'paymentId', 'uuid']);
+  const paymentUrl = firstString(data, ['payment_url', 'paymentUrl', 'payment_link_url', 'paymentLinkUrl', 'url', 'link', 'payment_link', 'checkout_url', 'checkoutUrl', 'redirect_url', 'short_url']);
   if (!invoiceId || !paymentUrl || !/^https:\/\//i.test(paymentUrl)) {
     throw new Error('Respons Moota tidak memuat ID tagihan dan URL pembayaran HTTPS yang dikenali. Periksa kontrak endpoint Terima Uang yang dikonfigurasi.');
   }
-  const amountRaw = data.payment_amount ?? data.total_amount ?? data.amount ?? input.amount;
+  const amountRaw = data.payment_amount ?? data.paymentAmount ?? data.total_amount ?? data.amount_to_pay ?? data.amount ?? input.amount;
   const paymentAmount = Number(amountRaw);
   const expiryRaw = firstString(data, ['expired_at', 'expires_at', 'due_date', 'expiredAt']);
   return {
     invoiceId,
     paymentUrl,
     paymentAmount: Number.isSafeInteger(paymentAmount) && paymentAmount > 0 ? paymentAmount : input.amount,
-    expiresAt: expiryRaw && !Number.isNaN(Date.parse(expiryRaw)) ? new Date(expiryRaw).toISOString() : null,
+    expiresAt: expiryRaw && !Number.isNaN(Date.parse(expiryRaw)) ? new Date(expiryRaw).toISOString() : requestedExpiry,
     response,
   };
 }

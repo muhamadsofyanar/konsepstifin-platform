@@ -4,6 +4,8 @@ import { getLearningService } from '@/lib/learning-store';
 import { learningGuard, learningJson, learningFailure } from '@/lib/learning-http';
 import { REFERRAL_COOKIE } from '@/lib/referral-service';
 import { LearningError, positive } from '@/lib/learning-service';
+import { createMootaPaymentForOrder } from '@/lib/moota-store';
+import { getPublicIntegrationSettings } from '@/lib/integration-settings';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     try {
@@ -22,8 +24,12 @@ export async function GET(request: Request) {
         if (view === 'setup')
             return learningJson(await s.readiness());
         if (view === 'admin') { const data=await s.adminData();const legacy=await getManagedProducts();return learningJson({...data,products:data.products.map(p=>({...p,...(p.source_product_key?{serviceDetails:legacy.find(l=>l.productKey===p.source_product_key)}:{})}))}); }
-        if (view === 'dashboard')
-            return learningJson(await s.dashboard(user, u.searchParams.get('section') ?? 'all'));
+        if (view === 'dashboard') {
+            const dashboard = await s.dashboard(user, u.searchParams.get('section') ?? 'all');
+            let whatsappContact = '';
+            try { whatsappContact = (await getPublicIntegrationSettings()).starsender.businessNumber || ''; } catch { /* Contact CTA is optional and must not block account data. */ }
+            return learningJson({ ...dashboard, whatsappContact });
+        }
         if (view === 'partner')
             return learningJson(await s.partner(user));
         if(view==='classroom') {
@@ -63,9 +69,19 @@ export async function POST(request: Request) {
             return learningJson({ message: 'Akses mitra diperlukan.' }, 403);
         let result;
         switch (input.action) {
-            case 'checkout':
-                result = await s.checkout(user, input, (await cookies()).get(REFERRAL_COOKIE)?.value ?? null);
+            case 'checkout': {
+                const purchase = await s.checkout(user, input, (await cookies()).get(REFERRAL_COOKIE)?.value ?? null);
+                if (!purchase.free && purchase.id) {
+                    try {
+                        const payment = await createMootaPaymentForOrder(Number(purchase.id), user);
+                        result = { ...purchase, paymentUrl: payment.invoice.paymentUrl, paymentExpiresAt: payment.invoice.expiresAt, paymentStatus: payment.order.paymentStatus, paymentSetupStatus: 'ready' };
+                    } catch {
+                        // The order is durable. The customer can retry from the purchases page without duplicating the order.
+                        result = { ...purchase, paymentSetupStatus: 'needs_attention', paymentSetupMessage: 'Pesanan sudah dibuat, tetapi link pembayaran belum berhasil disiapkan. Buka Pembelian saya lalu pilih Coba buat link pembayaran lagi. Jangan transfer manual sebelum instruksi resmi tersedia.' };
+                    }
+                } else result = purchase;
                 break;
+            }
             case 'complete':
                 result = await s.complete(user, positive(input.id));
                 break;

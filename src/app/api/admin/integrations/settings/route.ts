@@ -15,7 +15,7 @@ export async function PUT(request: Request) {
   if (!actor || !actor.roles.includes('super_admin')) return reply({ message: 'Hanya pemilik platform yang dapat mengubah integrasi.' }, 403);
   try {
     const body = await readAdminJson(request);
-    if (Object.keys(body).some(key => !['moota', 'starsender', 'clearSecrets'].includes(key))) throw new Error('Isian pengaturan tidak dikenal.');
+    if (Object.keys(body).some(key => !['moota', 'starsender', 'mailketing', 'clearSecrets'].includes(key))) throw new Error('Isian pengaturan tidak dikenal.');
     return reply({ settings: await saveIntegrationSettings(actor.userId, body) });
   } catch (error) {
     return reply({ message: error instanceof Error && !('code' in error) ? error.message : 'Pengaturan integrasi belum tersimpan.' }, 400);

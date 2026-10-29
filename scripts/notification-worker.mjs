@@ -12,13 +12,15 @@ async function tick() {
     try {
       const [schema] = await sql`SELECT to_regclass('public.whatsapp_inbound_sessions') AS session_table`;
       if (!schema?.session_table) throw new Error('Migration 013 belum diterapkan.');
+      // Expire stale payment instructions before checking inbound sessions.
+      await sql`UPDATE notification_outbox SET status='expired',last_error='Link pembayaran kedaluwarsa sebelum pesan dikirim.',updated_at=now() WHERE status IN ('pending','awaiting_inbound') AND expires_at IS NOT NULL AND expires_at<=now()`;
       // A worker crash after claiming a message is treated as an unknown outcome, not auto-resend.
       await sql`UPDATE notification_outbox SET status='unknown',last_error='Worker berhenti saat pesan sedang diproses; status kirim perlu diperiksa manual.',updated_at=now() WHERE status='sending' AND updated_at < now() - interval '5 minutes'`;
       const [job] = await sql.begin(async tx => {
         const [claimed] = await tx`
           UPDATE notification_outbox
           SET status='sending',attempts=attempts+1,updated_at=now()
-          WHERE id=(SELECT id FROM notification_outbox WHERE status='pending' AND available_at<=now() ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1)
+          WHERE id=(SELECT id FROM notification_outbox WHERE status='pending' AND available_at<=now() AND (expires_at IS NULL OR expires_at>now()) ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1)
           RETURNING *`;
         return claimed ? [claimed] : [];
       });
