@@ -5,12 +5,13 @@ import { getPublishedArticles } from '@/lib/article-store';
 import { PublicFooter, PublicHeader } from './public-site-shell';
 import { getPublicManagedProducts } from '@/lib/product-store';
 import ActivityGallery from './activity-gallery';
+import PublicInterestAction from './public-interest-action';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Konsep STIFIn | Tes, Kelas, Ebook & Affiliate',
-  description: 'Temukan layanan Tes STIFIn, kelas, ebook, serta jalur promotor dan affiliate dalam satu platform KonsepSTIFIn.',
+  title: 'Tes STIFIn untuk Diri, Keluarga & Sekolah | KonsepSTIFIn',
+  description: 'Bandingkan layanan Tes STIFIn personal, pasangan, keluarga, dan institusi. Ajukan kebutuhan Anda untuk dikonfirmasi bersama tim dan promotor.',
   alternates: { canonical: '/' },
 };
 
@@ -44,14 +45,14 @@ export default async function Home() {
   ]);
 
   return <div className="public-site journey-site">
-    <PublicHeader active="home" announcement="Tes STIFIn, kelas, ebook, dan aktivitas mitra dalam satu platform" />
+    <PublicHeader active="home" announcement="Tes STIFIn personal, pasangan, keluarga, dan institusi · Jadwal dikonfirmasi bersama tim" />
     <main id="main-content">
       <section className="hub-hero">
         <div className="hub-hero-copy">
           <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
-          <h1>Kenali diri.<br/><em>Temukan langkah berikutnya.</em></h1>
-          <p>Mulai dari kebutuhan yang paling dekat: memahami diri dan keluarga, belajar melalui kelas dan ebook, atau bertumbuh bersama jaringan promotor dan affiliate.</p>
-          <div className="hub-actions"><Link className="public-cta big" href="/belajar?tab=catalog">Jelajahi produk & layanan →</Link><Link href="/tes-stifin#layanan">Bandingkan paket tes ↗</Link></div><div className="public-proof-strip"><span>✓ Tes tatap muka</span><span>✓ Kelas & ebook</span><span>✓ Satu akun</span></div>
+          <h1>Tes STIFIn untuk memahami diri dan keluarga.<br/><em>Mulai dari kebutuhan Anda.</em></h1>
+          <p>Bandingkan layanan personal, pasangan, keluarga, atau sekolah. Tim membantu mengonfirmasi pilihan, wilayah, jadwal, dan biaya sebelum Anda berkomitmen.</p>
+          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin#layanan">Pilih layanan Tes STIFIn →</Link><PublicInterestAction className="public-cta big home-help-cta" linkKey="tesPersonal" label="Bantu saya memilih" service="Bantuan memilih layanan STIFIn" leadType="test_service" /></div><div className="public-proof-strip"><span>✓ Tes tatap muka</span><span>✓ Pembahasan bersama promotor</span><span>✓ Jadwal dikonfirmasi</span></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
@@ -59,7 +60,7 @@ export default async function Home() {
         </figure>
       </section>
 
-      <section className="life-situations" aria-label="Situasi yang sering dialami">
+      <section className="life-situations" aria-label="Kebutuhan calon peserta Tes STIFIn">
         <article><small>DI RUMAH</small><p>“Sudah dijelaskan berkali-kali, kenapa cara menangkapnya tetap berbeda?”</p><span>Pahami cara belajar dan berkomunikasi.</span></article>
         <article><small>DALAM DIRI</small><p>“Saya bisa banyak hal, tetapi mana yang paling alami untuk saya?”</p><span>Kenali pola kerja yang terasa lebih mengalir.</span></article>
         <article><small>DI TEMPAT KERJA</small><p>“Mengapa satu cara memotivasi tidak cocok untuk semua orang?”</p><span>Lihat perbedaan sebagai petunjuk, bukan hambatan.</span></article>

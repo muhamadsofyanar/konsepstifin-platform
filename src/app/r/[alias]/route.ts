@@ -3,10 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getReferralService } from '@/lib/referral-store';
 import { REFERRAL_COOKIE, REFERRAL_MAX_AGE, referralDestination } from '@/lib/referral-service';
 export const runtime = 'nodejs';
-export async function GET(request: NextRequest, {params}: {params: Promise<{alias:string}>}) {
- const response=new NextResponse(null,{status:302,headers:{Location:referralDestination(request.nextUrl.searchParams.get('to'))}});
+const campaignKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'] as const;
+function trackedDestination(request: NextRequest) {
  const product=request.nextUrl.searchParams.get('product');
- if(product && /^[a-zA-Z0-9-]{1,100}$/.test(product))response.headers.set('Location',oldProductPath(product,request.nextUrl.searchParams.get('kind')??undefined));
+ const path=product && /^[a-zA-Z0-9-]{1,100}$/.test(product)
+  ? oldProductPath(product,request.nextUrl.searchParams.get('kind')??undefined)
+  : referralDestination(request.nextUrl.searchParams.get('to'));
+ const target=new URL(path,request.nextUrl.origin);
+ if(target.origin!==request.nextUrl.origin)return '/tes-stifin';
+ for(const key of campaignKeys){
+  const value=(request.nextUrl.searchParams.get(key)||'').replace(/[<>{}"'`]/g,'').trim().slice(0,120);
+  if(value)target.searchParams.set(key,value);
+ }
+ return `${target.pathname}${target.search}${target.hash}`;
+}
+export async function GET(request: NextRequest, {params}: {params: Promise<{alias:string}>}) {
+ const response=new NextResponse(null,{status:302,headers:{Location:trackedDestination(request)}});
  response.headers.set('Cache-Control','private, no-store');
  response.headers.set('Referrer-Policy','same-origin');
  try {

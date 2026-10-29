@@ -25,7 +25,7 @@ describe('referral aliases and attribution',()=>{
  it('normalizes names and rejects reserved, non-ASCII, path and URL aliases',()=>{
   expect(normalizeReferralAlias('  Budi Santoso ')).toBe('budi-santoso');
   for(const value of ['admin','API','a','éko','../admin','a--b','//evil.test','https://evil.test'])expect(()=>normalizeReferralAlias(value)).toThrow();
-  expect(referralDestination('/belajar')).toBe('/belajar');expect(referralDestination('//evil.test')).toBe('/tes-stifin');expect(referralDestination('/jadi-promotor')).toBe('/jadi-promotor');
+  expect(referralDestination('/belajar')).toBe('/belajar');expect(referralDestination('/belajar?tab=catalog')).toBe('/belajar?tab=catalog');expect(referralDestination('/produk/layanan/tesPersonal')).toBe('/produk/layanan/tesPersonal');expect(referralDestination('/produk/layanan/not-a-service')).toBe('/tes-stifin');expect(referralDestination('//evil.test')).toBe('/tes-stifin');expect(referralDestination('/jadi-promotor')).toBe('/jadi-promotor');
  });
  it('keeps official codes immutable, owns all historical aliases and prevents collisions',async()=>{
   expect((await service.getPortal(user)).alias).toBe('khu-abu-01');

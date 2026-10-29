@@ -11,8 +11,31 @@ export function normalizeReferralAlias(value: unknown) {
  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(alias) || alias.length < 2 || alias.length > 80 || reserved.has(alias)) throw new Error('Alias harus 2–80 huruf ASCII, angka, atau tanda hubung dan bukan nama terlarang.');
  return alias;
 }
+const referralServiceKeys = new Set([
+ 'tesPersonal', 'tesPasangan', 'paketKeluarga', 'paketKeluargaPlus', 'sekolahKomunitas',
+ 'previewPromotor', 'wsl1', 'wsl2', 'idDanAlat', 'paketPromotor',
+]);
+
+/** Resolve only known internal destinations. Referral links must never become open redirects. */
 export function referralDestination(value: string | null) {
- return value === '/jadi-promotor' || value === '/belajar' || value === '/akun/daftar' ? value : '/tes-stifin';
+ const fallback = '/tes-stifin';
+ if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return fallback;
+ let url: URL;
+ try { url = new URL(value, 'https://konsepstifin.com'); } catch { return fallback; }
+ if (url.origin !== 'https://konsepstifin.com' || url.username || url.password) return fallback;
+ const path = url.pathname;
+ const allowed = new Set(['/tes-stifin', '/jadi-promotor', '/belajar', '/akun/daftar', '/affiliate', '/promotor', '/kontak', '/edukasi']);
+ const isServiceProduct = path.startsWith('/produk/layanan/') && referralServiceKeys.has(path.slice('/produk/layanan/'.length));
+ if (!allowed.has(path) && !isServiceProduct) return fallback;
+ const query = path === '/belajar' && url.searchParams.get('tab') === 'catalog' ? '?tab=catalog' : '';
+ const allowedHashes: Record<string, Set<string>> = {
+  '/tes-stifin': new Set(['#layanan', '#proses']),
+  '/jadi-promotor': new Set(['#tahapan']),
+  '/affiliate': new Set(['#program']),
+  '/kontak': new Set(['#affiliate']),
+ };
+ const hash = allowedHashes[path]?.has(url.hash) ? url.hash : '';
+ return `${path}${query}${hash}`;
 }
 export type ReferralSource = { userId: string; promoterCode: string; alias: string; name: string; branchCode: string; area: string };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');

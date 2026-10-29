@@ -1,8 +1,8 @@
-# Rilis terkini: KonsepSTIFIn 0.10.7
+# Rilis terkini: KonsepSTIFIn 0.10.8
 
-Integrasi Moota API V2 dan webhook pembayaran, link Terima Uang yang dikaitkan dengan pesanan, antrean notifikasi StarSender, serta kampanye marketing dengan persetujuan promosi eksplisit. Versi 0.10.7 menambahkan riwayat kampanye dan ringkasan status antrean StarSender langsung pada halaman Marketing.
+Rilis 0.10.8 memprioritaskan akuisisi klien: Pusat Mitra membuka tab Dapatkan klien, menyediakan tautan referral per layanan, pesan promosi siap salin, berbagi WhatsApp, ringkasan aktivitas, dan preservasi UTM saat redirect. Halaman utama kini mengarahkan calon peserta ke layanan Tes STIFIn dan menyediakan formulir bantuan memilih layanan.
 
-**WAJIB migrasi sampai 011** setelah upgrade. Baca [panduan 0.10.7](docs/UPGRADE-0.10.7.md) dan [status pengujian 0.10.7](HASIL-PENGUJIAN-0.10.7.txt). Pemeriksaan build penuh harus dilakukan dengan dependensi terpasang sebelum produksi. Pertahankan database, akun, harga dan volume file yang sudah dipakai. Dokumentasi di bawah adalah riwayat versi sebelumnya.
+Tidak ada migrasi database baru. Baca [panduan 0.10.8](docs/UPGRADE-0.10.8.md), [audit akuisisi](docs/AUDIT-AKUISISI-KONSEPSTIFIN-0.10.8.md), dan [status pengujian 0.10.8](HASIL-PENGUJIAN-0.10.8.txt). Jalankan seluruh pengujian dengan dependensi terpasang sebelum produksi. Pertahankan database, akun, harga, dan volume file yang sudah dipakai. Dokumentasi di bawah adalah riwayat versi sebelumnya.
 
 # Riwayat: KonsepSTIFIn 0.10.4
 

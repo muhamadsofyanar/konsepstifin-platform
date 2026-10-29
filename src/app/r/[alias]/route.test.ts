@@ -17,3 +17,12 @@ it('does not refresh an existing valid first referral and never sets an invalid 
 
 it('keeps referral redirect relative behind a container host and retains the selected product',async()=>{visit.mockResolvedValue({valid:true,token:null});const r=await GET(new NextRequest('http://0.0.0.0:3000/r/budi?to=/belajar&product=paketKeluarga'),{params:Promise.resolve({alias:'budi'})});expect(r.headers.get('location')).toBe('/produk/layanan/paketKeluarga');});
 it('keeps a digital product named wsl1 separate from the WSL service',async()=>{visit.mockResolvedValue({valid:true,token:null});const r=await GET(new NextRequest('https://example.test/r/budi?product=wsl1&kind=digital'),{params:Promise.resolve({alias:'budi'})});expect(r.headers.get('location')).toBe('/produk/wsl1');});
+
+it('keeps only approved campaign attribution parameters when redirecting to a service page',async()=>{
+ visit.mockResolvedValue({valid:true,token:null});
+ const r=await GET(new NextRequest('https://example.test/r/budi?to=%2Fproduk%2Flayanan%2FpaketKeluarga&utm_source=promotor&utm_medium=whatsapp&utm_campaign=keluarga&utm_content=pusat-mitra&next=https%3A%2F%2Fevil.test'),{params:Promise.resolve({alias:'budi'})});
+ const location=r.headers.get('location')!;
+ expect(location).toContain('/produk/layanan/paketKeluarga?');
+ expect(location).toContain('utm_source=promotor');expect(location).toContain('utm_medium=whatsapp');expect(location).toContain('utm_campaign=keluarga');
+ expect(location).not.toContain('evil.test');
+});
