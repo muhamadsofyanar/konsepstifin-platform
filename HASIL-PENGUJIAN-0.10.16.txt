@@ -1,0 +1,8 @@
+KonsepSTIFIn 0.10.16 - UI/UX visual refinement
+
+- Paket source diturunkan dari source rilis 0.10.15.
+- CSS UI/UX diperbarui untuk website publik, portal anggota, admin, dan dashboard.
+- package.json/package-lock.json diselaraskan ke 0.10.16.
+- Pengaturan integrasi, API, dan skema database tidak diubah.
+- Build produksi Next.js: belum diverifikasi pada lingkungan ini; wajib dikonfirmasi di Coolify.
+- Pengujian visual browser desktop/mobile: belum dilakukan otomatis pada lingkungan ini.
