@@ -1,36 +1,37 @@
-# KonsepSTIFIn 0.10.17
+# KonsepSTIFIn 0.10.18
 
-Rilis peningkatan UI/UX untuk perjalanan pengunjung, pelanggan, calon promotor, dan promotor aktif. Basisnya adalah source 0.10.16 yang telah berhasil dideploy pada produksi.
+Rilis peningkatan pengalaman pengunjung dengan fokus pada kebutuhan pengguna, informasi awal yang relevan, alur pemilihan layanan, konsistensi visual, dan animasi yang menghormati preferensi aksesibilitas.
 
 ## Perubahan utama
 
-- Menambahkan jalur masuk yang membedakan pelanggan/anggota dan promotor aktif di beranda.
-- Menampilkan tautan Masuk dan Daftar secara jelas untuk pengunjung yang belum login.
-- Merapikan footer menjadi kelompok Jelajahi, Berkembang Bersama, serta Akun & Bantuan.
-- Memperjelas CTA calon promotor, termasuk jalur masuk bagi promotor yang sudah aktif.
-- Memperhalus halaman detail produk, informasi harga, proses, FAQ, dan panel pengajuan.
-- Menjaga desain responsif, fokus keyboard, dan dukungan reduced motion.
-- Tidak mengubah alur checkout, Moota, StarSender, Mailketing, struktur database, atau kredensial.
+- Menambahkan pemilih jalur pengunjung interaktif: tes personal, keluarga, kelompok, mencari promotor, menjadi promotor, atau membaca edukasi.
+- Memindahkan pilihan layanan ke area awal halaman, sebelum akses akun yang sudah terdaftar, sehingga calon klien tidak terdistraksi oleh login terlalu dini.
+- Menyusun ulang halaman beranda: kebutuhan pengunjung, layanan, konteks masalah, proses, dokumentasi nyata, informasi persiapan, batasan layanan, edukasi, FAQ, akun, dan CTA akhir.
+- Menambahkan panduan informasi minimum yang perlu disiapkan, tanpa meminta alamat lengkap atau data sensitif di tahap awal.
+- Mengirim event Meta Pixel `VisitorPathSelected` dan `VisitorPathCTA` saat Pixel tersedia, tanpa data pribadi, agar minat pengunjung dapat dianalisis.
+- Menambahkan transisi, animasi masuk ringan, efek hover, dan feedback pilihan pada kartu. Animasi dinonaktifkan saat `prefers-reduced-motion` aktif.
+- Memperluas konsistensi animasi ke landing page tes, promotor, affiliate, dan galeri dokumentasi.
+- Tidak mengubah harga, promo, checkout, integrasi Moota, StarSender, Mailketing, autentikasi, atau struktur database.
 
-## Upgrade ke 0.10.17
+## Upgrade ke 0.10.18
 
 1. Backup repository dan database produksi.
 2. Masukkan seluruh isi arsip rilis ke repository `muhamadsofyanar/konsepstifin-platform`, branch `main`.
-3. Commit semua perubahan dalam satu commit.
-4. Deploy satu kali melalui Coolify.
-5. Pastikan healthcheck berstatus `healthy` dan `/api/health` menampilkan `0.10.17`.
-6. Uji beranda, daftar akun, login, detail produk, jalur calon promotor, portal anggota, checkout, dan pengaturan admin di desktop serta HP.
+3. Pastikan `package.json` dan `package-lock.json` menunjukkan `0.10.18`.
+4. Commit semua perubahan dalam satu commit.
+5. Deploy sekali melalui Coolify.
+6. Pastikan build berhasil, healthcheck `healthy`, dan `/api/health` menunjukkan `0.10.18`.
+7. Uji jalur personal, keluarga, kelompok, promotor, pencarian promotor, edukasi, login, dan halaman layanan di desktop serta HP.
 
 ## Database dan environment
 
 - Tidak ada migrasi database baru.
 - Tidak ada environment variable baru.
-- Kredensial integrasi tidak perlu dimasukkan ulang.
-- Promo pusat tetap mengambil data dari pengaturan admin.
+- Tidak ada perubahan pada sumber harga/promo atau kredensial integrasi.
 
 ## Status pengujian
 
-- Pemeriksaan sintaks TypeScript/JSX untuk file yang diubah: lulus.
-- Pemeriksaan keseimbangan kurung CSS: lulus.
-- Versi `package.json` dan `package-lock.json`: konsisten pada `0.10.17`.
-- Build produksi Next.js: belum terverifikasi lokal. Instalasi dependency (`npm ci`) mengalami timeout di lingkungan kerja ini. Wajib menunggu hasil build dan healthcheck Coolify sebelum menyatakan rilis produksi lolos.
+- Pemeriksaan sintaks source dan struktur JSX: dijalankan setelah perubahan.
+- Validasi JSON package dan lockfile: wajib lulus.
+- Test interaksi pemilih jalur pengunjung: ditambahkan.
+- Build produksi Next.js dan test suite penuh: harus diverifikasi melalui build Coolify jika dependensi lokal tidak tersedia.

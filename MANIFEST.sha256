@@ -16,6 +16,7 @@ dcefdbc54d5ee293be67d1cdccb17d5b30c46d701ac82efc1d4971ad9c3e3244  ./HASIL-PENGUJ
 a4d8c217463d385344bfcfe27b5fb2a5f6e77449b6a06353507578862729b307  ./HASIL-PENGUJIAN-0.10.15.txt
 e37e96aa3992c989fbbbbcf4dd26f4ca1be9a79f82bbc21472b83123d9e419ec  ./HASIL-PENGUJIAN-0.10.16.txt
 f32ecbc5fe379f2baf9a3f1c58f1af91c4fa5da2647e66ff46e4fed9da2a5491  ./HASIL-PENGUJIAN-0.10.17.txt
+8ec7ee789cb01b17a0f409a7b57cdf21ebf1a2eb8994fb359dfc409e5e1f9084  ./HASIL-PENGUJIAN-0.10.18.txt
 606edc61a927becdce53f271612681b31b7fb3522b47919b3ea527626aebe849  ./HASIL-PENGUJIAN-0.10.2.txt
 ddbea96fc987a92553705caa78a14a9ea5507206bddcd1a23b54e9db64e35ef7  ./HASIL-PENGUJIAN-0.10.3.txt
 c57f743432c6f1ada3e14077a8289078194c17e0bba29395e4667b172bb08a34  ./HASIL-PENGUJIAN-0.10.4.txt
@@ -46,7 +47,7 @@ d383d94349b17640107629a08a94653c48a8cb9e300caf7cf7feeb6ed8e9dabb  ./PETUNJUK-UPG
 5124314ca47453c676a0a909b8cbad732e53710e1113f5b7c5f77667684f783e  ./PETUNJUK-UPGRADE-0.9.txt
 ad4f4f4b4bb256c9f1deccaa3ec840b68851dd6d30bc66869aefae21551caf1c  ./PETUNJUK-UPLOAD.txt
 d18ee7124eb26ba6d36eb57efb66dd60b9010861637ad208f3ca5bf330dbad4f  ./PROJECT_CONTEXT.md
-e1c41f192a096071440b94a3ee4ec12d4012d08f5912fb19776bb35f672b8201  ./README.md
+43ebd931e3c907f1135a2fa7d1d742d56faea3640754829350c69b2bbc22e774  ./README.md
 b1795236d57b456cabf84b9f314bedcc3b1f6fa0d153bf1085776f1aabb7b5d6  ./SERAH_TERIMA_AKSES_OPTIMASI_AI_V15_4.md
 fec0235aa32abe01433b8c320390af75a67e65c3437125f5c89befde8fd4db13  ./SERAH_TERIMA_CONTENT_INTELLIGENCE_V15.md
 90049e2aed1a3adb0fe4b4e71123847039415f462a15865154ac17c940bd503c  ./SERAH_TERIMA_COPYWRITING_DEPLOY_V0_3_0.md
@@ -66,6 +67,7 @@ d2bfec0a3f513cfe58d1699500dcfcc60182d2095673f7ea39265eb909b12485  ./UPGRADE-KONS
 43ae5d7092bfc22befe06aaf223670f3f29412fbdbdfc89f02a5cb40aacb7482  ./UPGRADE-KONSEPSTIFIN-0.10.15.md
 198903d892829795759b649fe05e57c0fba6ab6173a892cfce9fe77c6630e277  ./UPGRADE-KONSEPSTIFIN-0.10.16.md
 42ee89bf8ce601ca3c609698005379a1ea468a2c8176dece8d3443641369d1f7  ./UPGRADE-KONSEPSTIFIN-0.10.17.md
+8a6b38a292eb3b48190ef4157ea540295dcbfaa542e2f6aa4640d1631cb61297  ./UPGRADE-KONSEPSTIFIN-0.10.18.md
 2e36a589b384f87d1ed057f83d4cbb98d8f86d2c80db15a69d7265c8773fd7e2  ./docs/AUDIT-0.10.0.md
 c73850b10c60329f3e2840f79d83a69bc5071ee51aefd2eafe5f78ebd1bc6f57  ./docs/AUDIT-0.10.1.md
 58ae5aaeda3caecf2d826db2ccf42115eb129957df0102b3c2a62680075d0e46  ./docs/AUDIT-0.10.10.md
@@ -83,6 +85,7 @@ e5415b46c93fbdab6475520d512516bf7de8d55f3211ce9463a6de59e4cb7284  ./docs/AUDIT-K
 76502d6764a7b6ba7dd4f5ef9ba5958b891bc62f30c71c4f200c528dd9d5f3b0  ./docs/AUDIT-KONSEPSTIFIN-0.10.15.md
 d159618b0eac67a90e29824aff65a74e58c9ddfa75eef31bff6042c366ffd6e6  ./docs/AUDIT-KONSEPSTIFIN-0.10.16.md
 9701334fe9145ffd0aa4cda8cc5e59fe50fc6f93d09c2b9d44a3183dcd9868c5  ./docs/AUDIT-KONSEPSTIFIN-0.10.17.md
+c024098ee37a009280f5832c30622cc657d3066eac15253392a6b13143da4657  ./docs/AUDIT-KONSEPSTIFIN-0.10.18.md
 71fc2dafbacc24bed1105b0a2bba1199582018c55ed79e9aac5ef1396edc1ca9  ./docs/DAFTAR-PERUBAHAN-0.9.1.md
 57f917fa269b24ffab9d4084c3187c681acb2f43c6f35b469633b4f231de14d2  ./docs/DAFTAR-PERUBAHAN-0.9.md
 0f9f814ee484245e1658b225f3765ef239bf4918628ed4ac36f47dda0245fea6  ./docs/HASIL-PENGUJIAN-0.9.1.md
@@ -91,6 +94,7 @@ aa433bd593f605c684ddb17763244e7262a4e8dc1dcecf6fe157e5351e106253  ./docs/OPERASI
 42b01e55fc0ade70c54768b4500087388a4ce937609a1cc06a8393beb5fbb43f  ./docs/Spesifikasi-Pengembangan-KonsepSTIFIn-dari-Averion.md
 995e9979234683c53de825d1fb427a4bbda3fced1e868752bfcd290d4605fb83  ./docs/UI-UX-0.10.16.md
 8cb3eedad25c8b87cafdb02b9ef25e9fb1a5352dedc3db532dc9dab594556aab  ./docs/UI-UX-0.10.17.md
+b102d8005f53bddc8891706c746c71fb318804705d693b171148484edf18bf36  ./docs/UI-UX-0.10.18.md
 9505f5c32ffe2e3d39f56250dfe425a2be2e0c720aa163e0a529e69a87d57814  ./docs/UPGRADE-0.10.0.md
 c25d1d50f71f15b030bc6f10e4d73416f2b9c20b82ee2ea9e9b666196bbab750  ./docs/UPGRADE-0.10.1.md
 c8d32fffd515cb7014ada6e83088833ede41796e1d174ea619b0ce9fa57aa933  ./docs/UPGRADE-0.10.10.md
@@ -127,8 +131,8 @@ e7999c7bbae7514ef86baed9bd9eef39d14d3f1f79486066308f1d7d08d948b4  ./docs/verific
 870f1adccecf3051cbcd9fd307cef51d7633cf510979c181a81f4b1797273493  ./eslint.config.mjs
 7b550dda9686c16f36a17bf9051d5dbf31e98555b30d114ac49fc49a1e712651  ./next-env.d.ts
 496898063c834c666510bdb5bb472bcf08e01ca8eef297da101ad12680c8fc93  ./next.config.ts
-b45b8a8a0634c3fb4ffdb3f1699a27e1acea5a6419d6d9ab1ce01c0cbeb72ed1  ./package-lock.json
-e7e9d0fd72221256edeaa5cfa24f6c6f250243120e2a7813d8f06373bf5846fb  ./package.json
+ddc55012365f3f01b4f4aa9024349dbada439e84c18439ce6f34d5535d499035  ./package-lock.json
+6957d806fe4469b0f1b254af7c9ddc726ba236c440691bf7a2e763f16f0ddbf5  ./package.json
 dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde  ./postcss.config.mjs
 2b67812c325c199a02536cdbeea0c593a72f707d323b72ee3e08dbab06753bd4  ./public/file.svg
 6fbd040a29c2037a765dfb9f2561e9965b5c95c6dcb5dce516089d63d5f17af7  ./public/fonts/LICENSE-DM-Sans.txt
@@ -207,7 +211,7 @@ bd366f4056e4b42702c35b60d2a118219f54e75a7da3c53cde9dde774e3ca106  ./src/app/admi
 efa3150db6e85252f5e98367ed4d597e4c3aea963a81dde96c3e82048ec6a1bd  ./src/app/admin/marketing/page.tsx
 62d07efffc2a7c9467cf97ee60524bd192d64a27725f8cbda81951d82105655d  ./src/app/admin/page.tsx
 5686f70050fd757bc6625c74925f15af440c9dcaee38a092e5b4d219a994f926  ./src/app/admin/pengaturan/integration-panel.tsx
-864ad8851c5eaed3e495a979bdf53116484a61f6ea97cd480cdc85590ede30cf  ./src/app/admin/pengaturan/page.tsx
+2bcef422a2e1f522fa85d040a32a21e85d5b6f4432d02da10ccff19f67ebeb14  ./src/app/admin/pengaturan/page.tsx
 db73a2db5ef39d8a8bac866ea0bdebfa33577a3117234f50fb866649cef46c7b  ./src/app/admin/pengaturan/promotion-manager.tsx
 86c733b6df8f149762e5f0696c6d08a66fcf92845cec71c775f4d35c3ad6ebd5  ./src/app/admin/pengaturan/settings-manager.tsx
 8deb4704401dc2f317a941a44d48241da3f57efda8d94045042baddd47d188f9  ./src/app/admin/pesanan/[id]/page.tsx
@@ -360,22 +364,22 @@ b7bdc22cd66894595bcee0075d83946462a1eb98fcc45fd67fb324fe2c49c5de  ./src/app/load
 0557b5dbf21f1f4108e7ce9198928cf7757f03526a02b9ae0adddd9191c12721  ./src/app/mobile-navigation.tsx
 62d9577ac755a9e0dd0c890acad871bec0a53fb30f6da89435f39c47f2bb6a60  ./src/app/navigation-progress.tsx
 0db4ba5350eb72a78e072884a36f8fb87de6ef3c17577c7c3d1386ff58afd244  ./src/app/opengraph-image.tsx
-7ea9c34d08dd3f0561afcedfc81d76cd2d57590818e8db76e1e09afab9b325d5  ./src/app/page.tsx
+cf25210fffedf74797b4c89144e6ed8bbcfcc8d9df15e1add7b8d5f6961e030a  ./src/app/page.tsx
 496eb09d7c66d10e0d02cdcccd70ef7dd6e8f27c3fc6742006a67e7c7b8a4bce  ./src/app/privasi/page.tsx
 c4c70fa4969de7381dbb4ab3a9b3eaca535084c7c25d1b3cd13e1832ce47a3e2  ./src/app/produk/[...identifier]/page.tsx
 760ff0ac790296118cbbd2486063cdc7714dcd430bfd00f3f954bb18ba53a65a  ./src/app/produk/loading.tsx
 d08c197779870105047697db0ec9c23f57e866f675f8dc16bb7b68748f1e6013  ./src/app/produk/product-checkout.tsx
 c90aacc6c6b25ff401475af516acc8d93d4715ba7f070df33c8df92481469591  ./src/app/promoter-checkout.css
-a78d181ce7bb0f50123c1f5b628dda0989c5569ba4b42b7e4a410e262a2b74c0  ./src/app/promotor-stifin/[city]/page.tsx
 5afd0fc08398baae1264b1c87228c7e01e8a20599f51963f5458bc3b059604f5  ./src/app/promotor/[slug-promotor]/page.tsx
 8165d79672ffdd01d7dbac17b8cf8a068796eb0b9e7d41a20ce9b872d073ac91  ./src/app/promotor/layout.tsx
 843bf90b07136cda24d88668199ab45ecede76d076b44ffef630868309e5d6cb  ./src/app/promotor/page.tsx
 b646bbabb39f93f4211a14af701d06643102aa8abebaa0e664c48d0bd2fe8be4  ./src/app/promotor/promoter-directory.test.tsx
+a78d181ce7bb0f50123c1f5b628dda0989c5569ba4b42b7e4a410e262a2b74c0  ./src/app/promotor-stifin/[city]/page.tsx
 9a8d6257345babfcc3e3c0058499d8cbe7b7f618c5fd93649d58b912fa35f985  ./src/app/public-account-link.tsx
 d1d1fff31b6037beda186b5edb610231c795d091c8c80496936e5bbf5b98b1fc  ./src/app/public-interest-action.test.tsx
 6337abe0964b59bad7db61a3f1d48d141c81633fd51970cac1473f0d27db9784  ./src/app/public-interest-action.tsx
 edd0bb2f0b346be170ba360747b837788e4235d0284781fc2db2da61753949d6  ./src/app/public-promotion-banner.tsx
-0e5d43adeaa317992016294edc3e73e5dee9d415e514dc47e333bbfc6a2b6696  ./src/app/public-refresh.css
+99fa99755b3953c783204429c0464214114182fced29ad434d78540e19496789  ./src/app/public-refresh.css
 8c4edbf6517f4a40a7002f96e93915fa244bcfa66e2076581369ca80679dd12e  ./src/app/public-site-shell.tsx
 925ed362cb22f86f6bf4d755f577de0c7287629825af4744cc275fcd99ead343  ./src/app/r/[alias]/route.test.ts
 37cd466e72c4343ef53f0f951b68ad0a74f2fd850667fa3f785d8f0cee886cfd  ./src/app/r/[alias]/route.ts
@@ -395,6 +399,8 @@ d5524f0ec462f76a876336c404d534939a92e28d91240743d0f3fc697c100cc2  ./src/app/tes-
 a228a45f3755791b3050d2a62551fec07facec51456ce814ed925ec98cac6121  ./src/app/tes-stifin/opengraph-image.tsx
 3ca9e0cbf9afc76625b3202de25ad3c7900e96fd8abfcad31d7843a28fd1a2d0  ./src/app/tes-stifin/page.tsx
 f6d967729e7ebb5055f6aef0059b3294b660dab82aa064c9f734c19da1b92eb7  ./src/app/trust-page-schema.tsx
+45b8d958c5009fd0dc3e9e8e9de49e3abf4748569f199020ca4b3c9a4c23aa26  ./src/app/visitor-path-finder.test.tsx
+d630dd051bff6c9f13084e6cbcec48297646bd04615bed7f6228be1447b2486d  ./src/app/visitor-path-finder.tsx
 1325d86ccd1b033bfa47d554db26c5f8d46e45971ba051dbed9e8b643703ac62  ./src/app/wilayah/[...segments]/page.tsx
 cc577927a98ff72926b7be0ed7d792997a4a3ce9514ab9a4714a3511806f7126  ./src/app/wilayah/layout.tsx
 507d17051da74c1024036454bcc8bc6feb9a06c13644e460015aa11a2a8bfb24  ./src/app/wilayah/page.tsx

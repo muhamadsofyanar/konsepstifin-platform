@@ -7,13 +7,15 @@ import PublicPromotionBanner from './public-promotion-banner';
 import ActivityGallery from './activity-gallery';
 import PublicInterestAction from './public-interest-action';
 import { getActivePromotion } from '@/lib/promotion-store';
+import VisitorPathFinder from './visitor-path-finder';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Tes STIFIn untuk Diri, Keluarga & Sekolah | KonsepSTIFIn',
-  description: 'Bandingkan layanan Tes STIFIn personal, pasangan, keluarga, dan institusi. Ajukan kebutuhan Anda untuk dikonfirmasi bersama tim dan promotor.',
+  description: 'Temukan layanan Tes STIFIn untuk diri sendiri, pasangan, keluarga, sekolah, atau organisasi. Pilih kebutuhan, pahami prosesnya, dan ajukan layanan tanpa harus membuat akun terlebih dahulu.',
   alternates: { canonical: '/' },
+  openGraph: { title: 'Temukan Layanan Tes STIFIn | KonsepSTIFIn', description: 'Pilih layanan untuk diri sendiri, keluarga, sekolah, atau organisasi. Pelajari proses dan langkah berikutnya dengan jelas.', url: '/', type: 'website' },
 };
 
 const journeys = [
@@ -45,17 +47,16 @@ export default async function Home() {
 
       <PublicPromotionBanner />
 
-      <section className="home-entry-paths" aria-labelledby="home-entry-paths-title">
-        <div className="home-entry-heading"><span>SUDAH TERDAFTAR?</span><h2 id="home-entry-paths-title">Lanjutkan dari akun yang sesuai.</h2><p>Pengunjung baru dapat langsung melihat layanan. Jika sudah memiliki akun, pilih jalur masuk di bawah.</p></div>
-        <div className="home-entry-grid">
-          <article className="home-entry-card">
-            <span className="home-entry-icon" aria-hidden="true">01</span><div><h3>Pelanggan atau anggota</h3><p>Masuk untuk memeriksa aktivitas, kelas, pembelian, atau pesanan yang terkait dengan akun Anda.</p></div><Link href="/akun/login?next=%2Fakun">Masuk ke akun <span aria-hidden="true">→</span></Link>
-          </article>
-          <article className="home-entry-card featured">
-            <span className="home-entry-icon" aria-hidden="true">02</span><div><h3>Promotor aktif</h3><p>Buka pusat promotor untuk melanjutkan aktivitas sesuai peran dan akses yang telah diberikan.</p></div><Link href="/akun/login?next=%2Fakun">Masuk ke portal promotor <span aria-hidden="true">→</span></Link>
-          </article>
-        </div>
+      <VisitorPathFinder />
+
+      <section className="journey-grid home-primary-journeys" aria-label="Mulai dari kebutuhan Anda">
+        {journeys.map((item) => <article className={`journey-card ${item.tone}`} key={item.href}>
+          <header><span>{item.eyebrow}</span><b>{item.number}</b></header>
+          <h2>{item.title}</h2><p>{item.description}</p>
+          <Link href={item.href}>{item.action} <span>→</span></Link>
+        </article>)}
       </section>
+
 
       <section className="life-situations" aria-label="Kebutuhan calon peserta Tes STIFIn">
         <article><small>DI RUMAH</small><p>“Sudah dijelaskan berkali-kali, kenapa cara menangkapnya tetap berbeda?”</p><span>Pahami cara belajar dan berkomunikasi.</span></article>
@@ -68,16 +69,6 @@ export default async function Home() {
         <p>Ada yang datang karena ingin lebih paham dirinya. Ada yang sedang mencari cara berkomunikasi dengan pasangan atau anak. Ada pula yang ingin menjadikan STIFIn sebagai jalan belajar dan profesi. Mulailah dari kebutuhan yang paling dekat dengan Anda.</p>
       </section>
 
-      <section className="journey-grid home-primary-journeys" aria-label="Mulai dari kebutuhan Anda">
-        {journeys.map((item) => <article className={`journey-card ${item.tone}`} key={item.href}>
-          <header><span>{item.eyebrow}</span><b>{item.number}</b></header>
-          <h2>{item.title}</h2><p>{item.description}</p>
-          <Link href={item.href}>{item.action} <span>→</span></Link>
-        </article>)}
-      </section>
-
-
-      <ActivityGallery />
 
       <section className="home-process section" aria-labelledby="home-process-title">
         <div className="section-heading"><span>ALUR YANG JELAS</span><h2 id="home-process-title">Dari memilih layanan sampai jadwal dikonfirmasi.</h2><p>Anda tidak harus memahami seluruh katalog atau membuat akun terlebih dahulu untuk meminta layanan tes.</p></div>
@@ -87,6 +78,22 @@ export default async function Home() {
           <li><b>03</b><h3>Tim mengonfirmasi</h3><p>Tim meninjau cakupan promotor, jumlah peserta, promo, harga, dan jadwal yang tersedia.</p></li>
           <li><b>04</b><h3>Lanjut setelah setuju</h3><p>Anda menerima instruksi berikutnya. Pembayaran diverifikasi sebelum layanan dijadwalkan final.</p></li>
         </ol>
+      </section>
+
+      <ActivityGallery />
+
+      <section className="home-preparation" aria-labelledby="home-preparation-title">
+        <div className="home-preparation-heading">
+          <span className="section-kicker">AGAR TINDAK LANJUT LEBIH CEPAT</span>
+          <h2 id="home-preparation-title">Siapkan informasi inti saja.</h2>
+          <p>Anda tidak perlu mengisi formulir panjang di awal. Tiga informasi ini membantu tim memahami kebutuhan Anda tanpa mengumpulkan data berlebihan.</p>
+        </div>
+        <div className="home-preparation-grid">
+          <article><span>01</span><div><h3>Kota atau wilayah</h3><p>Digunakan untuk memeriksa cakupan promotor. Alamat lengkap tidak perlu diberikan pada tahap awal.</p></div></article>
+          <article><span>02</span><div><h3>Jumlah peserta</h3><p>Mulai dari satu peserta, keluarga, atau perkiraan jumlah peserta kelompok.</p></div></article>
+          <article><span>03</span><div><h3>Tujuan Anda</h3><p>Misalnya memahami diri, mendampingi keluarga, atau mengadakan program di sekolah dan organisasi.</p></div></article>
+        </div>
+        <p className="home-preparation-privacy"><span aria-hidden="true">✓</span> Data tambahan hanya diminta jika memang diperlukan. Jangan mengirim data sensitif melalui formulir awal.</p>
       </section>
 
       <section className="home-decision-info" aria-label="Informasi penting sebelum mengajukan layanan">
@@ -126,6 +133,19 @@ export default async function Home() {
           <details><summary>Apakah ada promo untuk keluarga atau workshop?<span>＋</span></summary><p>Program promo pusat ditampilkan pada website selama periode aktif. Skema Family Test dan harga workshop mengikuti ketentuan pusat serta dikonfirmasi kembali sebelum pembayaran.</p></details>
         </div>
       </section>
+
+      <section className="home-entry-paths" aria-labelledby="home-entry-paths-title">
+        <div className="home-entry-heading"><span>SUDAH TERDAFTAR?</span><h2 id="home-entry-paths-title">Lanjutkan dari akun yang sesuai.</h2><p>Pengunjung baru dapat langsung melihat layanan. Jika sudah memiliki akun, pilih jalur masuk di bawah.</p></div>
+        <div className="home-entry-grid">
+          <article className="home-entry-card">
+            <span className="home-entry-icon" aria-hidden="true">01</span><div><h3>Pelanggan atau anggota</h3><p>Masuk untuk memeriksa aktivitas, kelas, pembelian, atau pesanan yang terkait dengan akun Anda.</p></div><Link href="/akun/login?next=%2Fakun">Masuk ke akun <span aria-hidden="true">→</span></Link>
+          </article>
+          <article className="home-entry-card featured">
+            <span className="home-entry-icon" aria-hidden="true">02</span><div><h3>Promotor aktif</h3><p>Buka pusat promotor untuk melanjutkan aktivitas sesuai peran dan akses yang telah diberikan.</p></div><Link href="/akun/login?next=%2Fakun">Masuk ke portal promotor <span aria-hidden="true">→</span></Link>
+          </article>
+        </div>
+      </section>
+
 
       <section className="hub-final">
         <div><span>PILIH SATU LANGKAH</span><h2>Tidak perlu memahami semua pilihan sekaligus. Pilih kebutuhan utama Anda, lalu tim membantu langkah berikutnya.</h2></div>
