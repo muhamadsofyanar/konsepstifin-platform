@@ -9,6 +9,7 @@ import { getPromotersForRegion } from '@/lib/promoter-store';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getActivePromotion, familyScheme } from '@/lib/promotion-store';
 import { getPublicIntegrationSettings } from '@/lib/integration-settings';
+import { queueWhatsAppMessage, stableNotificationKey } from '@/lib/notification-outbox';
 
 export function publicInterestErrorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : 'Permintaan belum dapat disimpan.';
@@ -68,6 +69,26 @@ export async function POST(request: NextRequest) {
       createLead: createInterestLead,
     });
     const isTestLead = result.lead.leadType === 'test_service';
+    // Queue onboarding instructions for promoter candidates. The notification worker
+    // keeps this in awaiting_inbound until the candidate starts the WhatsApp chat.
+    if (!isTestLead && 'phone' in result.lead && 'consentToContact' in result.lead && result.lead.phone && result.lead.consentToContact) {
+      const candidateName = String(result.lead.name || 'Bapak/Ibu').trim().slice(0, 100) || 'Bapak/Ibu';
+      const candidateService = String(result.lead.service || body.service || 'Paket Promotor').trim().slice(0, 120);
+      try {
+        await queueWhatsAppMessage({
+          eventType: 'promoter_candidate_instructions',
+          leadId: result.lead.id,
+          phone: result.lead.phone,
+          name: candidateName,
+          message: `Assalamu'alaikum ${candidateName}. Terima kasih telah mengajukan ${candidateService} melalui KonsepSTIFIn. Referensi: ${result.reference}. Untuk menerima panduan tahapan, persyaratan, biaya, dan langkah berikutnya, balas pesan ini atau kirim nomor referensi tersebut ke chat resmi KonsepSTIFIn. Tim akan membantu setelah percakapan dimulai. Pengajuan ini belum berarti pendaftaran promotor telah disetujui.`,
+          dedupeKey: stableNotificationKey('promoter-candidate-instructions', `${result.lead.id}:${result.lead.phone}`),
+          createdBy: 'public-interest-form',
+        });
+      } catch (queueError) {
+        // Do not turn a successfully saved lead into a failed form submission.
+        console.error('Instruksi calon promotor gagal masuk antrean WhatsApp.', queueError instanceof Error ? queueError.message : 'Unknown error');
+      }
+    }
     let whatsappContact = '';
     try { whatsappContact = (await getPublicIntegrationSettings()).starsender.businessNumber || ''; } catch { /* A settings read must not turn a saved lead into a failed submission. */ }
     return NextResponse.json({

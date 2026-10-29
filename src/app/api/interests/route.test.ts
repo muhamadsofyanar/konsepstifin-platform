@@ -4,10 +4,12 @@ import { POST, publicInterestErrorResponse } from './route';
 import { submitInterest } from '@/lib/interest-service';
 
 const referral = vi.hoisted(()=>({resolveToken:vi.fn(),resolveRegistered:vi.fn()}));
+const notificationQueue = vi.hoisted(()=>({queueWhatsAppMessage:vi.fn().mockResolvedValue(true),stableNotificationKey:vi.fn((prefix:string,value:string)=>`${prefix}:${value}`)}));
 vi.mock('@/lib/identity/server',()=>({getAccountPrincipal:vi.fn().mockResolvedValue(null)}));
 vi.mock('@/lib/referral-store',()=>({getReferralService:()=>referral}));
 
 vi.mock('@/lib/interest-service', () => ({ submitInterest: vi.fn() }));
+vi.mock('@/lib/notification-outbox', () => notificationQueue);
 
 let address = 0;
 function request(body: Record<string, unknown>, ip = `198.51.100.${++address}`) {
@@ -19,7 +21,7 @@ function request(body: Record<string, unknown>, ip = `198.51.100.${++address}`) 
 }
 
 describe('POST /api/interests', () => {
-  beforeEach(() => vi.mocked(submitInterest).mockReset());
+  beforeEach(() => { vi.mocked(submitInterest).mockReset(); notificationQueue.queueWhatsAppMessage.mockClear(); });
 
   it('mengembalikan referensi, match aman, dan checkout resmi untuk lead tes', async () => {
     vi.mocked(submitInterest).mockResolvedValue({
@@ -56,6 +58,19 @@ describe('POST /api/interests', () => {
     } as Awaited<ReturnType<typeof submitInterest>>);
     const response = await POST(request({ leadType: 'promoter_candidate' }));
     expect(await response.json()).toEqual({ ok: true, reference: 'KSF-43', referralRecorded: false, referralAlias: '', status: 'baru', match: null });
+  });
+
+  it('mengantrikan instruksi calon promotor dan menunggu chat masuk sebelum pengiriman', async () => {
+    vi.mocked(submitInterest).mockResolvedValue({
+      lead: { id: 88, leadType: 'promoter_candidate', status: 'baru', name: 'Muhamad Sofyan AR', phone: '6281333362649', service: 'Paket Promotor', consentToContact: true },
+      reference: 'KSF-88', status: 'baru', match: null,
+    } as Awaited<ReturnType<typeof submitInterest>>);
+    const response = await POST(request({ leadType: 'promoter_candidate', consentToContact: true, phone: '081333362649', name: 'Muhamad Sofyan AR' }));
+    expect(response.status).toBe(201);
+    expect(notificationQueue.queueWhatsAppMessage).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: 'promoter_candidate_instructions', leadId: 88, phone: '6281333362649',
+      dedupeKey: 'promoter-candidate-instructions:88:6281333362649',
+    }));
   });
 
   it('menyembunyikan detail PostgreSQL dari respons publik', async () => {

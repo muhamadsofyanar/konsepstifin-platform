@@ -44,6 +44,24 @@ export async function POST(request: Request) {
       ON CONFLICT(phone_e164) DO UPDATE SET last_inbound_at=now(),last_message_id=EXCLUDED.last_message_id,
       opted_out_at=CASE WHEN ${optsOut} THEN now() WHEN ${optsIn} THEN NULL ELSE whatsapp_inbound_sessions.opted_out_at END,updated_at=now()`;
     const [session] = await sql`SELECT opted_out_at FROM whatsapp_inbound_sessions WHERE phone_e164=${phone}`;
+    // If an existing promoter lead predates the queue fix, create its onboarding
+    // reply only after this person has actually initiated a WhatsApp conversation.
+    // Limit this automatic response to an open lead with explicit contact consent.
+    if (!optsOut && !session?.opted_out_at) {
+      const [candidate] = await sql`SELECT id,name,service,phone FROM public_interest_leads
+        WHERE lead_type='promoter_candidate' AND consent_to_contact=true AND status NOT IN ('selesai','ditutup')
+          AND regexp_replace(phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})
+        ORDER BY created_at DESC,id DESC LIMIT 1`;
+      if (candidate) {
+        const candidateName = String(candidate.name || 'Bapak/Ibu').trim().slice(0, 100) || 'Bapak/Ibu';
+        const candidateService = String(candidate.service || 'Paket Promotor').trim().slice(0, 120);
+        const reference = `KSF-${candidate.id}`;
+        const reply = `Assalamu'alaikum ${candidateName}. Terima kasih telah mengajukan ${candidateService} melalui KonsepSTIFIn. Referensi: ${reference}. Tim akan membantu menjelaskan tahapan, persyaratan, biaya, dan langkah berikutnya. Pengajuan ini belum berarti pendaftaran promotor telah disetujui.`;
+        await sql`INSERT INTO notification_outbox(event_type,lead_id,recipient_phone,recipient_name,message,dedupe_key,created_by)
+          VALUES ('promoter_candidate_instructions',${candidate.id},${phone},${candidateName},${reply},${`promoter-candidate-instructions:${candidate.id}:${phone}`},'starsender-inbound-webhook')
+          ON CONFLICT (dedupe_key) DO NOTHING`;
+      }
+    }
     if (optsOut || session?.opted_out_at) {
       await sql`UPDATE notification_outbox SET status='failed',last_error='Pesan dihentikan karena kontak memilih berhenti menerima pesan WhatsApp.',updated_at=now()
         WHERE status IN ('pending','awaiting_inbound') AND regexp_replace(recipient_phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})`;
