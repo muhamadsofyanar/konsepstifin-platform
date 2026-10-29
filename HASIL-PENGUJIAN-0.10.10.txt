@@ -1,4 +1,4 @@
-KonsepSTIFIn 0.10.10
+KonsepSTIFIn 0.10.11
 
 Pemeriksaan statis yang dilakukan:
 - Node syntax check untuk scripts/notification-worker.mjs: lulus.

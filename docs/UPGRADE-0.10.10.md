@@ -1,9 +1,9 @@
-# Upgrade KonsepSTIFIn 0.10.10
+# Upgrade KonsepSTIFIn 0.10.11
 
 ## Prasyarat
 - Backup database PostgreSQL dan direktori file.
 - Pastikan migration `012-integrations-promotions.sql` dari 0.10.9 sudah diterapkan.
-- Deploy commit/source 0.10.10.
+- Deploy commit/source 0.10.11.
 
 ## Migrasi
 Jalankan satu kali setelah deployment: `IDENTITY_ADMIN_CONFIRM=yes node scripts/apply-migration.mjs 013-whatsapp-inbound-first.sql`. Perintah memerlukan `DATABASE_URL` untuk database yang benar. Jangan jalankan pada database yang belum diverifikasi.
@@ -25,7 +25,7 @@ Jalankan satu kali setelah deployment: `IDENTITY_ADMIN_CONFIRM=yes node scripts/
 Di halaman Personal Token Moota, gunakan nama `KonsepSTIFIn Production` dan scope `API`, `User_read`, `Bank_read`, `Mutation_read` untuk integrasi penuh. Scope API memiliki hak luas. Simpan token di halaman admin KonsepSTIFIn. URL webhook Moota dan secret harus sesuai dengan yang ditampilkan admin. Jangan mengisi path Create Terima Uang sampai endpoint dan request body diverifikasi dari dokumentasi Moota aktif.
 
 ## Verifikasi setelah deployment
-- `/api/health` menampilkan versi 0.10.10.
+- `/api/health` menampilkan versi 0.10.11.
 - Tes koneksi Moota berhasil dan akun bank yang diharapkan muncul.
 - Webhook StarSender menolak token salah dengan HTTP 403 dan menerima pesan masuk valid.
 - Pesan antrean tanpa sesi masuk berubah menjadi `awaiting_inbound`, bukan dikirim.

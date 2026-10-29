@@ -1,0 +1,6 @@
+KonsepSTIFIn 0.10.11 - hasil pemeriksaan source
+- Perubahan status badge dan CSS responsif ditulis ke source.
+- Tidak ada migrasi database baru.
+- Build produksi belum dijalankan di lingkungan pembuatan arsip.
+- Deployment log pengguna gagal sebelum build aplikasi karena DNS timeout saat mengambil metadata Docker Hub untuk node:24-alpine.
+- Setelah DNS pulih, jalankan npm ci, npm run typecheck, npm test, npm run build, lalu deploy staging dan verifikasi UI.

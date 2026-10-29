@@ -1,4 +1,4 @@
-# Audit KonsepSTIFIn 0.10.10
+# Audit KonsepSTIFIn 0.10.11
 
 ## Perubahan
 - Menambahkan webhook inbound StarSender yang memvalidasi secret URL, mengabaikan pesan grup/keluar, menormalkan nomor, dan mencegah event duplikat.

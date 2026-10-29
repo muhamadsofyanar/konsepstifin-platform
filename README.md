@@ -1,4 +1,4 @@
-# KonsepSTIFIn 0.10.10
+# KonsepSTIFIn 0.10.11
 
 Rilis ini menambahkan kebijakan WhatsApp inbound-first untuk mengurangi pesan keluar yang tidak diharapkan dan menunggu pelanggan memulai percakapan terlebih dahulu.
 
@@ -18,7 +18,7 @@ Buat Personal Token bernama `KonsepSTIFIn Production`. Untuk integrasi yang meng
 ## Upgrade
 
 1. Backup database dan file sebelum deployment.
-2. Deploy source 0.10.10 dari branch `main`.
+2. Deploy source 0.10.11 dari branch `main`.
 3. Setelah backup, jalankan migrasi satu kali: `IDENTITY_ADMIN_CONFIRM=yes node scripts/apply-migration.mjs 013-whatsapp-inbound-first.sql`. Migrasi 012 harus sudah diterapkan dari rilis 0.10.9.
 4. Buka Admin > Pengaturan > Integrasi Eksternal. Isi Device API Key StarSender, buat secret webhook, simpan, lalu salin URL webhook pesan masuk ke pengaturan webhook device StarSender.
 5. Pastikan webhook StarSender mengirim event pesan masuk ke URL tersebut. Kirim chat uji dari nomor pribadi ke nomor resmi KonsepSTIFIn. Pesan keluar tidak dikirim sebelum event inbound tercatat.
