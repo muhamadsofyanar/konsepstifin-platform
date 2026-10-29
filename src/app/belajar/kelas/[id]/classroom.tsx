@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { groupLearningGrants, learningAccess } from '@/lib/portal-ui';
+import { learningAccess } from '@/lib/portal-ui';
 import VideoPlayer from '../../video-player';
 import { query, action, date, EmptyState, Notice, type DataRow } from '../../ui';
 
@@ -15,21 +15,11 @@ export default function Classroom({productId,initialLesson}:{productId:number;in
 
  useEffect(()=>{
   let active=true;
-  query('view=dashboard').then(async dashboard=>{
-   const own=groupLearningGrants(dashboard.grants??[]).find(g=>Number(g.product_id)===productId);
+  query('view=classroom&id='+productId+(initialLesson?'&lesson='+initialLesson:'')).then(data=>{
    if(!active)return;
-   setGrant(own??null);setProgress(dashboard.progress??[]);
-   if(!own||!learningAccess(own).active)return;
-   const syllabus=await query('view=syllabus&id='+productId);
-   if(!active)return;
-   setLessons(syllabus.lessons);
-   const allowed=(l:DataRow)=>!learningAccess(own,Number(l.unlock_days)).locked;
-   const requested=initialLesson?syllabus.lessons.find((l:DataRow)=>Number(l.id)===initialLesson):null;
-   // A URL must never fall back to an unrelated lesson silently.
-   if(initialLesson&&!requested){setError('Materi pada tautan ini tidak ditemukan di kelas Anda. Pilih materi lain.');return;}
-   const first=requested??syllabus.lessons.find((l:DataRow)=>Number(l.id)===Number(own.last_lesson_id)&&allowed(l))??syllabus.lessons.find(allowed);
-   if(first){if(!allowed(first)){setError('Materi masih terkunci. Pilih materi yang sudah tersedia.');return;}
-    const result=await query('view=material&id='+first.id);if(active){setMaterial(result.material);const u=new URL(window.location.href);u.searchParams.set('materi',String(first.id));window.history.replaceState(null,'',u);}}
+   setGrant(data.grant??null);setProgress(data.progress??[]);setLessons(data.lessons??[]);setMaterial(data.material??null);
+   setError(data.materialError??'');
+   if(data.material){const u=new URL(window.location.href);u.searchParams.set('materi',String(data.material.id));window.history.replaceState(null,'',u);}
   }).catch(e=>{if(active)setError(e instanceof Error?e.message:'Kelas belum dapat dimuat.');}).finally(()=>{if(active)setLoading(false);});
   return()=>{active=false;invalidate();};
  },[productId,initialLesson,retry,invalidate]);
@@ -49,7 +39,7 @@ export default function Classroom({productId,initialLesson}:{productId:number;in
  const completed=(id:unknown)=>progress.some(p=>Number(p.lesson_id)===Number(id));
  const index=lessons.findIndex(l=>Number(l.id)===Number(material?.id));
  const isEbook=grant?.kind==='ebook', access=grant?learningAccess(grant):null;
- const unlocked=(l:DataRow)=>!!grant&&!learningAccess(grant,Number(l.unlock_days)).locked;
+ const unlocked=(l:DataRow)=>!!grant&&(l.preview===true||!learningAccess(grant,Number(l.unlock_days)).locked);
  async function complete() {
   if(!material||busy)return;
   const id=Number(material.id);setBusy(true);setError('');

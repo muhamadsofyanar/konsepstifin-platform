@@ -2,6 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { CommerceDatabase, CommerceQuery } from './commerce-service.ts';
 import { productSlug } from './slug.ts';
+import { groupLearningGrants, learningAccess } from './portal-ui.ts';
 type Row = Record<string, unknown>;
 export class LearningError extends Error {
 }
@@ -290,7 +291,8 @@ export class LearningService {
     } return rows.length; }
     async manualGrant(user: string, productId: number, reason: string, actor: string) { text(reason, 1000); return this.db.transaction(async (q) => { await this.lockUser(q, user); const p = (await q.query('SELECT * FROM learning_products WHERE id=$1', [positive(productId)]))[0]; if (!p)
         throw new LearningError('Produk tidak ditemukan.'); if (p.source_product_key) throw new LearningError('Layanan tes dikelola melalui CRM dan pesanan, bukan hak akses kelas.'); const required = (await q.query("SELECT id FROM learning_lessons WHERE product_id=$1 AND required=true AND state='published'", [productId])).map(r => Number(r.id)); const row = (await q.query('INSERT INTO learning_grants(user_id,product_id,source,reason,expires_at,required_lessons,duration_days) VALUES($1,$2,$3,$4,CASE WHEN $5::int IS NULL THEN NULL ELSE now()+$5::int*interval \'1 day\' END,$6::text::jsonb,$5) RETURNING id', [user, productId, 'admin', reason, p.access_days, JSON.stringify(required)]))[0]; await this.audit(q, actor, 'grant.manual', row.id, { reason, user }); return row; }); }
-    async syllabus(user: string, productId: number) { return this.db.query(`SELECT l.id,l.product_id,l.module,l.title,l.kind,l.position,l.unlock_days,l.required,l.preview FROM learning_lessons l WHERE l.product_id=$1 AND (l.state='published' OR (l.state='archived' AND EXISTS(SELECT 1 FROM learning_grants g WHERE g.product_id=l.product_id AND g.user_id=$2 AND g.status='active' AND (g.expires_at IS NULL OR g.expires_at>now()) AND g.required_lessons @> to_jsonb(l.id)))) ORDER BY l.position,l.id`, [positive(productId), user]); }
+    async syllabus(user: string, productId: number) { return this.syllabusQuery(this.db,user,productId); }
+    private async syllabusQuery(q: CommerceQuery,user: string, productId: number) { return q.query(`SELECT l.id,l.product_id,l.module,l.title,l.kind,l.position,l.unlock_days,l.required,l.preview FROM learning_lessons l WHERE l.product_id=$1 AND (l.state='published' OR (l.state='archived' AND EXISTS(SELECT 1 FROM learning_grants g WHERE g.product_id=l.product_id AND g.user_id=$2 AND g.status='active' AND (g.expires_at IS NULL OR g.expires_at>now()) AND g.required_lessons @> to_jsonb(l.id)))) ORDER BY l.position,l.id`, [positive(productId), user]); }
     private async accessible(q: CommerceQuery, user: string, lessonId: number) {
         const l = (await q.query("SELECT l.* FROM learning_lessons l JOIN learning_products p ON p.id=l.product_id WHERE l.id=$1 AND l.state IN ('published','archived') AND p.state<>'draft'", [positive(lessonId)]))[0];
         if (!l)
@@ -303,16 +305,45 @@ export class LearningService {
             throw new LearningError('Materi masih terkunci.');
         return { l, g };
     }
-    async material(user: string, lessonId: number) { return this.db.transaction(async (q) => { const { l, g } = await this.accessible(q, user, lessonId); if (g)
-        await q.query('UPDATE learning_grants SET last_lesson_id=$1 WHERE user_id=$2 AND product_id=$3 AND status=$4', [lessonId, user, l.product_id, 'active']); return l; }); }
+    private async readMaterial(q: CommerceQuery,user: string, lessonId: number) { const { l, g } = await this.accessible(q, user, lessonId); if (g)
+        await q.query('UPDATE learning_grants SET last_lesson_id=$1 WHERE user_id=$2 AND product_id=$3 AND status=$4', [lessonId, user, l.product_id, 'active']); return l; }
+    async material(user: string, lessonId: number) { return this.db.transaction(q=>this.readMaterial(q,user,lessonId)); }
+    async hasProductAccess(user: string, productId: number) {
+        const [row]=await this.db.query("SELECT EXISTS(SELECT 1 FROM learning_grants WHERE user_id=$1 AND product_id=$2 AND status='active' AND (expires_at IS NULL OR expires_at>now())) AS active",[user,positive(productId)]);
+        return row.active===true;
+    }
+    async classroom(user: string, productId: number, requestedLesson?: number) {
+        positive(productId);if(requestedLesson!==undefined)positive(requestedLesson);
+        return this.db.transaction(async q=>{
+            const grants=await q.query('SELECT g.*,p.title,p.kind,p.source_product_key FROM learning_grants g JOIN learning_products p ON p.id=g.product_id WHERE g.user_id=$1 AND g.product_id=$2 ORDER BY g.id DESC',[user,productId]);
+            const grant=groupLearningGrants(grants)[0]??null;
+            if(!grant||!learningAccess(grant).active)return {grant,lessons:[],progress:[],material:null,materialError:''};
+            const lessons=await this.syllabusQuery(q,user,productId);
+            const progress=await q.query('SELECT pr.lesson_id,l.product_id FROM learning_progress pr JOIN learning_lessons l ON l.id=pr.lesson_id WHERE pr.user_id=$1 AND l.product_id=$2',[user,productId]);
+            const allowed=(l:Row)=>l.preview===true||!learningAccess(grant,Number(l.unlock_days)).locked;
+            const requested=requestedLesson?lessons.find(l=>Number(l.id)===requestedLesson):null;
+            if(requestedLesson&&!requested)return {grant,lessons,progress,material:null,materialError:'Materi pada tautan ini tidak ditemukan di kelas Anda. Pilih materi lain.'};
+            const chosen=requested??lessons.find(l=>Number(l.id)===Number(grant.last_lesson_id)&&allowed(l))??lessons.find(allowed);
+            if(chosen&&!allowed(chosen))return {grant,lessons,progress,material:null,materialError:'Materi masih terkunci. Pilih materi yang sudah tersedia.'};
+            const material=chosen?await this.readMaterial(q,user,Number(chosen.id)):null;
+            return {grant,lessons,progress,material,materialError:''};
+        });
+    }
     async complete(user: string, lessonId: number) { return this.db.transaction(async (q) => { const { g } = await this.accessible(q, user, lessonId); if (!g)
         throw new LearningError('Daftar kelas sebelum menyimpan progres.'); await q.query('INSERT INTO learning_progress(user_id,lesson_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [user, lessonId]); return { saved: true }; }); }
-    async dashboard(user: string) { return this.db.transaction(async q=>{ const [grants, progress, purchases, notifications, tickets, certificates] = [await q.query('SELECT g.*,p.title,p.kind,p.source_product_key FROM learning_grants g JOIN learning_products p ON p.id=g.product_id WHERE g.user_id=$1 ORDER BY g.id DESC LIMIT 200', [user]),
-await q.query('SELECT pr.*,l.product_id FROM learning_progress pr JOIN learning_lessons l ON l.id=pr.lesson_id WHERE user_id=$1', [user]),
-await q.query('SELECT p.id,p.product_id,p.snapshot,p.created_at,o.id AS order_id,o.number,o.total,o.state AS order_state,EXISTS(SELECT 1 FROM commerce_ledger refund WHERE refund.order_id=o.id AND refund.kind=\'refund\') AS has_refund,COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance FROM learning_purchases p LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE p.user_id=$1 ORDER BY p.id DESC LIMIT 100', [user]),
-await q.query('SELECT message,created_at FROM learning_notifications WHERE user_id=$1 ORDER BY id DESC LIMIT 50', [user]),
-await q.query('SELECT * FROM learning_tickets WHERE user_id=$1 ORDER BY id DESC LIMIT 50', [user]),
-await q.query('SELECT * FROM learning_certificates WHERE user_id=$1', [user])]; return { grants, progress, purchases, notifications, tickets, certificates }; }); }
+    async dashboard(user: string, section='all'): Promise<Record<string,Row[]>> {
+        const fields:Record<string,string[]>={classes:['grants','progress'],orders:['purchases'],certificates:['certificates'],support:['notifications','tickets'],all:['grants','progress','purchases','notifications','tickets','certificates']};
+        if(!Object.hasOwn(fields,section))throw new LearningError('Bagian akun tidak valid.');
+        return this.db.transaction(async q=>{const result:Record<string,Row[]>={};
+            if(fields[section].includes('grants'))result.grants=await q.query('SELECT g.*,p.title,p.kind,p.source_product_key FROM learning_grants g JOIN learning_products p ON p.id=g.product_id WHERE g.user_id=$1 ORDER BY g.id DESC LIMIT 200', [user]);
+            if(fields[section].includes('progress'))result.progress=await q.query('SELECT pr.*,l.product_id FROM learning_progress pr JOIN learning_lessons l ON l.id=pr.lesson_id WHERE user_id=$1', [user]);
+            if(fields[section].includes('purchases'))result.purchases=await q.query('SELECT p.id,p.product_id,p.snapshot,p.created_at,o.id AS order_id,o.number,o.total,o.state AS order_state,EXISTS(SELECT 1 FROM commerce_ledger refund WHERE refund.order_id=o.id AND refund.kind=\'refund\') AS has_refund,COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance FROM learning_purchases p LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE p.user_id=$1 ORDER BY p.id DESC LIMIT 100', [user]);
+            if(fields[section].includes('notifications'))result.notifications=await q.query('SELECT message,created_at FROM learning_notifications WHERE user_id=$1 ORDER BY id DESC LIMIT 50', [user]);
+            if(fields[section].includes('tickets'))result.tickets=await q.query('SELECT * FROM learning_tickets WHERE user_id=$1 ORDER BY id DESC LIMIT 50', [user]);
+            if(fields[section].includes('certificates'))result.certificates=await q.query('SELECT * FROM learning_certificates WHERE user_id=$1', [user]);
+            return result;
+        });
+    }
     async partner(user: string) { return this.db.transaction(async q=>{ const [commissions, payouts] = [await q.query("SELECT e.id,e.purchase_id,e.amount,e.state,e.payout_id,e.reason,e.created_at,p.snapshot->>'title' AS product_title,o.number AS order_number FROM affiliate_entries e LEFT JOIN learning_purchases p ON p.id=e.purchase_id LEFT JOIN commerce_orders o ON o.id=p.order_id WHERE e.user_id=$1 ORDER BY e.id DESC LIMIT 200", [user]),
 await q.query('SELECT * FROM affiliate_payouts WHERE user_id=$1 ORDER BY id DESC LIMIT 100', [user])]; const [r] = await q.query("SELECT COALESCE(sum(amount) FILTER(WHERE state='available'),0) AS available,COALESCE(sum(amount) FILTER(WHERE state='reversed' AND amount<0 AND reverses_id IN (SELECT id FROM affiliate_entries WHERE state IN ('paid','reserved'))),0) AS debt FROM affiliate_entries WHERE user_id=$1", [user]); return { commissions: commissions.map((r): Row & {
             amount: number;
@@ -361,7 +392,7 @@ await q.query('SELECT * FROM affiliate_payouts WHERE user_id=$1 ORDER BY id DESC
     async revokeCertificate(code: string, reason: string, actor: string) { text(reason, 1000); await this.db.transaction(async (q) => { await q.query('UPDATE learning_certificates SET revoked_at=now(),reason=$1 WHERE code=$2', [reason, text(code, 100)]); await this.audit(q, actor, 'certificate.revoke', code, { reason }); }); }
     async ticket(user: string, subject: string, message: string) { return (await this.db.query('INSERT INTO learning_tickets(user_id,subject,message) VALUES($1,$2,$3) RETURNING id', [user, text(subject), text(message, 5000)]))[0]; }
     async searchUsers(term:string){if(typeof term!=='string'||term.trim().length<2||term.length>254)throw new LearningError('Ketik 2–254 karakter email untuk mencari akun.');return this.db.query('SELECT id,email,active FROM platform_users WHERE email ILIKE $1 ORDER BY email LIMIT 50',['%'+term.trim()+'%']);}
-    async readiness(){const rows=await this.db.query("SELECT name,to_regclass('public.'||name) AS relation FROM (VALUES ('learning_products'),('learning_lessons'),('learning_coupons'),('learning_purchases'),('learning_grants'),('learning_progress'),('learning_jobs'),('affiliate_payouts'),('affiliate_entries'),('learning_audit'),('learning_notifications'),('learning_certificates'),('learning_tickets'),('platform_referral_registrations')) AS expected(name)");const missing=rows.filter(r=>!r.relation).map(r=>String(r.name));const columns=await this.db.query("SELECT column_name FROM information_schema.columns WHERE table_name='learning_products' AND column_name IN ('source_product_key','price_note')");if(columns.length<2)missing.push('catalog_0_10');return {ready:missing.length===0,missing};}
+    async readiness(){const rows=await this.db.query("SELECT name,to_regclass('public.'||name) AS relation FROM (VALUES ('learning_products'),('learning_lessons'),('learning_coupons'),('learning_purchases'),('learning_grants'),('learning_progress'),('learning_jobs'),('affiliate_payouts'),('affiliate_entries'),('learning_audit'),('learning_notifications'),('learning_certificates'),('learning_tickets'),('platform_referral_registrations'),('public_products'),('public_product_migrations')) AS expected(name)");const missing=rows.filter(r=>!r.relation).map(r=>String(r.name));const columns=await this.db.query("SELECT column_name FROM information_schema.columns WHERE table_name='learning_products' AND column_name IN ('source_product_key','price_note')");if(columns.length<2)missing.push('catalog_0_10');if(rows.some(r=>r.name==='public_product_migrations'&&r.relation)){const [marker]=await this.db.query("SELECT EXISTS(SELECT 1 FROM public_product_migrations WHERE revision='catalog-explicit-010') AS applied");if(!marker.applied)missing.push('catalog_explicit_010');}return {ready:missing.length===0,missing};}
     async adminData() { return this.db.transaction(async q=>{ const [products, lessons, grants, commissions, payouts, jobs, tickets, coupons, users, registrations] = [await q.query('SELECT * FROM learning_products ORDER BY id DESC LIMIT 200'),
 await q.query('SELECT * FROM learning_lessons ORDER BY product_id,position,id LIMIT 1000'),
 await q.query('SELECT g.*,u.email,p.title,(SELECT count(*) FROM learning_progress pr JOIN learning_lessons ll ON ll.id=pr.lesson_id WHERE pr.user_id=g.user_id AND ll.product_id=g.product_id) AS completed_count FROM learning_grants g JOIN platform_users u ON u.id=g.user_id JOIN learning_products p ON p.id=g.product_id ORDER BY g.id DESC LIMIT 200'),

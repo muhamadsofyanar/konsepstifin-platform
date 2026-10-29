@@ -1,0 +1,14 @@
+KonsepSTIFIn 0.10.5
+
+Vitest: 307 lulus, 6 dilewati. 69 file lulus, 3 file dilewati.
+Build produksi, TypeScript, ESLint: lulus.
+Uji pengurangan kerja: satu permintaan awal kelas, enam query khusus kelas,
+dua query daftar akses, satu SELECT untuk baca katalog rutin.
+Uji akses, cakupan pengguna, path file privat, migrasi idempotent,
+rollback edit katalog, lazy tab, pagination kartu dan affiliate disertakan.
+Smoke standalone serta pemeriksaan browser: lihat docs/AUDIT-0.10.5.md.
+
+Jumlah query tidak memasukkan pemeriksaan sesi atau BEGIN/COMMIT.
+Data pengujian sintetis, bukan database produksi. Tidak ada benchmark VPS.
+Screenshot browser hanya untuk pemeriksaan internal.
+Paket belum dideploy oleh asisten ke server pengguna. Migrasi 010 wajib.

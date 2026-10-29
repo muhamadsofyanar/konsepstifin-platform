@@ -1,0 +1,18 @@
+KonsepSTIFIn 0.10.5 | source lengkap
+
+Perbaikan pemuatan kelas, katalog, tab peserta dan feedback navigasi.
+Mencakup seluruh perbaikan affiliate dan ID & Alat dari 0.10.4.
+
+1. Backup database dan volume seperti biasa.
+2. Unggah isi folder ke root repository aplikasi yang sama dan redeploy.
+3. WAJIB jalankan migrasi sampai 010 di terminal container aplikasi baru:
+
+IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+
+4. Refresh paksa browser. /api/health harus menunjukkan version 0.10.5.
+5. Uji akses kelas, katalog, harga admin dan referral ID & Alat.
+
+Tidak perlu mengganti database, provision ulang akun atau import ulang promotor.
+Pertahankan DATABASE_URL, PLATFORM_ORIGIN, password, alias dan volume file.
+Migrasi mengisi yang belum ada, tanpa menimpa produk/komisi yang sudah diatur.
+Baca docs/UPGRADE-0.10.5.md dan docs/AUDIT-0.10.5.md.

@@ -1,6 +1,6 @@
 import { beforeEach, it, expect, vi } from 'vitest';
 const account = vi.hoisted(() => vi.fn());
-const service = vi.hoisted(() => ({ saveProduct: vi.fn(), checkout: vi.fn(), catalog: vi.fn(), material: vi.fn() }));
+const service = vi.hoisted(() => ({ saveProduct: vi.fn(), checkout: vi.fn(), catalog: vi.fn(), material: vi.fn(), classroom: vi.fn() }));
 vi.mock('@/lib/identity/server', () => ({ getAccountPrincipal: account }));
 vi.mock('@/lib/learning-store', () => ({ getLearningService: () => service }));
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
@@ -16,4 +16,9 @@ it('requires administrator for deletion and partner role for payout or partner d
  account.mockResolvedValue({userId:'u',active:true,sessionValid:true,roles:['member']});
  for(const action of ['product.delete','lesson.delete','payout.request'])expect((await POST(req({action,id:1}))).status).toBe(403);
  expect((await GET(new Request('https://example.test/api/learning?view=partner'))).status).toBe(403);
+});
+
+it('returns one scoped classroom response without exposing private file paths or trusting a supplied user',async()=>{
+ account.mockResolvedValue({userId:'trusted',active:true,sessionValid:true,roles:['member']});service.classroom.mockResolvedValue({grant:{product_id:1},lessons:[{id:2}],progress:[],material:{id:2,file_path:'secret/private.pdf',body:'Owned'},materialError:''});
+ const response=await GET(new Request('https://example.test/api/learning?view=classroom&id=1&lesson=2&userId=victim'));expect(response.status).toBe(200);const data=await response.json();expect(data.material.hasFile).toBe(true);expect(JSON.stringify(data)).not.toContain('secret/private.pdf');expect(service.classroom).toHaveBeenCalledWith('trusted',1,2);
 });

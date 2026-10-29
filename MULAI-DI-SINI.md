@@ -1,4 +1,10 @@
-# Rilis terkini: KonsepSTIFIn 0.10.4
+# Rilis terkini: KonsepSTIFIn 0.10.5
+
+Pemuatan kelas dan tab peserta dipersempit, pembacaan katalog tanpa sinkronisasi database, pagination 12 kartu, serta indikator klik dan loading. Semua perbaikan affiliate 0.10.4 disertakan.
+
+**WAJIB migrasi sampai 010** setelah upgrade. Baca [panduan 0.10.5](docs/UPGRADE-0.10.5.md) dan [audit pengujian](docs/AUDIT-0.10.5.md). Pertahankan database, akun, harga dan volume file yang sudah dipakai. Dokumentasi di bawah adalah riwayat versi sebelumnya.
+
+# Riwayat: KonsepSTIFIn 0.10.4
 
 Perbaikan pengajuan layanan dari affiliate, terutama ID & Alat dan jalur calon promotor. Sumber referral disimpan terpisah dari izin berbagi kontak. Konfirmasi menampilkan KSF dan alias tersimpan. Aktivitas mitra menampilkan daftar pengajuan tanpa data kontak klien.
 

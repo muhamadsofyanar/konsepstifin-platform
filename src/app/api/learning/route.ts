@@ -1,4 +1,4 @@
-import { ensureProductSchema, getManagedProducts } from '@/lib/product-store';
+import { getManagedProducts } from '@/lib/product-store';
 import { cookies } from 'next/headers';
 import { getLearningService } from '@/lib/learning-store';
 import { learningGuard, learningJson, learningFailure } from '@/lib/learning-http';
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     try {
         const u = new URL(request.url), view = u.searchParams.get('view') ?? 'catalog', s = getLearningService();
-        if (view === 'catalog') { await ensureProductSchema(); return learningJson({ products: await s.catalog() }); }
+        if (view === 'catalog') { return learningJson({ products: await s.catalog() }); }
         if (view === 'certificate')
             return learningJson({ certificate: await s.verifyCertificate(u.searchParams.get('code') ?? '') });
         const g = await learningGuard(request, false, view === 'admin' || view === 'setup' || view === 'users');
@@ -21,11 +21,16 @@ export async function GET(request: Request) {
             return learningJson({ users: await s.searchUsers(u.searchParams.get('q') ?? '') });
         if (view === 'setup')
             return learningJson(await s.readiness());
-        if (view === 'admin') { await ensureProductSchema(); const data=await s.adminData();const legacy=await getManagedProducts();return learningJson({...data,products:data.products.map(p=>({...p,...(p.source_product_key?{serviceDetails:legacy.find(l=>l.productKey===p.source_product_key)}:{})}))}); }
+        if (view === 'admin') { const data=await s.adminData();const legacy=await getManagedProducts();return learningJson({...data,products:data.products.map(p=>({...p,...(p.source_product_key?{serviceDetails:legacy.find(l=>l.productKey===p.source_product_key)}:{})}))}); }
         if (view === 'dashboard')
-            return learningJson(await s.dashboard(user));
+            return learningJson(await s.dashboard(user, u.searchParams.get('section') ?? 'all'));
         if (view === 'partner')
             return learningJson(await s.partner(user));
+        if(view==='classroom') {
+            const d=await s.classroom(user,positive(u.searchParams.get('id')),u.searchParams.has('lesson')?positive(u.searchParams.get('lesson')):undefined);
+            const material=d.material?(({file_path,...safe})=>({...safe,hasFile:Boolean(file_path)}))(d.material):null;
+            return learningJson({...d,material});
+        }
         if (view === 'syllabus')
             return learningJson({ lessons: await s.syllabus(user, positive(u.searchParams.get('id'))) });
         if (view === 'material') {
