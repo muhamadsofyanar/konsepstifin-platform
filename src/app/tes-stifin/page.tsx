@@ -8,6 +8,8 @@ import { catalogAmount } from '@/lib/catalog-presentation';
 import { getPublicManagedProducts } from '@/lib/product-store';
 import ActivityGallery from '../activity-gallery';
 import JsonLd from '../json-ld';
+import PublicPromotionBanner from '../public-promotion-banner';
+import { getActivePromotion } from '@/lib/promotion-store';
 
 export const metadata: Metadata = {
   title: 'Tes STIFIn Offline — Pilihan Layanan dan Prosesnya',
@@ -23,7 +25,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function TestLandingPage() {
   const testFaq = faqItems.filter((_, index) => [0, 1, 4].includes(index));
-  const publicProducts = await getPublicManagedProducts('test');
+  const [publicProducts, promo] = await Promise.all([getPublicManagedProducts('test'), getActivePromotion()]);
   const servicesSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -60,6 +62,8 @@ export default async function TestLandingPage() {
       </section>
 
       <section className="test-reassurance"><span>PERSONAL</span><span>KELUARGA</span><span>SEKOLAH</span><span>KOMUNITAS</span><span>INSTITUSI</span></section>
+      <PublicPromotionBanner family workshop={false} compact />
+      {promo.familyActive && <section id="promo-family" className="section family-promo-details"><div className="section-heading"><span>PROMO RESMI PUSAT · {promo.settings.startDate} sampai {promo.settings.endDate}</span><h2>Family Test, dengan tes bonus sesuai skema.</h2><p>Harga jual minimal Rp{promo.settings.minimumPaidTestPrice.toLocaleString('id-ID')} per tes berbayar. Pilih skema, lalu kirim permintaan. Tim mengonfirmasi harga akhir dan pelaksanaannya.</p></div><div className="family-promo-options">{promo.settings.familySchemes.map(scheme=><article key={scheme.key}><small>FAMILY TEST</small><h3>{scheme.label}</h3><p>{scheme.paidTests} tes berbayar + {scheme.freeTests} tes gratis</p><strong>Minimal Rp{(scheme.paidTests*promo.settings.minimumPaidTestPrice).toLocaleString('id-ID')}</strong><span>Jumlah peserta: {scheme.paidTests+scheme.freeTests}</span></article>)}</div><div className="family-promo-cta"><p>Promo opsional. Admin akan mengonfirmasi jumlah tes, wilayah, jadwal, dan harga sebelum transaksi.</p><PublicInterestAction linkKey="paketKeluarga" service="Paket Tes Keluarga" label="Ajukan Family Test →" className="public-cta big" familyPromo={{minimumPaidTestPrice:promo.settings.minimumPaidTestPrice,schemes:promo.settings.familySchemes}} /></div></section>}
 
       <section className="test-problem-story">
         <div><span>MUNGKIN INI TERASA DEKAT</span><h2>Kita sering menuntut hasil, sebelum memahami cara alaminya.</h2></div>
@@ -74,7 +78,7 @@ export default async function TestLandingPage() {
         ['04', 'Arah penerapan yang realistis', 'Pilih satu atau dua penyesuaian kecil yang dapat dicoba setelah pembahasan hasil.'],
       ].map((item) => <article key={item[0]}><span>{item[0]}</span><h3>{item[1]}</h3><p>{item[2]}</p></article>)}</div></section>
 
-      <section id="layanan" className="section product-section"><div className="section-heading"><span>PILIHAN LAYANAN</span><h2>Pilih untuk diri sendiri, keluarga, atau kelompok Anda.</h2><p>Bandingkan jumlah peserta dan fasilitasnya. Buka detail produk untuk mengajukan layanan, lalu pengelola membantu mengonfirmasi wilayah, promotor, dan jadwal.</p></div><div className="product-grid">{publicProducts.map((product) => <article className={product.featured ? 'product-card featured-product' : 'product-card'} key={product.title}>{product.featured && <div className="product-ribbon">MULAI DARI 1 PESERTA</div>}<small>{product.eyebrow}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{product.price}</b><span>{product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map((item) => <span key={item}>✓ {item}</span>)}</div>{product.bonuses.length > 0 && <div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map((item) => <span key={item}>＋ {item}</span>)}</div>}<Link className="product-action" href={'/produk/layanan/'+product.productKey}>{product.action} →</Link></article>)}</div><div className="catalog-support"><div><b>Belum yakin memilih paket?</b><span>Tim dapat membantu mencocokkan jumlah peserta, kota, dan kebutuhan Anda.</span></div><PublicInterestAction leadType="test_service" captureLead className="catalog-support-action" linkKey="tesPersonal" label="Butuh bantuan memilih? →" service="Bantuan memilih layanan STIFIn" /></div><p className="price-note">Harga pada katalog menjadi informasi awal. Nominal dan instruksi pembayaran dikonfirmasi admin sebelum pembayaran. Tes STIFIn bukan layanan diagnosis medis atau psikologis.</p></section>
+      <section id="layanan" className="section product-section"><div className="section-heading"><span>PILIHAN LAYANAN</span><h2>Pilih untuk diri sendiri, keluarga, atau kelompok Anda.</h2><p>Bandingkan jumlah peserta dan fasilitasnya. Buka detail produk untuk mengajukan layanan, lalu pengelola membantu mengonfirmasi wilayah, promotor, dan jadwal.</p></div><div className="product-grid">{publicProducts.map((product) => <article className={product.featured ? 'product-card featured-product' : 'product-card'} key={product.title}>{product.featured && <div className="product-ribbon">MULAI DARI 1 PESERTA</div>}<small>{product.eyebrow}</small><h3>{product.title}</h3><p className="product-description">{product.description}</p><div className="product-price"><b>{promo.familyActive && ['paketKeluarga','paketKeluargaPlus'].includes(product.productKey) ? 'Harga sesuai skema promo' : product.price}</b><span>{promo.familyActive && ['paketKeluarga','paketKeluargaPlus'].includes(product.productKey) ? 'Pilih skema Family Test di bagian promo. Harga minimum dihitung dari jumlah tes berbayar.' : product.priceNote}</span></div><div className="product-list"><strong>Yang didapat</strong>{product.features.map((item) => <span key={item}>✓ {item}</span>)}</div>{product.bonuses.length > 0 && <div className="bonus-box"><strong>Bonus pilihan</strong>{product.bonuses.map((item) => <span key={item}>＋ {item}</span>)}</div>}<Link className="product-action" href={'/produk/layanan/'+product.productKey}>{product.action} →</Link></article>)}</div><div className="catalog-support"><div><b>Belum yakin memilih paket?</b><span>Tim dapat membantu mencocokkan jumlah peserta, kota, dan kebutuhan Anda.</span></div><PublicInterestAction leadType="test_service" captureLead className="catalog-support-action" linkKey="tesPersonal" label="Butuh bantuan memilih? →" service="Bantuan memilih layanan STIFIn" /></div><p className="price-note">Harga pada katalog menjadi informasi awal. Nominal dan instruksi pembayaran dikonfirmasi admin sebelum pembayaran. Tes STIFIn bukan layanan diagnosis medis atau psikologis.</p></section>
 
       <ActivityGallery />
 

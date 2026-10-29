@@ -5,6 +5,8 @@ import { PublicFooter, PublicHeader } from '../public-site-shell';
 import { faqItems } from '../site-config';
 import { promoterInvestment, formatRupiah } from '@/lib/catalog-presentation';
 import { getPublicManagedProducts } from '@/lib/product-store';
+import PublicPromotionBanner from '../public-promotion-banner';
+import { getActivePromotion } from '@/lib/promotion-store';
 
 export const metadata: Metadata = {
   title: 'Calon Promotor STIFIn — Peran, Tahap, dan Biaya',
@@ -20,7 +22,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function PromoterLandingPage() {
   const promoterFaq = faqItems.filter((_, index) => [2, 3].includes(index));
-  const promoterSteps = await getPublicManagedProducts('promoter');
+  const [allPromoterProducts, promo] = await Promise.all([getPublicManagedProducts('promoter'), getActivePromotion()]);
+  const promoterSteps = allPromoterProducts.filter(item => item.productKey !== 'wst').map(item => {
+    if (!promo.workshopActive || (item.productKey !== 'wsl1' && item.productKey !== 'wsl2')) return item;
+    const promoPrice = item.productKey === 'wsl1' ? promo.settings.workshopPrices.wsl1 : promo.settings.workshopPrices.wsl2;
+    return { ...item, price: `Rp${promoPrice.toLocaleString('id-ID')}`, priceNote: `harga promo pusat sampai ${promo.settings.endDate}` };
+  });
   const investment=promoterInvestment(promoterSteps);
   const packageProduct=promoterSteps.find(item=>item.productKey==='paketPromotor');
 
@@ -34,6 +41,8 @@ export default async function PromoterLandingPage() {
           <figcaption className="media-story-card promoter-story-card"><small>PETA PERJALANAN</small><b>Preview → WSL 1 → WSL 2</b><span>Lanjutkan ke ID & alat saat sudah siap</span></figcaption>
         </figure>
       </section>
+
+      <PublicPromotionBanner family={false} workshop compact />
 
       <section className="promoter-fit">
         <div><span>APAKAH JALUR INI UNTUK ANDA?</span><h2>Cocok untuk orang yang senang belajar, melayani, dan membangun kepercayaan.</h2></div>
@@ -59,6 +68,8 @@ export default async function PromoterLandingPage() {
         </div>
         <div className="promoter-note"><div><b>Preview</b><span>Kenali profesinya</span></div><i>→</i><div><b>WSL 1</b><span>Bangun fondasi</span></div><i>→</i><div><b>WSL 2</b><span>Pendalaman</span></div><i>→</i><div><b>ID & scanner</b><span>Aktivasi sesuai syarat</span></div></div>
       </section>
+
+      {promo.workshopActive && <section id="year-end-workshop" className="section year-end-workshop"><div className="section-heading"><span>PROGRAM CABANG · PROMO PUSAT</span><h2>Year-End Workshop</h2><p>Harga berlaku pada {promo.settings.startDate} sampai {promo.settings.endDate}. Rincian kelas, jadwal, dan ketentuan final dikonfirmasi tim.</p></div><div className="family-promo-options workshop-promo-options"><article><small>WORKSHOP</small><h3>WSL 1</h3><strong>Rp{promo.settings.workshopPrices.wsl1.toLocaleString('id-ID')}</strong><Link href="/produk/layanan/wsl1">Tanyakan WSL 1 →</Link></article><article><small>WORKSHOP</small><h3>WSL 2</h3><strong>Rp{promo.settings.workshopPrices.wsl2.toLocaleString('id-ID')}</strong><Link href="/produk/layanan/wsl2">Tanyakan WSL 2 →</Link></article><article><small>WORKSHOP</small><h3>WST</h3><strong>Rp{promo.settings.workshopPrices.wst.toLocaleString('id-ID')}</strong><Link href="/produk/layanan/wst">Tanyakan WST →</Link></article></div></section>}
 
       <section className="promoter-expectation"><div><span>SUPAYA EKSPEKTASINYA SAMA</span><h2>Perannya nyata; hasil usaha atau penghasilan tidak dijanjikan.</h2><p>Menjadi promotor berarti belajar, melayani peserta, menjaga privasi, serta mengikuti ketentuan aktivasi. Hasil setiap orang dipengaruhi kesiapan, kualitas pelayanan, konsistensi, wilayah, dan banyak faktor lain.</p></div><ul><li>Pahami biaya, fasilitas, dan peran sebelum mendaftar.</li><li>Tanyakan jadwal, proses belajar, syarat, serta aktivasi.</li><li>Bangun kepercayaan melalui pelayanan dan komunikasi yang jujur.</li><li>Jaga privasi peserta dan gunakan data secara bertanggung jawab.</li></ul></section>
 

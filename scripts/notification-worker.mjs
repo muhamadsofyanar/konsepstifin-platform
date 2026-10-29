@@ -8,7 +8,7 @@ const sql = process.env.DATABASE_URL ? postgres(process.env.DATABASE_URL, { max:
 
 async function tick() {
   if (stopping) return;
-  if (sql && starsenderStatus().configured) {
+  if (sql && (await starsenderStatus()).configured) {
     try {
       // A worker crash after claiming a message is treated as an unknown outcome, not auto-resend.
       await sql`UPDATE notification_outbox SET status='unknown',last_error='Worker berhenti saat pesan sedang diproses; status kirim perlu diperiksa manual.',updated_at=now() WHERE status='sending' AND updated_at < now() - interval '5 minutes'`;

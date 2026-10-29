@@ -7,10 +7,11 @@ import { submitInterest } from '@/lib/interest-service';
 import { createInterestLead } from '@/lib/interest-store';
 import { getPromotersForRegion } from '@/lib/promoter-store';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getActivePromotion, familyScheme } from '@/lib/promotion-store';
 
 export function publicInterestErrorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : 'Permintaan belum dapat disimpan.';
-  const status = /belum|perlu|minimal|valid|lengkap|pilih|persetujuan|sesuai/i.test(message) ? 400 : 500;
+  const status = /belum|perlu|minimal|valid|lengkap|pilih|persetujuan|sesuai|promo|aktif|skema|berlaku/i.test(message) ? 400 : 500;
   if (status === 500) console.error('Gagal menyimpan formulir minat.', message);
   return NextResponse.json({
     error: status === 400 ? message : 'Permintaan belum dapat disimpan. Silakan coba kembali.',
@@ -31,6 +32,30 @@ export async function POST(request: NextRequest) {
     const startedAt = Number(body.startedAt);
     if (!Number.isFinite(startedAt) || Date.now() - startedAt < 1_500) {
       return NextResponse.json({ error: 'Formulir dikirim terlalu cepat. Silakan coba kembali.' }, { status: 400 });
+    }
+
+    const promoKey = String(body.familyPromoKey ?? '').trim();
+    if (promoKey) {
+      const productKey = String(body.productKey ?? '').trim();
+      if (!['paketKeluarga', 'paketKeluargaPlus'].includes(productKey)) throw new Error('Promo Family Test hanya berlaku untuk permintaan tes keluarga.');
+      const promo = await getActivePromotion();
+      if (!promo.familyActive) throw new Error('Promo Family Test tidak sedang aktif. Silakan muat ulang halaman atau hubungi tim.');
+      const scheme = familyScheme(promo.settings, promoKey);
+      if (!scheme) throw new Error('Skema promo tidak tersedia. Pilih skema yang aktif pada halaman layanan.');
+      const minimum = scheme.paidTests * promo.settings.minimumPaidTestPrice;
+      const currentNotes = String(body.notes ?? '').replace(/PROMO PUSAT (?:FAMILY TEST|YEAR-END WORKSHOP):[^|]*/gi, '').trim().slice(0, 400);
+      const verifiedPromoNote = `PROMO PUSAT FAMILY TEST: ${scheme.label}; ${scheme.paidTests} tes berbayar + ${scheme.freeTests} tes gratis; total ${scheme.paidTests + scheme.freeTests} peserta; minimum pembayaran Rp${minimum.toLocaleString('id-ID')}; periode ${promo.settings.startDate} s.d. ${promo.settings.endDate}. Harga akhir dikonfirmasi admin.`;
+      body.notes = [currentNotes, verifiedPromoNote].filter(Boolean).join(' | ').slice(0, 600);
+    } else {
+      const productKey = String(body.productKey ?? '').trim();
+      if (['wsl1', 'wsl2', 'wst'].includes(productKey)) {
+        const promo = await getActivePromotion();
+        if (promo.workshopActive) {
+          const price = promo.settings.workshopPrices[productKey as 'wsl1'|'wsl2'|'wst'];
+          const note = `PROMO PUSAT YEAR-END WORKSHOP: ${productKey.toUpperCase()}; harga promo Rp${price.toLocaleString('id-ID')}; periode ${promo.settings.startDate} s.d. ${promo.settings.endDate}; jadwal dan rincian dikonfirmasi admin.`;
+          body.notes = [String(body.notes ?? '').replace(/PROMO PUSAT (?:FAMILY TEST|YEAR-END WORKSHOP):[^|]*/gi, '').trim().slice(0, 400), note].filter(Boolean).join(' | ').slice(0, 600);
+        }
+      }
     }
 
     const principal = request.cookies.has(ACCOUNT_COOKIE) ? await getAccountPrincipal() : null;

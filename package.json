@@ -1,6 +1,6 @@
 {
   "name": "konsepstifin-platform",
-  "version": "0.10.8",
+  "version": "0.10.9",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -20,7 +20,8 @@
     "network:import": "node scripts/promoter-admin.mjs import",
     "voucher:worker": "node --env-file-if-exists=.env.local scripts/voucher-worker.mjs",
     "learning:worker": "node --env-file-if-exists=.env.local scripts/learning-worker.mjs",
-    "notifications:worker": "node --env-file-if-exists=.env.local scripts/notification-worker.mjs"
+    "notifications:worker": "node --env-file-if-exists=.env.local scripts/notification-worker.mjs",
+    "migration:apply": "node scripts/apply-migration.mjs"
   },
   "dependencies": {
     "next": "16.2.10",

@@ -27,7 +27,7 @@ const TEST_PRODUCT_KEYS = new Set([
   'tesPersonal', 'tesPasangan', 'paketKeluarga', 'paketKeluargaPlus', 'sekolahKomunitas', 'bantuanTes',
 ]);
 const PROMOTER_PRODUCT_KEYS = new Set([
-  'previewPromotor', 'wsl1', 'wsl2', 'idDanAlat', 'paketPromotor', 'bantuanPromotor',
+  'previewPromotor', 'wsl1', 'wsl2', 'wst', 'idDanAlat', 'paketPromotor', 'bantuanPromotor',
 ]);
 
 const IDEMPOTENCY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -166,6 +166,7 @@ function inferProductKey(service: string) {
   if (normalized.includes('preview')) return 'previewPromotor';
   if (normalized.includes('wsl 1')) return 'wsl1';
   if (normalized.includes('wsl 2')) return 'wsl2';
+  if (normalized === 'wst' || normalized.includes(' wst')) return 'wst';
   if (normalized.includes('id') && normalized.includes('alat')) return 'idDanAlat';
   if (normalized.includes('paket promotor')) return 'paketPromotor';
   if (normalized.includes('pasangan')) return 'tesPasangan';
@@ -362,6 +363,7 @@ export async function initializeInterestSchema() {
         WHEN LOWER(service) LIKE '%preview%' THEN 'previewPromotor'
         WHEN LOWER(service) LIKE '%wsl 1%' THEN 'wsl1'
         WHEN LOWER(service) LIKE '%wsl 2%' THEN 'wsl2'
+        WHEN LOWER(service) = 'wst' OR LOWER(service) LIKE '% wst%' THEN 'wst'
         WHEN LOWER(service) LIKE '%id%alat%' THEN 'idDanAlat'
         WHEN LOWER(service) LIKE '%paket promotor%' THEN 'paketPromotor'
         WHEN LOWER(service) LIKE '%pasangan%' THEN 'tesPasangan'
@@ -370,7 +372,7 @@ export async function initializeInterestSchema() {
         WHEN LOWER(service) LIKE '%tes%' THEN 'tesPersonal'
         ELSE 'bantuanTes' END WHERE product_key=''`;
       await sql`UPDATE public_interest_leads SET lead_type=CASE
-        WHEN product_key IN ('previewPromotor','wsl1','wsl2','idDanAlat','paketPromotor','bantuanPromotor') THEN 'promoter_candidate'
+        WHEN product_key IN ('previewPromotor','wsl1','wsl2','wst','idDanAlat','paketPromotor','bantuanPromotor') THEN 'promoter_candidate'
         ELSE 'test_service' END`;
       await sql`UPDATE public_interest_leads SET internal_notes=TRIM(internal_notes || ' Backfill: layanan lama diklasifikasikan sebagai test_service.')
         WHERE product_key='bantuanTes' AND internal_notes NOT LIKE '%Backfill: layanan lama%'`;

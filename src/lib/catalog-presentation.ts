@@ -16,7 +16,7 @@ export function publicPrice(key:string,value:string){
   const amount=catalogAmount(value);
   if((key==='sekolahKomunitas'&&(amount===0||amount===null))||(['tesPersonal','tesPasangan','paketKeluarga','paketKeluargaPlus'].includes(key)&&amount===0))return 'Minta penawaran';
   if(['affiliateUmum','affiliatePromotor'].includes(key)&&amount!==null&&amount<=1&&!/^gratis$/i.test(value.trim()))return 'Konfirmasi ketentuan';
-  if(['previewPromotor','wsl1','wsl2','idDanAlat','paketPromotor'].includes(key)&&amount===0)return 'Konfirmasi jadwal';
+  if(['previewPromotor','wsl1','wsl2','wst','idDanAlat','paketPromotor'].includes(key)&&amount===0)return 'Konfirmasi jadwal';
   if(amount===0)return 'Gratis';
   return amount===null?currentPublicCopy(value):formatRupiah(amount);
 }

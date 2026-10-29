@@ -15,7 +15,7 @@ export type QueuedMessage = {
 };
 
 export async function queueWhatsAppMessage(input: QueuedMessage): Promise<boolean> {
-  if (!starsenderStatus().configured || !input.phone.trim() || !input.message.trim()) return false;
+  if (!(await starsenderStatus()).configured || !input.phone.trim() || !input.message.trim()) return false;
   const sql = getDatabaseClient();
   const [row] = await sql`
     INSERT INTO notification_outbox

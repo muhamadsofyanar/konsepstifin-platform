@@ -17,6 +17,7 @@ const promoterServices = [
   { key: 'previewPromotor', label: 'Preview Calon Promotor' },
   { key: 'wsl1', label: 'WSL 1' },
   { key: 'wsl2', label: 'WSL 2' },
+  { key: 'wst', label: 'WST' },
   { key: 'idDanAlat', label: 'Informasi ID & Alat' },
   { key: 'paketPromotor', label: 'Paket Promotor' },
   { key: 'bantuanPromotor', label: 'Bantuan memahami tahapan promotor' },
@@ -35,7 +36,7 @@ type SubmissionResult = {
 };
 
 function inferredLeadType(linkKey: ProductKey): LeadType {
-  return ['previewPromotor', 'wsl1', 'wsl2', 'idDanAlat', 'paketPromotor'].includes(linkKey)
+  return ['previewPromotor', 'wsl1', 'wsl2', 'wst', 'idDanAlat', 'paketPromotor'].includes(linkKey)
     ? 'promoter_candidate'
     : 'test_service';
 }
@@ -71,6 +72,7 @@ export default function PublicInterestAction({
   provinceName = '',
   regencyCode = '',
   regencyName = '',
+  familyPromo,
 }: {
   linkKey: ProductKey;
   label: string;
@@ -88,6 +90,7 @@ export default function PublicInterestAction({
   provinceName?: string;
   regencyCode?: string;
   regencyName?: string;
+  familyPromo?: { minimumPaidTestPrice: number; schemes: Array<{ key: string; paidTests: number; freeTests: number; label: string }> };
 }) {
   const [open, setOpen] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
@@ -95,6 +98,7 @@ export default function PublicInterestAction({
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState('');
   const [result, setResult] = useState<SubmissionResult | null>(null);
+  const [selectedPromoKey, setSelectedPromoKey] = useState(familyPromo?.schemes[0]?.key || '');
   const effectiveLeadType = leadType ?? inferredLeadType(linkKey);
   const selectedDefault = defaultProductKey(effectiveLeadType, linkKey, service);
 
@@ -104,6 +108,7 @@ export default function PublicInterestAction({
     setState('idle');
     setError('');
     setResult(null);
+    setSelectedPromoKey(familyPromo?.schemes[0]?.key || '');
     setOpen(true);
   }
 
@@ -128,6 +133,7 @@ export default function PublicInterestAction({
           city: form.get('city'),
           service: selectedService,
           notes: form.get('notes'),
+          familyPromoKey: form.get('familyPromoKey'),
           website: form.get('website'),
           provinceCode,
           provinceName,
@@ -158,6 +164,8 @@ export default function PublicInterestAction({
   }
 
   const serviceOptions = effectiveLeadType === 'test_service' ? testServices : promoterServices;
+  const showServicePicker = selectedDefault === 'bantuanTes' || selectedDefault === 'bantuanPromotor';
+  const selectedPromo = familyPromo?.schemes.find(item => item.key === selectedPromoKey);
   return <>
     <button className={className} type="button" onClick={start}>{label}</button>
     {open ? <div className="modal-backdrop" onMouseDown={() => setOpen(false)}>
@@ -179,14 +187,18 @@ export default function PublicInterestAction({
             <p>{effectiveLeadType === 'test_service' ? 'Data ini dipakai untuk mencari promotor dan mengonfirmasi kebutuhan serta jadwal bersama admin.' : 'Data ini masuk ke antrean konsultasi tim untuk ditindaklanjuti.'}</p>
           </div>
           <form onSubmit={submit}>
-            <label>Nama lengkap<input name="name" required minLength={3} placeholder="Nama Anda" /></label>
-            <div className="form-row"><label>Nomor WhatsApp<input name="phone" required inputMode="tel" placeholder="08xx xxxx xxxx" /></label><label>Email<input name="email" type="email" placeholder="nama@email.com" /></label></div>
-            <div className="form-row"><label>Kota/domisili<input name="city" required defaultValue={regencyName} placeholder="Contoh: Bandung" /></label><label>Pilihan layanan<select name="productKey" defaultValue={selectedDefault}>{serviceOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label></div>
-            <label>Jadwal atau kebutuhan tambahan<textarea name="notes" rows={3} placeholder={effectiveLeadType === 'test_service' ? 'Contoh: Sabtu pagi' : 'Contoh: ingin memahami tahapan WSL'} /></label>
-            <label className="interest-consent"><input type="checkbox" name="consentToContact" required /> Saya setuju nomor WhatsApp digunakan tim untuk menindaklanjuti permintaan ini.</label>
-            <label className="interest-consent"><input type="checkbox" name="consentToShare" required={effectiveLeadType === 'test_service'} /> {effectiveLeadType === 'test_service' ? 'Saya setuju nomor WhatsApp dibagikan kepada promotor yang ditugaskan untuk melayani permintaan ini.' : 'Opsional: Saya setuju data kontak dibagikan kepada promotor pengundang untuk mendampingi pendaftaran ini.'}</label>
+            <div className="interest-core-fields">
+              <label>Nama lengkap<input name="name" required minLength={3} maxLength={120} placeholder="Nama Anda" autoComplete="name" /></label>
+              <label>Nomor WhatsApp<input name="phone" required inputMode="tel" maxLength={32} placeholder="08xx xxxx xxxx" autoComplete="tel" /></label>
+              <label>Kota/domisili<input name="city" required minLength={2} maxLength={100} defaultValue={regencyName} placeholder="Contoh: Bandung" autoComplete="address-level2" /></label>
+            </div>
+            {showServicePicker ? <label>Pilih kebutuhan<select name="productKey" defaultValue={selectedDefault}>{serviceOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label> : <><input type="hidden" name="productKey" value={selectedDefault} /><div className="interest-fixed-service"><small>LAYANAN YANG DIPILIH</small><b>{serviceOptions.find(item => item.key === selectedDefault)?.label || service}</b><span>Anda tidak perlu memilih layanan lagi.</span></div></>}
+            {familyPromo && familyPromo.schemes.length > 0 && effectiveLeadType === 'test_service' && (selectedDefault === 'paketKeluarga' || selectedDefault === 'paketKeluargaPlus') && <div className="interest-promo-choice"><label>Skema Promo Family Test<select name="familyPromoKey" value={selectedPromoKey} onChange={e => setSelectedPromoKey(e.target.value)}>{familyPromo.schemes.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>{selectedPromo && <p>{selectedPromo.paidTests} tes berbayar + {selectedPromo.freeTests} tes gratis. Minimum pembayaran <b>Rp{(selectedPromo.paidTests * familyPromo.minimumPaidTestPrice).toLocaleString('id-ID')}</b>.</p>}</div>}
+            <details className="interest-optional-fields"><summary>Tambah detail opsional</summary><label>Email (opsional)<input name="email" type="email" maxLength={160} placeholder="nama@email.com" autoComplete="email" /></label><label>Jadwal atau kebutuhan tambahan (opsional)<textarea name="notes" rows={2} maxLength={600} placeholder="Contoh: Sabtu pagi atau tes untuk 4 anggota keluarga" /></label></details>
+            <label className="interest-consent"><input type="checkbox" name="consentToContact" required /> Saya setuju tim menghubungi saya melalui WhatsApp untuk menindaklanjuti permintaan ini.</label>
+            <label className="interest-consent"><input type="checkbox" name="consentToShare" required={effectiveLeadType === 'test_service'} /> {effectiveLeadType === 'test_service' ? 'Saya setuju nomor WhatsApp dibagikan hanya kepada promotor yang ditugaskan untuk melayani permintaan ini.' : 'Opsional: Saya setuju data kontak dibagikan kepada promotor pengundang untuk mendampingi pendaftaran ini.'}</label>
             <label className="interest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-            <div className="privacy-note">Asal tautan mitra yang valid dicatat untuk atribusi pengajuan. Pembagian kontak mengikuti persetujuan di atas. Jangan kirim data sidik jari, kata sandi, dokumen identitas, atau informasi rahasia melalui formulir ini.</div>
+            <div className="privacy-note">Data digunakan untuk menindaklanjuti permintaan. Harga dan jadwal dikonfirmasi sebelum pembayaran. Jangan kirim data sidik jari, kata sandi, atau dokumen identitas.</div>
             {error ? <p className="interest-error" role="alert">{error}</p> : null}
             <button className="public-cta big" type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Menyimpan…' : 'Kirim permintaan →'}</button>
           </form>

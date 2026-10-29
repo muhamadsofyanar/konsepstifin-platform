@@ -32,7 +32,7 @@ export async function setMarketingConsent(leadId: number, enabled: boolean, acto
 }
 
 export async function createMarketingCampaign(input: { title: string; message: string; leadIds: number[]; actor: string }) {
-  if (!starsenderStatus().configured) throw new Error('STARSENDER_API_KEY belum dikonfigurasi.');
+  if (!(await starsenderStatus()).configured) throw new Error('API StarSender belum dikonfigurasi. Buka Admin → Pengaturan → Integrasi eksternal.');
   const title = input.title.trim();
   const message = input.message.trim();
   if (!title || title.length > 120) throw new Error('Judul kampanye wajib diisi dan maksimal 120 karakter.');

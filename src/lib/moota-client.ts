@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { getIntegrationConfig } from '@/lib/integration-settings';
 
 export type MootaInvoiceInput = {
   orderNumber: string;
@@ -16,9 +17,6 @@ export type MootaInvoiceResult = {
   response: unknown;
 };
 
-const baseUrl = () => (process.env.MOOTA_API_BASE_URL || 'https://app.moota.co').replace(/\/+$/, '');
-const token = () => (process.env.MOOTA_API_TOKEN || '').trim();
-const timeoutMs = () => Math.max(1000, Math.min(30000, Number(process.env.MOOTA_API_TIMEOUT_MS || 12000)));
 
 function parseJson(text: string): unknown {
   try { return JSON.parse(text) as unknown; } catch { return { message: text.slice(0, 300) }; }
@@ -39,17 +37,18 @@ function firstString(value: Record<string, unknown>, keys: string[]): string {
   return '';
 }
 async function request(path: string, method: 'GET' | 'POST', body?: Record<string, unknown>) {
-  if (!token()) throw new Error('MOOTA_API_TOKEN belum dikonfigurasi di environment server.');
+  const config = (await getIntegrationConfig()).moota;
+  if (!config.apiToken) throw new Error('Token Moota belum dikonfigurasi. Buka Admin → Pengaturan → Integrasi eksternal.');
   if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Path API Moota tidak valid.');
-  const response = await fetch(`${baseUrl()}${path}`, {
+  const response = await fetch(`${config.baseUrl.replace(/\/+$/, '')}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token()}`,
+      Authorization: `Bearer ${config.apiToken}`,
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
-    signal: AbortSignal.timeout(timeoutMs()),
+    signal: AbortSignal.timeout(config.timeoutMs),
     cache: 'no-store',
   });
   const raw = await response.text();
@@ -61,13 +60,9 @@ async function request(path: string, method: 'GET' | 'POST', body?: Record<strin
   return data;
 }
 
-export function mootaStatus() {
-  return {
-    apiConfigured: Boolean(token()),
-    webhookConfigured: Boolean((process.env.MOOTA_WEBHOOK_SECRET || '').trim()),
-    receiveMoneyPathConfigured: Boolean((process.env.MOOTA_RECEIVE_MONEY_CREATE_PATH || '').trim()),
-    bankAccountConfigured: Boolean((process.env.MOOTA_BANK_ACCOUNT_ID || '').trim()),
-  };
+export async function mootaStatus() {
+  const config = (await getIntegrationConfig()).moota;
+  return { apiConfigured: Boolean(config.apiToken), webhookConfigured: Boolean(config.webhookSecret), receiveMoneyPathConfigured: Boolean(config.receiveMoneyCreatePath), bankAccountConfigured: Boolean(config.bankAccountId) };
 }
 
 export async function testMootaConnection() {
@@ -83,12 +78,13 @@ export async function testMootaConnection() {
  * Set MOOTA_RECEIVE_MONEY_CREATE_PATH to the current create operation from the account docs.
  */
 export async function createMootaInvoice(input: MootaInvoiceInput): Promise<MootaInvoiceResult> {
-  const path = (process.env.MOOTA_RECEIVE_MONEY_CREATE_PATH || '').trim();
-  const bankId = (process.env.MOOTA_BANK_ACCOUNT_ID || '').trim();
+  const config = (await getIntegrationConfig()).moota;
+  const path = config.receiveMoneyCreatePath.trim();
+  const bankId = config.bankAccountId.trim();
   if (!path) throw new Error('MOOTA_RECEIVE_MONEY_CREATE_PATH belum diatur. Isi path operasi create Terima Uang dari dokumentasi API Moota yang aktif.');
   if (!bankId) throw new Error('MOOTA_BANK_ACCOUNT_ID belum dikonfigurasi.');
   if (!Number.isSafeInteger(input.amount) || input.amount < 1) throw new Error('Nominal tagihan Moota tidak valid.');
-  const bankField = (process.env.MOOTA_BANK_ACCOUNT_FIELD || 'bank_id').trim();
+  const bankField = config.bankAccountField.trim() || 'bank_id';
   const payload: Record<string, unknown> = {
     [bankField]: bankId,
     name: input.customerName,
@@ -119,8 +115,8 @@ export async function createMootaInvoice(input: MootaInvoiceInput): Promise<Moot
   };
 }
 
-export function verifyMootaSignature(rawBody: string, signature: string): boolean {
-  const secret = (process.env.MOOTA_WEBHOOK_SECRET || '').trim();
+export async function verifyMootaSignature(rawBody: string, signature: string): Promise<boolean> {
+  const secret = (await getIntegrationConfig()).moota.webhookSecret.trim();
   const provided = signature.trim().replace(/^sha256=/i, '');
   if (!secret || !provided || !/^[a-f0-9]{64}$/i.test(provided)) return false;
   const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest();

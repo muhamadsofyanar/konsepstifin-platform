@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Marketing WhatsApp | Konsep STIFIn' };
 export default async function MarketingPage() {
   if (!await getAdminPrincipal()) redirect('/admin/login');
+  const senderStatus = await starsenderStatus();
   type MarketingContact = (Awaited<ReturnType<typeof listMarketingContacts>>)[number];
   type MarketingCampaign = (Awaited<ReturnType<typeof listMarketingCampaigns>>)[number];
   let contacts: MarketingContact[] = [];
@@ -14,8 +15,8 @@ export default async function MarketingPage() {
   let error = '';
   try { [contacts, campaigns] = await Promise.all([listMarketingContacts(), listMarketingCampaigns(20)]); } catch { error = 'Data marketing belum tersedia. Jalankan migrasi 011-integrations.sql.'; }
   return <main className="portal-page">
-    <header className="portal-heading"><div><span className="portal-eyebrow">MARKETING / WHATSAPP</span><h1>Kampanye StarSender</h1><p>Kelola persetujuan promosi dan kirim pesan ke kontak yang sudah memberikan persetujuan eksplisit.</p></div><span className="portal-version">{starsenderStatus().configured ? 'API terkonfigurasi' : 'API belum dikonfigurasi'}</span></header>
-    {!starsenderStatus().configured && <p className="portal-error" role="alert">STARSENDER_API_KEY belum diatur. Pesan kampanye tidak dapat dikirim sampai API key disimpan di environment Coolify.</p>}
+    <header className="portal-heading"><div><span className="portal-eyebrow">MARKETING / WHATSAPP</span><h1>Kampanye StarSender</h1><p>Kelola persetujuan promosi dan kirim pesan ke kontak yang sudah memberikan persetujuan eksplisit.</p></div><span className="portal-version">{senderStatus.configured ? 'API terkonfigurasi' : 'API belum dikonfigurasi'}</span></header>
+    {!senderStatus.configured && <p className="portal-error" role="alert">API StarSender belum diatur. Buka Pengaturan Admin → Integrasi eksternal untuk memasukkan API key tanpa redeploy.</p>}
     {error && <p className="portal-error" role="alert">{error}</p>}
     <MarketingManager initialContacts={contacts as unknown as Array<Record<string, unknown>>} initialCampaigns={campaigns as unknown as Array<Record<string, unknown>>} />
   </main>;

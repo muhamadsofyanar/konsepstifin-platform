@@ -1,4 +1,4 @@
-export const serviceKeys = ['tesPersonal','tesPasangan','paketKeluarga','paketKeluargaPlus','sekolahKomunitas','previewPromotor','wsl1','wsl2','idDanAlat','paketPromotor'];
+export const serviceKeys = ['tesPersonal','tesPasangan','paketKeluarga','paketKeluargaPlus','sekolahKomunitas','previewPromotor','wsl1','wsl2','wst','idDanAlat','paketPromotor'];
 export function productPath(p: { source_product_key?: unknown; slug?: unknown }) {
   return p.source_product_key ? '/produk/layanan/' + encodeURIComponent(String(p.source_product_key)) : '/produk/' + encodeURIComponent(String(p.slug));
 }

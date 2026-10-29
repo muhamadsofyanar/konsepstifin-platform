@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const [contacts, campaigns] = await Promise.all([listMarketingContacts(url.searchParams.get('q') || ''), listMarketingCampaigns(20)]);
-    return json({ contacts, campaigns, starsender: starsenderStatus() });
+    return json({ contacts, campaigns, starsender: await starsenderStatus() });
   } catch { return json({ message: 'Daftar kontak marketing belum dapat dimuat. Pastikan migrasi 011 sudah dijalankan.' }, 503); }
 }
 export async function POST(request: Request) {

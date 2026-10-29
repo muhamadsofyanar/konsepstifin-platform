@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const raw = await request.text();
   if (raw.length > 1_000_000) return Response.json({ message: 'Payload terlalu besar.' }, { status: 413 });
   const signature = request.headers.get('signature') || request.headers.get('Signature') || '';
-  if (!verifyMootaSignature(raw, signature)) return Response.json({ message: 'Signature Moota tidak valid.' }, { status: 403 });
+  if (!await verifyMootaSignature(raw, signature)) return Response.json({ message: 'Signature Moota tidak valid.' }, { status: 403 });
   let payload: unknown;
   try { payload = JSON.parse(raw) as unknown; } catch { return Response.json({ message: 'JSON Moota tidak valid.' }, { status: 400 }); }
   try {

@@ -4,19 +4,19 @@ import { createMootaInvoice, verifyMootaSignature } from './moota-client';
 
 afterEach(() => { delete process.env.MOOTA_WEBHOOK_SECRET; delete process.env.MOOTA_API_BASE_URL; delete process.env.MOOTA_API_TOKEN; delete process.env.MOOTA_BANK_ACCOUNT_ID; delete process.env.MOOTA_RECEIVE_MONEY_CREATE_PATH; vi.unstubAllGlobals(); });
 
-it('verifies Moota HMAC against the exact raw request body', () => {
+it('verifies Moota HMAC against the exact raw request body', async () => {
   process.env.MOOTA_WEBHOOK_SECRET = 'secret-test';
   const raw = '[{"mutation_id":"abc","amount":50000,"type":"CR"}]';
   const signature = createHmac('sha256', 'secret-test').update(raw, 'utf8').digest('hex');
-  expect(verifyMootaSignature(raw, signature)).toBe(true);
-  expect(verifyMootaSignature(`${raw} `, signature)).toBe(false);
-  expect(verifyMootaSignature(raw, '')).toBe(false);
+  await expect(verifyMootaSignature(raw, signature)).resolves.toBe(true);
+  await expect(verifyMootaSignature(`${raw} `, signature)).resolves.toBe(false);
+  await expect(verifyMootaSignature(raw, '')).resolves.toBe(false);
 });
 
-it('rejects missing secrets and malformed signatures', () => {
-  expect(verifyMootaSignature('{}', 'abc')).toBe(false);
+it('rejects missing secrets and malformed signatures', async () => {
+  await expect(verifyMootaSignature('{}', 'abc')).resolves.toBe(false);
   process.env.MOOTA_WEBHOOK_SECRET = 'secret-test';
-  expect(verifyMootaSignature('{}', 'not-hex')).toBe(false);
+  await expect(verifyMootaSignature('{}', 'not-hex')).resolves.toBe(false);
 });
 
 it('creates a Terima Uang invoice only through the configured documented path', async () => {

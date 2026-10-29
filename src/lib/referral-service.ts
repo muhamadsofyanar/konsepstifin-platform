@@ -13,7 +13,7 @@ export function normalizeReferralAlias(value: unknown) {
 }
 const referralServiceKeys = new Set([
  'tesPersonal', 'tesPasangan', 'paketKeluarga', 'paketKeluargaPlus', 'sekolahKomunitas',
- 'previewPromotor', 'wsl1', 'wsl2', 'idDanAlat', 'paketPromotor',
+ 'previewPromotor', 'wsl1', 'wsl2', 'wst', 'idDanAlat', 'paketPromotor',
 ]);
 
 /** Resolve only known internal destinations. Referral links must never become open redirects. */
@@ -30,7 +30,7 @@ export function referralDestination(value: string | null) {
  const query = path === '/belajar' && url.searchParams.get('tab') === 'catalog' ? '?tab=catalog' : '';
  const allowedHashes: Record<string, Set<string>> = {
   '/tes-stifin': new Set(['#layanan', '#proses']),
-  '/jadi-promotor': new Set(['#tahapan']),
+  '/jadi-promotor': new Set(['#tahapan', '#year-end-workshop']),
   '/affiliate': new Set(['#program']),
   '/kontak': new Set(['#affiliate']),
  };

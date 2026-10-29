@@ -48,7 +48,7 @@ export async function createMootaPaymentForOrder(orderId: number, actor: string)
       VALUES (${orderId},'moota.invoice.created',${`moota-invoice:${invoice.invoiceId}`},${JSON.stringify({invoiceId:invoice.invoiceId,paymentUrl:invoice.paymentUrl})},${actor})
       ON CONFLICT (order_id,operation_key) DO NOTHING`;
     let validPhone = false;
-    if (phone && starsenderStatus().configured) {
+    if (phone && (await starsenderStatus()).configured) {
       try { normalizeWhatsAppNumber(phone); validPhone = true; } catch { /* Invalid recipient numbers are not queued. */ }
     }
     if (validPhone) {
@@ -163,7 +163,7 @@ export async function processMootaWebhookPayload(payload: unknown) {
       const customerName = asString(order.customer_name) || 'Bapak/Ibu';
       const paid = received >= Number(order.total);
       let validCustomerPhone = false;
-      if (customerPhone && starsenderStatus().configured) {
+      if (customerPhone && (await starsenderStatus()).configured) {
         try { normalizeWhatsAppNumber(customerPhone); validCustomerPhone = true; } catch { /* Invalid recipient numbers are not queued. */ }
       }
       if (validCustomerPhone) {
@@ -220,7 +220,7 @@ export async function reconcileMootaEvent(eventId: string, orderId: number, acto
     const received = Number(order.balance) + amount;
     const phone = asString(order.customer_phone);
     let validPhone = false;
-    if (phone && starsenderStatus().configured) {
+    if (phone && (await starsenderStatus()).configured) {
       try { normalizeWhatsAppNumber(phone); validPhone = true; } catch { /* Invalid recipient numbers are not queued. */ }
     }
     if (validPhone) {
