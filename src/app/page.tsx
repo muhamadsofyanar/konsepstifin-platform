@@ -6,6 +6,7 @@ import { PublicFooter, PublicHeader } from './public-site-shell';
 import PublicPromotionBanner from './public-promotion-banner';
 import ActivityGallery from './activity-gallery';
 import PublicInterestAction from './public-interest-action';
+import { getActivePromotion } from '@/lib/promotion-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +17,14 @@ export const metadata: Metadata = {
 };
 
 const journeys = [
-  { number: '01', eyebrow: 'UNTUK DIRI & KELUARGA', title: 'Tes STIFIn', description: 'Mulai dari kebutuhan tes Anda. Tim membantu memastikan jumlah peserta, promo yang sesuai, wilayah, dan jadwal.', href: '/tes-stifin', action: 'Pilih layanan tes', tone: 'forest' },
-  { number: '02', eyebrow: 'UNTUK CABANG & CALON MITRA', title: 'Workshop & Kemitraan', description: 'Lihat program workshop pusat, pelajari jalur promotor, atau tanyakan kerja sama affiliate.', href: '/jadi-promotor#year-end-workshop', action: 'Lihat workshop & kemitraan', tone: 'sand' },
+  { number: '01', eyebrow: 'UNTUK DIRI SENDIRI', title: 'Tes Personal', description: 'Mulai dengan satu peserta. Pelajari layanan, proses pemindaian, pembahasan hasil, dan cara mengajukan jadwal.', href: '/produk/layanan/tesPersonal', action: 'Lihat Tes Personal', tone: 'forest' },
+  { number: '02', eyebrow: 'UNTUK PASANGAN & KELUARGA', title: 'Tes Keluarga', description: 'Bandingkan layanan pasangan, keluarga, dan Family Test. Promo pusat ditampilkan jika sedang aktif.', href: '/produk/layanan/paketKeluarga', action: 'Bandingkan paket keluarga', tone: 'sand' },
+  { number: '03', eyebrow: 'UNTUK SEKOLAH & ORGANISASI', title: 'Tes Kelompok', description: 'Ajukan kebutuhan untuk sekolah, komunitas, lembaga, atau tim. Jumlah peserta dan jadwal dikonfirmasi bersama tim.', href: '/produk/layanan/sekolahKomunitas', action: 'Minta penawaran kelompok', tone: 'mint' },
+  { number: '04', eyebrow: 'UNTUK CALON MITRA', title: 'Promotor & Workshop', description: 'Pelajari tahapan, persyaratan, workshop, dan perbedaan jalur promotor dengan affiliate sebelum memutuskan.', href: '/jadi-promotor', action: 'Pelajari jalur kemitraan', tone: 'forest' },
 ];
 
 export default async function Home() {
-  const latestArticles = await getPublishedArticles(3);
+  const [latestArticles, promo] = await Promise.all([getPublishedArticles(3), getActivePromotion()]);
 
 
   return <div className="public-site journey-site">
@@ -32,7 +35,7 @@ export default async function Home() {
           <span className="eyebrow">KONSEP STIFIN · DALAM JARINGAN STIFIN GENETIC</span>
           <h1>Tes STIFIn untuk memahami diri dan keluarga.<br/><em>Mulai dari kebutuhan Anda.</em></h1>
           <p>Bandingkan layanan personal, pasangan, keluarga, atau sekolah. Tim membantu mengonfirmasi pilihan, wilayah, jadwal, dan biaya sebelum Anda berkomitmen.</p>
-          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin#layanan">Pilih layanan Tes STIFIn →</Link><PublicInterestAction className="public-cta big home-help-cta" linkKey="tesPersonal" label="Bantu saya memilih" service="Bantuan memilih layanan STIFIn" leadType="test_service" /></div><div className="public-proof-strip"><span>✓ Tes tatap muka</span><span>✓ Pembahasan bersama promotor</span><span>✓ Jadwal dikonfirmasi</span></div>
+          <div className="hub-actions"><Link className="public-cta big" href="/tes-stifin#layanan">Pilih layanan Tes STIFIn →</Link><PublicInterestAction className="public-cta big home-help-cta" linkKey="tesPersonal" label="Bantu saya memilih" service="Bantuan memilih layanan STIFIn" leadType="test_service" familyPromo={promo.familyActive ? { minimumPaidTestPrice: promo.settings.minimumPaidTestPrice, schemes: promo.settings.familySchemes } : undefined} /></div><div className="public-proof-strip"><span>✓ Tes tatap muka</span><span>✓ Pembahasan bersama promotor</span><span>✓ Jadwal dikonfirmasi</span></div>
         </div>
         <figure className="journey-hero-media home-hero-media">
           <Image src="/images/hero-home-v3.webp" alt="Keluarga Muslim Indonesia berbincang dan saling mendengarkan" width={1586} height={992} sizes="(max-width: 1050px) 90vw, 45vw" preload />
@@ -63,6 +66,26 @@ export default async function Home() {
 
       <ActivityGallery />
 
+      <section className="home-process section" aria-labelledby="home-process-title">
+        <div className="section-heading"><span>ALUR YANG JELAS</span><h2 id="home-process-title">Dari memilih layanan sampai jadwal dikonfirmasi.</h2><p>Anda tidak harus memahami seluruh katalog atau membuat akun terlebih dahulu untuk meminta layanan tes.</p></div>
+        <ol className="home-process-grid">
+          <li><b>01</b><h3>Pilih kebutuhan</h3><p>Personal, pasangan, keluarga, atau kelompok. Jika belum yakin, gunakan bantuan memilih.</p></li>
+          <li><b>02</b><h3>Kirim data inti</h3><p>Isi nama, WhatsApp, kota, dan persetujuan kontak. Detail lain bersifat opsional.</p></li>
+          <li><b>03</b><h3>Tim mengonfirmasi</h3><p>Tim meninjau cakupan promotor, jumlah peserta, promo, harga, dan jadwal yang tersedia.</p></li>
+          <li><b>04</b><h3>Lanjut setelah setuju</h3><p>Anda menerima instruksi berikutnya. Pembayaran diverifikasi sebelum layanan dijadwalkan final.</p></li>
+        </ol>
+      </section>
+
+      <section className="home-decision-info" aria-label="Informasi penting sebelum mengajukan layanan">
+        <div><span>SEBELUM MENGAJUKAN</span><h2>Informasi penting, tanpa janji yang tidak pasti.</h2><p>KonsepSTIFIn membantu menghubungkan kebutuhan Anda dengan layanan dan tim yang sesuai. Beberapa hal baru dapat dipastikan setelah tim memeriksa permintaan.</p></div>
+        <div className="home-decision-grid">
+          <article><b>Harga dan promo</b><p>Harga akhir, skema promo, dan rincian layanan dikonfirmasi sebelum pembayaran.</p></article>
+          <article><b>Lokasi dan jadwal</b><p>Tes dilakukan tatap muka. Wilayah layanan tidak otomatis berarti jadwal tersedia.</p></article>
+          <article><b>Data pribadi</b><p>Nomor kontak dibagikan secara terbatas sesuai persetujuan. Jangan kirim data sidik jari atau kata sandi.</p></article>
+          <article><b>Batas penggunaan hasil</b><p>Materi dan tes bersifat edukatif, bukan diagnosis medis atau psikologis.</p></article>
+        </div>
+      </section>
+
       <section className="hub-foundation">
         <div className="hub-foundation-copy"><span>SETELAH TAHU HASILNYA</span><h2>Tes memberi nama pada pola. Pemahaman membuatnya berguna.</h2><p>Hasil STIFIn adalah awal percakapan tentang cara Anda menyerap informasi, mengambil keputusan, bergerak, dan bertumbuh. Nilainya terasa ketika hasil dibahas dengan baik lalu diterapkan sesuai situasi nyata, bukan ketika dipakai untuk membatasi diri.</p><Link href="/edukasi">Lihat cara menerapkannya →</Link></div>
         <div className="hub-principles">
@@ -79,6 +102,17 @@ export default async function Home() {
           <div><span>{article.category}</span><h3><Link href={`/edukasi/${article.slug}`}>{article.title}</Link></h3><p>{article.excerpt}</p><Link href={`/edukasi/${article.slug}`}>Baca artikel →</Link></div>
         </article>)}</div>
       </section>}
+
+      <section className="home-faq section" aria-labelledby="home-faq-title">
+        <div className="section-heading"><span>PERTANYAAN SEBELUM MEMULAI</span><h2 id="home-faq-title">Hal yang perlu Anda ketahui.</h2></div>
+        <div className="faq-list">
+          <details><summary>Apakah saya harus membuat akun untuk mengajukan tes?<span>＋</span></summary><p>Tidak. Pengunjung dapat mengirim permintaan layanan tanpa akun. Akun berguna untuk akses kelas, ebook, pembelian, dan aktivitas mitra.</p></details>
+          <details><summary>Apa yang terjadi setelah saya mengirim formulir?<span>＋</span></summary><p>Anda menerima nomor referensi. Tim akan meninjau kebutuhan dan mengonfirmasi cakupan promotor, jadwal, harga, serta instruksi pembayaran. Formulir bukan bukti pembayaran atau kepastian jadwal.</p></details>
+          <details><summary>Apakah tes bisa dilakukan secara online?<span>＋</span></summary><p>Pemindaian sidik jari untuk layanan tes yang ditampilkan dilakukan secara tatap muka. Hubungi tim untuk memastikan pilihan wilayah dan jadwal.</p></details>
+          <details><summary>Apakah hasil STIFIn merupakan diagnosis?<span>＋</span></summary><p>Bukan. Informasi dan pembahasan STIFIn digunakan untuk edukasi dan refleksi pengembangan diri. Hasilnya tidak menggantikan penilaian profesional atau diagnosis medis dan psikologis.</p></details>
+          <details><summary>Apakah ada promo untuk keluarga atau workshop?<span>＋</span></summary><p>Program promo pusat ditampilkan pada website selama periode aktif. Skema Family Test dan harga workshop mengikuti ketentuan pusat serta dikonfirmasi kembali sebelum pembayaran.</p></details>
+        </div>
+      </section>
 
       <section className="hub-final">
         <div><span>PILIH SATU LANGKAH</span><h2>Tidak perlu memahami semua pilihan sekaligus. Pilih kebutuhan utama Anda, lalu tim membantu langkah berikutnya.</h2></div>

@@ -4,6 +4,18 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PublicInterestAction from './public-interest-action';
 
+
+function mockSubmissionResponse(payload: unknown, status = 201) {
+  const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes('/api/account/me')) {
+      return new Response(JSON.stringify({ message: 'Silakan masuk.' }), { status: 401 });
+    }
+    return new Response(JSON.stringify(payload), { status });
+  });
+  vi.stubGlobal('fetch', fetcher);
+  return fetcher;
+}
+
 async function fillRequiredFields({ share = true }: { share?: boolean } = {}) {
   fireEvent.change(screen.getByLabelText('Nama lengkap'), { target: { value: 'Budi Santoso' } });
   fireEvent.change(screen.getByLabelText('Nomor WhatsApp'), { target: { value: '081234567890' } });
@@ -33,9 +45,7 @@ describe('PublicInterestAction dua funnel', () => {
   });
 
   it('menawarkan consent berbagi opsional tanpa checkout pada calon promotor', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      ok: true, reference: 'KSF-41', status: 'baru', match: null,
-    }), { status: 201 })));
+    mockSubmissionResponse({ ok: true, reference: 'KSF-41', status: 'baru', match: null });
     render(<PublicInterestAction leadType="promoter_candidate" linkKey="wsl1" checkoutUrl="https://app.konsepstifin.com/product/wsl-1/" label="WSL" service="WSL 1" />);
     await userEvent.click(screen.getByRole('button', { name: 'WSL' }));
 
@@ -50,13 +60,7 @@ describe('PublicInterestAction dua funnel', () => {
 
   it('menyimpan attribution dan referensi tanpa mengarahkan checkout lama', async () => {
     const navigateToCheckout = vi.fn();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      ok: true,
-      reference: 'KSF-42',
-      status: 'ditawarkan',
-      match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
-      checkoutUrl: 'https://app.konsepstifin.com/product/tes-stifin-personal/',
-    }), { status: 201 })));
+    const fetcher = mockSubmissionResponse({ ok: true, reference: 'KSF-42', status: 'ditawarkan', match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } }, checkoutUrl: 'https://app.konsepstifin.com/product/tes-stifin-personal/' });
     render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" checkoutUrl="https://app.konsepstifin.com/product/tes-stifin-personal/" label="Pesan" service="Tes STIFIn Personal" requirePrecheckout navigateToCheckout={navigateToCheckout} />);
     await userEvent.click(screen.getByRole('button', { name: 'Pesan' }));
     await fillRequiredFields();
@@ -65,7 +69,7 @@ describe('PublicInterestAction dua funnel', () => {
     expect(await screen.findByText(/KSF-42/)).toBeInTheDocument();
     expect(navigateToCheckout).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: /pembayaran/i })).not.toBeInTheDocument();
-    const request = vi.mocked(fetch).mock.calls[0];
+    const request = vi.mocked(fetch).mock.calls.find(call => call[1]?.method === 'POST')!;
     const body = JSON.parse(String((request[1] as RequestInit).body));
     expect(body).toMatchObject({
       leadType: 'test_service',
@@ -80,13 +84,7 @@ describe('PublicInterestAction dua funnel', () => {
 
   it('tidak mengarahkan calon promotor walau respons menyertakan checkout', async () => {
     const navigateToCheckout = vi.fn();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      ok: true,
-      reference: 'KSF-44',
-      status: 'baru',
-      match: null,
-      checkoutUrl: 'https://app.konsepstifin.com/product/wsl-1/',
-    }), { status: 201 })));
+    mockSubmissionResponse({ ok: true, reference: 'KSF-44', status: 'baru', match: null, checkoutUrl: 'https://app.konsepstifin.com/product/wsl-1/' });
     render(<PublicInterestAction leadType="promoter_candidate" linkKey="wsl1" label="Konsultasi" service="WSL 1" navigateToCheckout={navigateToCheckout} />);
     await userEvent.click(screen.getByRole('button', { name: 'Konsultasi' }));
     await fillRequiredFields({ share: false });
@@ -97,7 +95,7 @@ describe('PublicInterestAction dua funnel', () => {
   });
 
   it('tidak menampilkan checkout ketika penyimpanan gagal', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'Database tidak tersedia.' }), { status: 500 })));
+    mockSubmissionResponse({ error: 'Database tidak tersedia.' }, 500);
     render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" label="Pesan" service="Tes STIFIn Personal" />);
     await userEvent.click(screen.getByRole('button', { name: 'Pesan' }));
     await fillRequiredFields();
@@ -120,16 +118,16 @@ describe('PublicInterestAction dua funnel', () => {
 });
 
 it('sends only explicit optional referral-sharing consent for promoter registrations',async()=>{
- const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({reference:'KSF-90'}),{status:201}));vi.stubGlobal('fetch',fetcher);
+ const fetcher=mockSubmissionResponse({reference:'KSF-90'});
  render(<PublicInterestAction leadType="promoter_candidate" linkKey="wsl1" label="Daftar" service="WSL 1"/>);
  await userEvent.click(screen.getByRole('button',{name:'Daftar'}));await fillRequiredFields({share:false});
  const sharing=screen.getByLabelText(/Opsional: Saya setuju data kontak/i);expect(sharing).not.toBeChecked();await userEvent.click(sharing);
  await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));await screen.findByText(/KSF-90/);
- const body=JSON.parse(String(fetcher.mock.calls[0][1].body));expect(body.consentToShare).toBe(true);expect(body).not.toHaveProperty('sourcePartnerCode');expect(body).not.toHaveProperty('referralToken');
+ const request=fetcher.mock.calls.find(call=>call[1]?.method==='POST')!;const body=JSON.parse(String(request[1]?.body));expect(body.consentToShare).toBe(true);expect(body).not.toHaveProperty('sourcePartnerCode');expect(body).not.toHaveProperty('referralToken');
 });
 
 it('shows the stored referral on an ID Alat request while keeping sharing optional',async()=>{
- vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({reference:'KSF-104',referralRecorded:true,referralAlias:'khu-abu-10'}),{status:201})));
+ mockSubmissionResponse({reference:'KSF-104',referralRecorded:true,referralAlias:'khu-abu-10'});
  render(<PublicInterestAction linkKey="idDanAlat" service="ID Aplikasi & Scanner Promotor" label="Ajukan layanan ini →"/>);
  await userEvent.click(screen.getByRole('button',{name:'Ajukan layanan ini →'}));
  expect(screen.getByRole('combobox')).toHaveValue('idDanAlat');
@@ -138,8 +136,37 @@ it('shows the stored referral on an ID Alat request while keeping sharing option
  await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));expect(await screen.findByText(/Asal referral tercatat: \/r\/khu-abu-10/)).toBeVisible();
 });
 it('does not announce a successful save when the response has no stored reference',async()=>{
- vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({ok:true}),{status:200})));
+ mockSubmissionResponse({ok:true},200);
  render(<PublicInterestAction linkKey="idDanAlat" service="ID & Alat" label="Ajukan"/>);await userEvent.click(screen.getByRole('button',{name:'Ajukan'}));
  fireEvent.change(screen.getByLabelText('Nama lengkap'),{target:{value:'Klien Baru'}});fireEvent.change(screen.getByLabelText('Nomor WhatsApp'),{target:{value:'081234567890'}});fireEvent.change(screen.getByLabelText('Kota/domisili'),{target:{value:'Bandung'}});await userEvent.click(screen.getByLabelText(/digunakan tim/));
  await userEvent.click(screen.getByRole('button',{name:'Kirim permintaan →'}));expect(await screen.findByText(/belum mendapat nomor referensi/)).toBeVisible();expect(screen.queryByText('Permintaan sudah tersimpan.')).not.toBeInTheDocument();
+});
+
+it('membedakan akun promotor dan menyediakan mode pengajuan atas nama calon klien', async () => {
+  const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes('/api/account/me')) return new Response(JSON.stringify({
+      registered: true, email: 'promotor@example.test', displayName: 'Promotor Uji', roles: ['promoter'],
+      promoterCode: 'P-01', accountType: 'promoter', accountLabel: 'Promotor', isBranchManager: false,
+    }), { status: 200 });
+    return new Response(JSON.stringify({ reference: 'KSF-121' }), { status: 201 });
+  });
+  vi.stubGlobal('fetch', fetcher);
+  render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" label="Ajukan tes" service="Tes STIFIn Personal" />);
+  await userEvent.click(screen.getByRole('button', { name: 'Ajukan tes' }));
+  expect(await screen.findByText('Promotor')).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText('Atas nama calon klien'));
+  expect(screen.getByLabelText('Nama calon klien')).toBeInTheDocument();
+  expect(screen.getByLabelText('WhatsApp calon klien')).toBeInTheDocument();
+  expect(screen.getByLabelText(/Saya telah memperoleh persetujuan calon klien agar nomor WhatsApp-nya digunakan tim/i)).toBeInTheDocument();
+});
+
+it('menampilkan skema Family Test setelah layanan dipilih pada formulir bantuan', async () => {
+  render(<PublicInterestAction leadType="test_service" linkKey="tesPersonal" label="Bantu memilih" service="Bantuan memilih layanan STIFIn" familyPromo={{
+    minimumPaidTestPrice: 500000,
+    schemes: [{ key: 'family-3-1', paidTests: 3, freeTests: 1, label: '3 tes + 1 gratis' }],
+  }} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Bantu memilih' }));
+  await userEvent.selectOptions(screen.getByLabelText('Pilih kebutuhan'), 'paketKeluarga');
+  expect(screen.getByLabelText('Skema Promo Family Test')).toBeInTheDocument();
+  expect(screen.getByText(/minimum pembayaran Rp1\.500\.000/i)).toBeInTheDocument();
 });

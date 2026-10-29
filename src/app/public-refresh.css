@@ -63,3 +63,61 @@
 .public-promo-banner{container-type:inline-size}
 @container (max-width: 680px){.public-promo-cards{grid-template-columns:minmax(0,1fr)}.public-promo-cards article{min-width:0}.public-promo-cards li{align-items:flex-start;flex-wrap:wrap}.public-promo-cards li span{text-align:left;overflow-wrap:anywhere}}
 @media(max-width:900px){.public-promo-cards{grid-template-columns:minmax(0,1fr)}}
+
+/* 0.10.12: conversion journeys, account-aware navigation, and readable footer layout. */
+.public-site .journey-footer{display:grid;grid-template-columns:minmax(150px,190px) minmax(0,1fr);gap:18px 42px;align-items:start}
+.public-site .journey-footer .footer-logo{grid-column:1;grid-row:1 / span 3;min-width:0}
+.public-site .journey-footer .footer-links{grid-column:2;grid-row:1;margin:0;align-content:start;min-width:0}
+.public-site .journey-footer>p{grid-column:2;grid-row:2;width:100%;max-width:850px;margin:0;line-height:1.8}
+.public-site .journey-footer>small{grid-column:2;grid-row:3;width:100%;max-width:950px;line-height:1.8}
+.public-site .journey-footer .footer-links a{line-height:1.6;white-space:normal}
+.public-site .home-process,.public-site .home-faq{max-width:1240px;width:calc(100% - 48px);margin:0 auto 72px;padding:44px 0}
+.public-site .home-process-grid{list-style:none;counter-reset:home-step;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:0;margin:28px 0 0}
+.public-site .home-process-grid li{min-width:0;padding:22px 20px;background:#fff;border:1px solid #dce8df;border-radius:15px}
+.public-site .home-process-grid li>b{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#e5f2ea;color:#087b60;font-size:11px}
+.public-site .home-process-grid h3{font-size:17px;line-height:1.35;margin:20px 0 8px;color:#174d39}
+.public-site .home-process-grid p{font-size:12px;line-height:1.8;color:#62766b;margin:0}
+.public-site .home-decision-info{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);gap:44px;align-items:start;background:#edf5f0;padding:54px max(24px,calc((100vw - 1240px)/2));margin:0 0 64px}
+.public-site .home-decision-info>div:first-child>span{font-size:10px;letter-spacing:1.5px;font-weight:850;color:#32775b}
+.public-site .home-decision-info h2{font-size:clamp(27px,3vw,39px);line-height:1.15;letter-spacing:-1px;margin:12px 0}
+.public-site .home-decision-info>div:first-child>p{font-size:13px;line-height:1.85;color:#60766a}
+.public-site .home-decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.public-site .home-decision-grid article{background:#fff;border:1px solid #dce8df;border-radius:12px;padding:19px}
+.public-site .home-decision-grid b{font-size:13px;color:#174d39}
+.public-site .home-decision-grid p{font-size:12px;line-height:1.8;color:#62766b;margin:8px 0 0}
+.public-site .home-faq .section-heading{margin-bottom:25px}
+.public-site .home-faq .faq-list{max-width:100%}
+.public-site .home-primary-journeys{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:70px}
+.public-site .home-primary-journeys .journey-card{min-height:300px}
+.public-site .home-primary-journeys .journey-card h2{margin-top:48px}
+.public-site .public-nav>div>.text-button{max-width:145px;overflow-wrap:anywhere;text-align:center}
+.public-site .interest-account-context{padding:14px 16px;margin:0 0 18px;border:1px solid #d2e7d8;background:#f0f8f2;border-radius:12px}
+.public-site .interest-account-context>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.public-site .interest-account-context small{display:block;font-size:9px;letter-spacing:1.2px;color:#4f8066;font-weight:850}
+.public-site .interest-account-context>div:first-child b{font-size:12px;color:#174d39}
+.public-site .interest-account-context>p{font-size:11px;line-height:1.7;color:#557064;margin:8px 0}
+.public-site .interest-account-context>span{display:block;font-size:11px;color:#60766a;overflow-wrap:anywhere}
+.public-site .interest-account-context.guest{background:#f7faf8;border-color:#dce8df}
+.public-site .interest-account-context.guest>b{font-size:12px;color:#174d39}
+.public-site .interest-account-context.guest>div{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.public-site .interest-account-context.guest>div a{font-size:11px;font-weight:800;color:#087b60;text-decoration:underline;text-underline-offset:3px}
+.public-site .interest-request-mode{display:flex;gap:12px;flex-wrap:wrap;border:1px solid #d8e8dc;border-radius:9px;padding:10px 12px;margin:12px 0 0}
+.public-site .interest-request-mode legend{padding:0 5px;font-size:10px;font-weight:800;color:#315f49}
+.public-site .interest-request-mode label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;margin:0;color:#315f49}
+.public-site .interest-request-mode input{width:15px;min-height:15px;margin:0;accent-color:#087b60}
+@media(max-width:900px){
+ .public-site .home-process-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .public-site .home-decision-info{grid-template-columns:1fr;gap:20px}
+ .public-site .journey-footer{grid-template-columns:1fr;gap:18px}
+ .public-site .journey-footer .footer-logo,.public-site .journey-footer .footer-links,.public-site .journey-footer>p,.public-site .journey-footer>small{grid-column:1;grid-row:auto}
+ .public-site .journey-footer .footer-logo{grid-row:auto}
+}
+@media(max-width:600px){
+ .public-site .home-process,.public-site .home-faq{width:calc(100% - 36px);padding:25px 0;margin-bottom:40px}
+ .public-site .home-process-grid,.public-site .home-decision-grid,.public-site .home-primary-journeys{grid-template-columns:1fr}
+ .public-site .home-process-grid li{padding:19px}
+ .public-site .home-decision-info{padding:35px 18px;margin-bottom:40px}
+ .public-site .home-decision-grid article{padding:17px}
+ .public-site .interest-request-mode{display:grid;grid-template-columns:1fr}
+ .public-site .interest-account-context>div:first-child{align-items:flex-start;flex-direction:column;gap:4px}
+}

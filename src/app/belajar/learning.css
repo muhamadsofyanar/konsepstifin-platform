@@ -21,3 +21,42 @@
 .learning-app .lr-growth-center{min-width:0}.learning-app .lr-growth-center .lr-section-title{align-items:flex-start}.learning-app .lr-growth-activity-link{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--lr-line);border-radius:9px;padding:11px 14px;background:#fff;font-size:13px;font-weight:650}.learning-app .lr-growth-stats{grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 22px}.learning-app .lr-growth-stats .lr-stat{background:#fff;border:1px solid var(--lr-line);border-top:3px solid #2b9a81;border-radius:14px;padding:19px 17px;min-width:0}.learning-app .lr-growth-stats .lr-stat strong{font-size:30px;overflow-wrap:anywhere}.learning-app .lr-growth-stats .lr-stat small{display:block;color:var(--lr-muted);line-height:1.5}.learning-app .lr-growth-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,280px);gap:24px;align-items:center;background:linear-gradient(120deg,#fff,#f1faf5)}.learning-app .lr-growth-controls h3{font-size:18px}.learning-app .lr-growth-controls p{margin-bottom:0}.learning-app .lr-growth-controls label{margin:0}.learning-app .lr-growth-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0 0 20px}.learning-app .lr-growth-card{display:flex;flex-direction:column;align-items:stretch;min-width:0;margin:0}.learning-app .lr-growth-card>.lr-tag{align-self:flex-start;margin-bottom:14px}.learning-app .lr-growth-card h3{font-size:20px;margin-bottom:8px}.learning-app .lr-growth-audience{font-weight:700;color:#24745e;margin:0 0 8px!important}.learning-app .lr-growth-card>p:not(.lr-growth-audience){color:var(--lr-muted);font-size:13px;min-height:62px}.learning-app .lr-growth-link-label{margin:10px 0 14px!important;font-size:11px!important;color:var(--lr-muted)}.learning-app .lr-growth-link-label input{font-size:11px;line-height:1.5;background:#f6faf7}.learning-app .lr-growth-actions{align-items:stretch;gap:8px;margin-top:auto}.learning-app .lr-growth-actions button,.learning-app .lr-growth-actions a{flex:1;min-height:42px;padding:10px;font-size:12px}.learning-app .lr-growth-actions .lr-secondary{background:#fff;color:var(--lr-green);border-color:var(--lr-line)}.learning-app .lr-growth-center>.lr-inline-notice{margin-top:20px;line-height:1.8}
 @media(max-width:850px){.learning-app .lr-growth-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.learning-app .lr-growth-grid{grid-template-columns:1fr}.learning-app .lr-growth-controls{grid-template-columns:1fr;gap:10px}.learning-app .lr-growth-card>p:not(.lr-growth-audience){min-height:0}}
 @media(max-width:600px){.learning-app .lr-growth-center .lr-section-title{display:block}.learning-app .lr-growth-activity-link{margin-top:12px}.learning-app .lr-growth-stats .lr-stat{padding:16px 13px}.learning-app .lr-growth-stats .lr-stat strong{font-size:26px}.learning-app .lr-growth-actions{flex-direction:column}.learning-app .lr-growth-actions>*{width:100%}}
+
+/* 0.10.12: product pages now explain fit, process, conditions, and next steps. */
+.learning-app.lr-product-detail{padding-bottom:54px}
+.learning-app .lr-product-main-card{overflow:hidden}
+.learning-app .lr-product-audience{padding:15px 17px;margin:20px 0;background:#f1f7f3;border:1px solid #dcebe0;border-radius:11px}
+.learning-app .lr-product-audience small{font-size:9px;letter-spacing:1.2px;font-weight:800;color:#54836a}
+.learning-app .lr-product-audience p{font-size:13px;line-height:1.75;color:#365f4b;margin:6px 0 0}
+.learning-app .lr-product-support-links{display:grid;gap:9px;padding-top:13px;margin-top:15px;border-top:1px solid var(--lr-line);font-size:12px}
+.learning-app .lr-product-detail-section{max-width:100%;margin:28px 0;padding:30px;background:#fff;border:1px solid var(--lr-line);border-radius:15px}
+.learning-app .lr-product-section-heading{max-width:780px;margin-bottom:22px}
+.learning-app .lr-product-section-heading h2{font-size:clamp(23px,2.8vw,30px);margin:7px 0 10px}
+.learning-app .lr-product-section-heading p{color:var(--lr-muted);margin:0;line-height:1.8}
+.learning-app .lr-product-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;padding:0;margin:0}
+.learning-app .lr-product-steps li{display:flex;align-items:flex-start;gap:13px;padding:17px;border:1px solid var(--lr-line);border-radius:11px;background:#fbfdfb;font-size:13px;line-height:1.75}
+.learning-app .lr-product-steps li>b{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#e3f1e8;color:#176847;font-size:10px}
+.learning-app .lr-product-before-order{background:#f3f8f4}
+.learning-app .lr-product-before-order>ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px;list-style:none;padding:0;margin:0}
+.learning-app .lr-product-before-order>ul li{position:relative;padding:0 0 0 22px;font-size:13px;line-height:1.8;color:#4e695b}
+.learning-app .lr-product-before-order>ul li:before{content:'✓';position:absolute;left:0;color:#14805e;font-weight:800}
+.learning-app .lr-product-contact-strip{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:24px;padding:17px 19px;background:#e5f1e9;border-radius:11px}
+.learning-app .lr-product-contact-strip>div{display:grid;gap:4px}
+.learning-app .lr-product-contact-strip b{font-size:13px}
+.learning-app .lr-product-contact-strip span{font-size:12px;color:#5b7566;line-height:1.6}
+.learning-app .lr-product-faq details{margin-bottom:10px;padding:16px 18px}
+.learning-app .lr-product-faq summary{font-size:13px;line-height:1.6}
+.learning-app .lr-product-faq details p{font-size:13px;line-height:1.8;color:var(--lr-muted);margin:12px 0 0}
+.learning-app .lr-product-bottom-cta{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px 30px;background:#0b4935;color:#fff;border-radius:15px;margin-top:28px}
+.learning-app .lr-product-bottom-cta h2{font-size:clamp(22px,2.8vw,30px);margin:7px 0}
+.learning-app .lr-product-bottom-cta p{color:#d0e2d8;max-width:720px;margin:0}
+.learning-app .lr-product-bottom-cta .lr-eyebrow{color:#b6ddc7}
+.learning-app .lr-product-bottom-cta>.lr-button{flex:0 0 auto;background:#fff;color:#075d43}
+.learning-app .lr-product-purchase>.lr-button{width:100%;text-align:center}
+@media(max-width:800px){
+ .learning-app .lr-product-steps,.learning-app .lr-product-before-order>ul{grid-template-columns:1fr}
+ .learning-app .lr-product-detail-section{padding:22px 18px}
+ .learning-app .lr-product-bottom-cta{align-items:stretch;flex-direction:column;padding:24px 20px}
+ .learning-app .lr-product-bottom-cta>.lr-button{width:100%}
+ .learning-app .lr-product-contact-strip{align-items:stretch;flex-direction:column}
+}

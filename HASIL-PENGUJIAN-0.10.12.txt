@@ -1,0 +1,14 @@
+KonsepSTIFIn 0.10.12 - Hasil pemeriksaan
+
+PASS: Syntax transpilation TypeScript/TSX pada file yang diubah.
+PASS: Package version dan package-lock.json konsisten di 0.10.12.
+PASS: Tidak ada migrasi database baru.
+PASS: Pengaturan integrasi mempertahankan nilai secret tersimpan dan menyamarkan token StarSender pada tampilan URL.
+
+BELUM TERVERIFIKASI: npm ci berulang kali timeout di lingkungan kerja.
+BELUM TERVERIFIKASI: npm run build / next build.
+BELUM TERVERIFIKASI: npm run typecheck.
+BELUM TERVERIFIKASI: lint dan seluruh unit test.
+BELUM TERVERIFIKASI: integrasi API live Moota dan StarSender.
+
+Catatan: Jangan menyatakan rilis siap produksi sampai build Coolify dan smoke test staging lulus.

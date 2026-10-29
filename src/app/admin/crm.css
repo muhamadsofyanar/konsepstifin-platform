@@ -17,3 +17,12 @@
 .integration-status-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;margin:0;padding:0}
 .integration-status-list li>span:first-child{min-width:0;overflow-wrap:anywhere;color:#46584f;font-size:13px}
 @media(max-width:520px){.integration-status-list li{align-items:flex-start;flex-wrap:wrap}.integration-status-list li>span:first-child{flex:1 1 160px}}
+
+/* 0.10.12: integration status rows remain aligned and secrets are not exposed in plain view. */
+.portal-columns>div{min-width:0}
+.integration-status-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;min-height:30px}
+.integration-status-list li>span:first-child{flex:1 1 auto;line-height:1.5}
+.integration-status{flex:0 0 auto;justify-self:end}
+.integration-help{display:block;margin-top:7px;color:#718278;font-size:11px;font-weight:400;line-height:1.65}
+.integration-code{display:inline-block;max-width:100%;overflow-wrap:anywhere;word-break:break-word;line-height:1.7}
+@media(max-width:760px){.portal-columns{grid-template-columns:minmax(0,1fr);gap:18px}.integration-status-list li{grid-template-columns:minmax(0,1fr) auto}.integration-status{white-space:normal;text-align:center}}

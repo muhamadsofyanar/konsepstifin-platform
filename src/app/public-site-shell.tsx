@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { LinkProps } from 'next/link';
 import MobileNavigation, { type MobileNavigationLink } from './mobile-navigation';
+import PublicAccountLink from './public-account-link';
 
 type PublicPage = 'home' | 'test' | 'location' | 'education' | 'promoter' | 'affiliate' | 'catalog';
 
@@ -20,8 +21,8 @@ const navigation: Array<{ page: PublicPage; href: PublicHref; label: string }> =
 export function PublicHeader({
   active,
   announcement,
-  ctaHref = '/belajar?tab=catalog',
-  ctaLabel = 'Lihat produk',
+  ctaHref = '/tes-stifin#layanan',
+  ctaLabel = 'Pilih layanan tes',
 }: {
   active: PublicPage;
   announcement: string;
@@ -31,6 +32,7 @@ export function PublicHeader({
   const mobileLinks: MobileNavigationLink[] = [
     ...navigation.map((item) => ({ ...item, active: item.page === active })),
   ];
+
 
   return <>
     <a className="public-skip-link" href="#main-content">Lewati navigasi</a>
@@ -44,7 +46,7 @@ export function PublicHeader({
       </nav>
       <div>
         <MobileNavigation links={mobileLinks} ctaHref={ctaHref} ctaLabel={ctaLabel} />
-        <Link className="text-button" href="/akun">Akun saya</Link>
+        <PublicAccountLink />
         <Link className="public-cta" href={ctaHref}>{ctaLabel}</Link>
       </div>
     </header>
