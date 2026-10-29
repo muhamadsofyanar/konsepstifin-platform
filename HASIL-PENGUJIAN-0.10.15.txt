@@ -1,0 +1,10 @@
+KonsepSTIFIn 0.10.15 - hasil pengujian
+
+- Perbaikan: `src/lib/voucher-service.ts` sekarang mengimpor `./starsender-client.ts` dengan ekstensi eksplisit.
+- Uji import runtime voucher service: LULUS pada Node.js 22 dengan native type stripping eksperimental dan stub postgres (hanya menguji resolusi modul, tidak menguji koneksi database).
+- Uji regresi kontrak import: LULUS.
+- `node --check` untuk start-with-worker, voucher-worker, dan tes regresi: LULUS.
+- Versi package.json/package-lock.json: 0.10.15.
+- Pemeriksaan build Next.js produksi: BELUM dijalankan karena `npm ci` sebelumnya mengalami timeout. Dockerfile kini menjalankan smoke import di tahap build pada Node.js 24 sebelum `next build`.
+- Pengujian Moota, StarSender, Mailketing dan database live: BELUM dijalankan.
+- Tidak ada migrasi database baru.

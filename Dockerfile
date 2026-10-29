@@ -7,6 +7,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Fail during build, not after rollout, if Node cannot resolve the voucher worker runtime imports.
+RUN node -e "import('./src/lib/voucher-service.ts').then(() => console.log('Voucher worker runtime imports OK'))"
 RUN npm run build
 
 FROM node:24-alpine AS runner

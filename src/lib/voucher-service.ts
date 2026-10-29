@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import type {CommerceDatabase,CommerceQuery,OrderCommand} from './commerce-service.ts';
 import type {VoucherApi} from './voucher-api.ts';
-import { normalizeWhatsAppNumber } from './starsender-client';
+import { normalizeWhatsAppNumber } from './starsender-client.ts';
 import {VoucherError,voucherMode,voucherQuantity,type VoucherMode,type VoucherOrder,type VoucherSettings} from './voucher-domain.ts';
 const date=(v:unknown)=>v instanceof Date?v.toISOString():String(v);
 const orderSelect=`SELECT o.*,v.quantity,v.unit_price,v.mode,v.status AS fulfillment_status,v.promoter_code,v.promoter_name,v.last_error,COALESCE((SELECT sum(amount) FROM commerce_ledger WHERE order_id=o.id),0) AS balance FROM voucher_orders v JOIN commerce_orders o ON o.id=v.order_id`;
