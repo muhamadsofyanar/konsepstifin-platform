@@ -1,0 +1,14 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+import { ChatError } from '@/lib/dashboard-chat-service';
+const mocks=vi.hoisted(()=>({principal:vi.fn(),accounts:vi.fn(),messages:vi.fn(),send:vi.fn(),read:vi.fn(),summary:vi.fn()}));
+vi.mock('@/lib/identity/server',()=>({getAccountPrincipal:mocks.principal}));
+vi.mock('@/lib/dashboard-chat-store',()=>({getDashboardChatService:()=>({accounts:mocks.accounts,messages:mocks.messages,send:mocks.send,markRead:mocks.read,summary:mocks.summary})}));
+import { GET, POST } from './route';
+const id='10000000-0000-4000-8000-000000000001';
+beforeEach(()=>{process.env.PLATFORM_ORIGIN='https://example.test';mocks.principal.mockResolvedValue({userId:id,roles:['member'],active:true,sessionValid:true,promoterCode:null});mocks.summary.mockResolvedValue({unread:0});});
+it('requires a current account session',async()=>{mocks.principal.mockResolvedValue(null);expect((await GET(new Request('https://example.test/api/account/chat'))).status).toBe(401);});
+it('rejects foreign origins before queueing a message',async()=>{const r=await POST(new Request('https://example.test/api/account/chat',{method:'POST',headers:{origin:'https://evil.test'},body:'{}'}));expect(r.status).toBe(403);expect(mocks.send).not.toHaveBeenCalled();});
+it('forwards the verified principal and returns access denial without data',async()=>{mocks.messages.mockRejectedValue(new ChatError('Akses percakapan ditolak.',403));const r=await GET(new Request('https://example.test/api/account/chat?memberId=other'));expect(r.status).toBe(403);expect(await r.json()).toEqual({message:'Akses percakapan ditolak.'});});
+it('rejects malformed JSON and oversized requests',async()=>{for(const body of ['{','a'.repeat(17000)]) {const r=await POST(new Request('https://example.test/api/account/chat',{method:'POST',headers:{origin:'https://example.test'},body}));expect([400,413]).toContain(r.status);}});
+it('accepts messages for the current member without using a browser-provided sender',async()=>{mocks.send.mockResolvedValue({id:'1',body:'Halo'});const r=await POST(new Request('https://example.test/api/account/chat',{method:'POST',headers:{origin:'https://example.test'},body:JSON.stringify({action:'send',body:'Halo',clientKey:'test',senderId:'someone'})}));expect(r.status).toBe(201);expect(mocks.send.mock.calls[0][0].userId).toBe(id);expect(mocks.send.mock.calls[0][1]).toBe(id);});
+it('does not expose database connection details on server failures',async()=>{mocks.messages.mockRejectedValue(new Error('postgres://secret'));const r=await GET(new Request('https://example.test/api/account/chat?memberId=other'));expect(r.status).toBe(503);expect(JSON.stringify(await r.json())).not.toContain('secret');});
