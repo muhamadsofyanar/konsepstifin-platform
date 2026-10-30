@@ -1,0 +1,23 @@
+KONSEPSTIFIN 0.10.21 — HASIL PEMERIKSAAN
+
+PEMERIKSAAN LULUS
+- package.json dan package-lock.json menggunakan versi 0.10.21.
+- Migration 015-whatsapp-command-center.sql tersedia dan menggunakan pola idempotent IF NOT EXISTS / ON CONFLICT.
+- Node syntax check: scripts/whatsapp-worker.mjs, scripts/notification-worker.mjs, scripts/start-with-worker.mjs, scripts/apply-migration.mjs — LULUS.
+- Node test suite tanpa dependensi eksternal: 46/46 tes LULUS dengan Node --experimental-strip-types.
+- Pemeriksaan source: webhook menerima event pesan personal masuk/keluar, menyimpan event secara idempotent, dan mengantrekan pekerjaan chatbot.
+- Pemeriksaan source: API Inbox menerapkan pembatasan akses admin/promotor; promotor dibatasi pada lead yang ditugaskan dan consent_to_share=true.
+- Pemeriksaan source: balasan manual masuk notification_outbox, dibatasi jendela 24 jam, dan memeriksa opt-out.
+- Pemeriksaan source: chatbot memakai OpenAI API jika dikonfigurasi; fallback rule-based tersedia jika API key tidak tersedia.
+- Pemeriksaan source: drip worker memeriksa persetujuan marketing, opt-out, status lead, dan jendela komunikasi.
+- Dockerfile dan start-with-worker.mjs memasukkan WhatsApp worker tanpa menghapus worker lama.
+
+BELUM DAPAT DIVERIFIKASI DI LINGKUNGAN INI
+- npm ci tidak selesai karena proses unduh registry melewati batas waktu. Karena itu npm run typecheck dan npm run build belum dijalankan.
+- Pengujian yang membutuhkan paket eksternal tidak dapat diselesaikan karena node_modules tidak lengkap.
+- Pengujian integrasi PostgreSQL dan StarSender memerlukan database produksi, Device API key, Webhook Premium, dan perangkat WhatsApp aktif.
+- Pengujian chatbot AI memerlukan OpenAI API key.
+- Pengujian pengiriman, status delivered/read, serta campaign nyata harus dilakukan setelah migrasi dan deployment.
+
+STATUS
+Source 0.10.21 telah diperiksa secara statis dan tes dasar lulus. Jangan menyatakan deployment atau integrasi produksi berhasil sebelum menjalankan build di Coolify, menerapkan migrasi 015, dan menyelesaikan checklist pengujian produksi di UPGRADE-KONSEPSTIFIN-0.10.21.md.

@@ -5,12 +5,18 @@ import { normalizeWhatsAppNumber } from '@/lib/starsender-client';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
 type Obj = Record<string, unknown>;
-function obj(v: unknown): Obj { return v && typeof v === 'object' && !Array.isArray(v) ? v as Obj : {}; }
-function str(v: unknown): string { return typeof v === 'string' || typeof v === 'number' ? String(v).trim() : ''; }
-function flag(v: unknown): boolean { return v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true'; }
+function obj(value: unknown): Obj { return value && typeof value === 'object' && !Array.isArray(value) ? value as Obj : {}; }
+function str(value: unknown): string { return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : ''; }
+function flag(value: unknown): boolean { return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true'; }
 function equalSecret(a: string, b: string) { const x=Buffer.from(a); const y=Buffer.from(b); return x.length===y.length && x.length>0 && timingSafeEqual(x,y); }
+function providerTime(value: unknown): Date | null {
+  if (typeof value === 'number' || (typeof value === 'string' && /^\d{10,13}$/.test(value))) {
+    const n=Number(value); const date=new Date(n < 10_000_000_000 ? n*1000 : n); return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (typeof value === 'string' && value) { const date=new Date(value); return Number.isNaN(date.getTime()) ? null : date; }
+  return null;
+}
 
 export async function POST(request: Request) {
   const config = await getIntegrationConfig();
@@ -24,53 +30,112 @@ export async function POST(request: Request) {
   try { payload = JSON.parse(raw) as unknown; } catch { return Response.json({ message: 'JSON tidak valid.' }, { status: 400 }); }
   const root = obj(payload);
   const data = obj(root.data ?? root.payload ?? root);
-  if (flag(data.is_me) || flag(data.is_group) || str(data.chat_type).toLowerCase() === 'group' || str(data.from).includes('@g.us')) {
-    return Response.json({ message: 'Pesan keluar/grup diabaikan.' }, { status: 200 });
+  if (flag(data.is_group) || str(data.chat_type).toLowerCase() === 'group' || str(data.from).includes('@g.us')) {
+    return Response.json({ message: 'Event grup tidak diproses dalam inbox personal.' }, { status: 200 });
   }
+  const isMe = flag(data.is_me);
+  const remoteCandidates = isMe
+    ? [data.to, data.chat_id, data.remote_jid, data.from, data.participant]
+    : [data.from, data.chat_id, data.remote_jid, data.participant];
+  const remote = remoteCandidates.map(str).find(value => value && !value.includes('@g.us') && !value.includes('@broadcast')) || '';
   let phone: string;
-  try { phone = normalizeWhatsAppNumber(str(data.from).replace(/@s\.whatsapp\.net$/i, '')); }
-  catch { return Response.json({ message: 'Nomor pengirim tidak valid.' }, { status: 400 }); }
-  const message = str(data.message ?? data.body ?? data.text);
-  const messageId = str(data.message_id ?? data.id) || createHash('sha256').update(`${phone}|${str(data.timestamp)}|${message}`).digest('hex');
-  const text = message.trim().toUpperCase();
-  const optsOut = /^(STOP|BERHENTI|UNSUBSCRIBE|STOP PROMO|JANGAN KIRIM)(\s|$)/.test(text);
-  const optsIn = /^(MULAI|START|AKTIFKAN KEMBALI)(\s|$)/.test(text);
+  try { phone = normalizeWhatsAppNumber(remote.replace(/@s\.whatsapp\.net$/i, '').replace(/@c\.us$/i, '')); }
+  catch { return Response.json({ message: 'Nomor kontak tidak valid atau tidak tersedia pada payload webhook.', direction: isMe ? 'outgoing' : 'incoming' }, { status: 200 }); }
+  const textMessage = str(data.message ?? data.body ?? data.text);
+  const mediaUrl = str(data.file ?? data.media_url ?? data.url);
+  const message = textMessage || (mediaUrl ? '[Pelanggan mengirim media]' : '[Pesan WhatsApp]');
+  const providerMessageId = str(data.message_id ?? data.id ?? data.key);
+  const timestamp = providerTime(data.timestamp);
+  const fallbackId = createHash('sha256').update(`${phone}|${isMe ? 'out' : 'in'}|${str(data.timestamp)}|${message}|${mediaUrl}`).digest('hex');
+  const messageId = providerMessageId || fallbackId;
+  const safePayload = { device_id: str(data.device_id), device_name: str(data.device_name), chat_type: str(data.chat_type), is_me: isMe, message_id: providerMessageId, timestamp: str(data.timestamp), quoted_message: str(data.quoted_message).slice(0, 1000) };
+  const text = textMessage.trim().toUpperCase();
+  const optsOut = !isMe && /^(STOP|BERHENTI|UNSUBSCRIBE|STOP PROMO|JANGAN KIRIM)(\s|$)/.test(text);
+  const optsIn = !isMe && /^(MULAI|START|AKTIFKAN KEMBALI)(\s|$)/.test(text);
   const sql = getDatabaseClient();
   try {
-    const [inserted] = await sql`INSERT INTO starsender_inbound_events(message_id,phone_e164) VALUES (${messageId},${phone}) ON CONFLICT(message_id) DO NOTHING RETURNING message_id`;
-    if (!inserted) return Response.json({ message: 'Pesan duplikat diabaikan.' }, { status: 200 });
-    await sql`INSERT INTO whatsapp_inbound_sessions(phone_e164,last_inbound_at,last_message_id,opted_out_at,updated_at)
-      VALUES (${phone},now(),${messageId},CASE WHEN ${optsOut} THEN now() ELSE NULL END,now())
-      ON CONFLICT(phone_e164) DO UPDATE SET last_inbound_at=now(),last_message_id=EXCLUDED.last_message_id,
-      opted_out_at=CASE WHEN ${optsOut} THEN now() WHEN ${optsIn} THEN NULL ELSE whatsapp_inbound_sessions.opted_out_at END,updated_at=now()`;
-    const [session] = await sql`SELECT opted_out_at FROM whatsapp_inbound_sessions WHERE phone_e164=${phone}`;
-    // If an existing promoter lead predates the queue fix, create its onboarding
-    // reply only after this person has actually initiated a WhatsApp conversation.
-    // Limit this automatic response to an open lead with explicit contact consent.
-    if (!optsOut && !session?.opted_out_at) {
-      const [candidate] = await sql`SELECT id,name,service,phone FROM public_interest_leads
-        WHERE lead_type='promoter_candidate' AND consent_to_contact=true AND status NOT IN ('selesai','ditutup')
-          AND regexp_replace(phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})
+    const result = await sql.begin(async tx => {
+      const direction = isMe ? 'outgoing' : 'incoming';
+      const [event] = await tx`INSERT INTO starsender_message_events(message_id,phone_e164,direction) VALUES (${messageId},${phone},${direction}) ON CONFLICT(message_id) DO NOTHING RETURNING message_id`;
+      if (!event) return { duplicate: true, conversationId: '', botQueued: false, optedOut: false };
+      const phoneDigits = [phone, phone.slice(2), `0${phone.slice(2)}`];
+      const [lead] = await tx`
+        SELECT id,name,assigned_promoter_code,consent_to_share,lead_type,whatsapp_marketing_consent
+        FROM public_interest_leads
+        WHERE regexp_replace(phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])
         ORDER BY created_at DESC,id DESC LIMIT 1`;
-      if (candidate) {
-        const candidateName = String(candidate.name || 'Bapak/Ibu').trim().slice(0, 100) || 'Bapak/Ibu';
-        const candidateService = String(candidate.service || 'Paket Promotor').trim().slice(0, 120);
-        const reference = `KSF-${candidate.id}`;
-        const reply = `Assalamu'alaikum ${candidateName}. Terima kasih telah mengajukan ${candidateService} melalui KonsepSTIFIn. Referensi: ${reference}. Tim akan membantu menjelaskan tahapan, persyaratan, biaya, dan langkah berikutnya. Pengajuan ini belum berarti pendaftaran promotor telah disetujui.`;
-        await sql`INSERT INTO notification_outbox(event_type,lead_id,recipient_phone,recipient_name,message,dedupe_key,created_by)
-          VALUES ('promoter_candidate_instructions',${candidate.id},${phone},${candidateName},${reply},${`promoter-candidate-instructions:${candidate.id}:${phone}`},'starsender-inbound-webhook')
-          ON CONFLICT (dedupe_key) DO NOTHING`;
+      const displayName = str(data.push_name ?? data.name) || String(lead?.name ?? phone);
+      const [conversation] = await tx`
+        INSERT INTO whatsapp_conversations(phone_e164,display_name,lead_id,assigned_promoter_code,status,last_message_text,last_message_at,unread_count)
+        VALUES (${phone},${displayName.slice(0,160)},${lead?.id ?? null},${String(lead?.assigned_promoter_code ?? '')},'open',${message.slice(0,1000)},COALESCE(${timestamp?.toISOString() ?? null}::timestamptz,now()),${isMe ? 0 : 1})
+        ON CONFLICT(phone_e164) DO UPDATE SET
+          display_name=CASE WHEN EXCLUDED.display_name<>EXCLUDED.phone_e164 THEN EXCLUDED.display_name ELSE whatsapp_conversations.display_name END,
+          lead_id=COALESCE(whatsapp_conversations.lead_id,EXCLUDED.lead_id),
+          assigned_promoter_code=CASE WHEN whatsapp_conversations.assigned_promoter_code='' THEN EXCLUDED.assigned_promoter_code ELSE whatsapp_conversations.assigned_promoter_code END,
+          last_message_text=EXCLUDED.last_message_text,last_message_at=GREATEST(whatsapp_conversations.last_message_at,EXCLUDED.last_message_at),
+          status=CASE WHEN ${!isMe} THEN 'open' ELSE whatsapp_conversations.status END,
+          unread_count=whatsapp_conversations.unread_count+EXCLUDED.unread_count,updated_at=now()
+        RETURNING id,bot_mode`;
+      const senderType = isMe ? 'agent' : 'customer';
+      let stored;
+      if (isMe) {
+        [stored] = await tx`
+          WITH candidate AS (
+            SELECT id FROM whatsapp_messages
+            WHERE conversation_id=${conversation.id}::uuid AND direction='outgoing' AND delivery_status='queued'
+              AND content=${message.slice(0,4000)} AND created_at>now()-interval '15 minutes'
+            ORDER BY created_at DESC,id DESC LIMIT 1 FOR UPDATE
+          )
+          UPDATE whatsapp_messages m SET provider_message_id=${messageId},delivery_status='sent',
+            media_url=${mediaUrl.slice(0,2000)},media_type=${str(data.mimetype ?? data.mime_type).slice(0,120)},
+            raw_payload=${JSON.stringify(safePayload)}::jsonb,provider_timestamp=${timestamp?.toISOString() ?? null}
+          FROM candidate WHERE m.id=candidate.id RETURNING m.id`;
       }
-    }
-    if (optsOut || session?.opted_out_at) {
-      await sql`UPDATE notification_outbox SET status='failed',last_error='Pesan dihentikan karena kontak memilih berhenti menerima pesan WhatsApp.',updated_at=now()
-        WHERE status IN ('pending','awaiting_inbound') AND regexp_replace(recipient_phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})`;
-    } else {
-      await sql`UPDATE notification_outbox SET status='pending',available_at=now(),last_error='',updated_at=now()
-        WHERE status='awaiting_inbound' AND (expires_at IS NULL OR expires_at>now()) AND regexp_replace(recipient_phone,'[^0-9]','','g') IN (${phone},${phone.slice(2)},${`0${phone.slice(2)}`})`;
-    }
-    return Response.json({ message: 'Pesan masuk tercatat.', duplicate: false, optedOut: Boolean(session?.opted_out_at) }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
+      if (!stored) [stored] = await tx`
+        INSERT INTO whatsapp_messages(conversation_id,provider_message_id,direction,sender_type,content,media_url,media_type,quoted_message,delivery_status,raw_payload,provider_timestamp)
+        VALUES (${conversation.id}::uuid,${messageId},${direction},${senderType},${message.slice(0,4000)},${mediaUrl.slice(0,2000)},${str(data.mimetype ?? data.mime_type).slice(0,120)},${str(data.quoted_message).slice(0,1000)},${isMe ? 'sent' : 'received'},${JSON.stringify(safePayload)}::jsonb,${timestamp?.toISOString() ?? null})
+        ON CONFLICT DO NOTHING RETURNING id`;
+      if (!stored) return { duplicate: true, conversationId: String(conversation.id), botQueued: false, optedOut: false };
+      if (!isMe) {
+        await tx`INSERT INTO starsender_inbound_events(message_id,phone_e164) VALUES (${messageId},${phone}) ON CONFLICT(message_id) DO NOTHING`;
+        await tx`INSERT INTO whatsapp_inbound_sessions(phone_e164,last_inbound_at,last_message_id,opted_out_at,updated_at)
+          VALUES (${phone},COALESCE(${timestamp?.toISOString() ?? null}::timestamptz,now()),${messageId},CASE WHEN ${optsOut} THEN now() ELSE NULL END,now())
+          ON CONFLICT(phone_e164) DO UPDATE SET last_inbound_at=GREATEST(whatsapp_inbound_sessions.last_inbound_at,EXCLUDED.last_inbound_at),last_message_id=EXCLUDED.last_message_id,
+          opted_out_at=CASE WHEN ${optsOut} THEN now() WHEN ${optsIn} THEN NULL ELSE whatsapp_inbound_sessions.opted_out_at END,updated_at=now()`;
+      }
+      const [session] = await tx`SELECT opted_out_at FROM whatsapp_inbound_sessions WHERE phone_e164=${phone}`;
+      if (!isMe && optsOut) {
+        await tx`UPDATE notification_outbox SET status='failed',last_error='Kontak meminta berhenti menerima pesan WhatsApp.',updated_at=now()
+          WHERE status IN ('pending','awaiting_inbound') AND regexp_replace(recipient_phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])`;
+        await tx`UPDATE whatsapp_messages m SET delivery_status='failed' FROM notification_outbox o WHERE m.outbox_id=o.id AND o.status='failed' AND regexp_replace(o.recipient_phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])`;
+        await tx`UPDATE whatsapp_bot_jobs SET status='skipped',last_error='Pelanggan mengirim perintah STOP.',updated_at=now() WHERE conversation_id=${conversation.id}::uuid AND status IN ('pending','processing','queued')`;
+        if (lead?.id) await tx`UPDATE whatsapp_drip_enrollments SET status='cancelled',last_error='Pelanggan mengirim perintah STOP.' WHERE lead_id=${lead.id} AND status IN ('active','paused')`;
+      } else if (!isMe && optsIn) {
+        await tx`UPDATE notification_outbox SET status='pending',available_at=now(),last_error='',updated_at=now()
+          WHERE status='awaiting_inbound' AND (expires_at IS NULL OR expires_at>now()) AND regexp_replace(recipient_phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])`;
+      }
+      let botQueued = false;
+      if (!isMe && !optsOut && !session?.opted_out_at) {
+        if (lead?.id) await tx`UPDATE whatsapp_drip_enrollments SET status='active',next_send_at=now(),last_error='' WHERE lead_id=${lead.id} AND status='paused' AND last_error LIKE 'Menunggu pelanggan%'`;
+        await tx`UPDATE notification_outbox SET status='failed',last_error='Balasan bot lama digantikan oleh pesan pelanggan yang lebih baru.',updated_at=now()
+          WHERE conversation_id=${conversation.id}::uuid AND event_type='whatsapp_bot_reply' AND status IN ('pending','awaiting_inbound')`;
+        await tx`UPDATE whatsapp_messages SET delivery_status='failed' WHERE outbox_id IN (SELECT id FROM notification_outbox WHERE conversation_id=${conversation.id}::uuid AND event_type='whatsapp_bot_reply' AND status='failed') AND delivery_status='queued'`;
+        await tx`UPDATE whatsapp_bot_jobs SET status='skipped',last_error='Pesan pelanggan terbaru menggantikan balasan bot yang belum terkirim.',updated_at=now() WHERE conversation_id=${conversation.id}::uuid AND status IN ('processing','queued')`;
+        const [bot] = await tx`SELECT enabled FROM whatsapp_bot_settings WHERE id=1`;
+        if (bot?.enabled && conversation.bot_mode === 'bot') {
+          const [pendingBot] = await tx`SELECT id FROM whatsapp_bot_jobs WHERE conversation_id=${conversation.id}::uuid AND status='pending' AND created_at>now()-interval '15 seconds' ORDER BY id DESC LIMIT 1 FOR UPDATE`;
+          if (pendingBot) await tx`UPDATE whatsapp_bot_jobs SET inbound_message_id=${stored.id},available_at=now()+interval '3 seconds',updated_at=now() WHERE id=${pendingBot.id}`;
+          else await tx`INSERT INTO whatsapp_bot_jobs(conversation_id,inbound_message_id,status,available_at)
+            VALUES (${conversation.id}::uuid,${stored.id},'pending',now()+interval '3 seconds') ON CONFLICT(inbound_message_id) DO NOTHING`;
+          botQueued = true;
+        }
+        await tx`UPDATE notification_outbox SET status='pending',available_at=now(),last_error='',updated_at=now()
+          WHERE status='awaiting_inbound' AND (expires_at IS NULL OR expires_at>now()) AND regexp_replace(recipient_phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])`;
+      }
+      return { duplicate: false, conversationId: String(conversation.id), botQueued, optedOut: Boolean(session?.opted_out_at) };
+    });
+    return Response.json({ message: result.duplicate ? 'Event pesan duplikat diabaikan.' : 'Pesan WhatsApp tersinkronisasi.', ...result, direction: isMe ? 'outgoing' : 'incoming' }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
   } catch {
-    return Response.json({ message: 'Pesan masuk belum dapat diproses.' }, { status: 503 });
+    return Response.json({ message: 'Pesan WhatsApp belum dapat diproses. Periksa migrasi 015 dan koneksi database.' }, { status: 503 });
   }
 }

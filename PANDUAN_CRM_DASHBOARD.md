@@ -78,3 +78,14 @@ Production build dan pemeriksaan TypeScript berhasil di lingkungan kerja.
 ESLint dan suite unit/UI/API dijalankan. Tes integrasi PostgreSQL dilewati bila
 TEST_DATABASE_URL tidak tersedia. Koneksi database produksi, transaksi Sejoli,
 dan perilaku browser di server Anda harus diuji setelah deploy.
+
+## WhatsApp Command Center (0.10.21)
+
+- Buka `/admin/whatsapp` untuk melihat Inbox, membaca riwayat, dan membalas pelanggan.
+- Admin dapat mengelola chatbot internal, template balasan cepat, dan drip campaign dari tab **Chatbot & Automasi**.
+- Ringkasan Inbox menampilkan total percakapan, pesan belum dibaca, percakapan menunggu petugas, dan percakapan yang sedang ditangani bot.
+- Promotor dapat membuka Inbox yang sama, tetapi hanya melihat lead yang ditugaskan kepadanya dan telah memberi izin berbagi data.
+- Balasan manual masuk antrean worker StarSender dan hanya dikirim selama jendela 24 jam sejak pesan pelanggan terakhir.
+- Chatbot baru aktif setelah admin mengaktifkannya. Masukkan OpenAI API key melalui **Admin → Pengaturan → Integrasi eksternal** untuk jawaban berbasis AI dan pustaka STIFIn.
+- Broadcast dan pengelolaan persetujuan marketing tetap tersedia pada menu **Marketing**.
+- Jalankan migrasi `015-whatsapp-command-center.sql` sebelum menguji Inbox dan otomasi.

@@ -11,11 +11,13 @@ function getDatabaseClient() {
 type MootaConfig = { baseUrl: string; apiToken: string; webhookSecret: string; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
 type StarSenderConfig = { apiKey: string; apiUrl: string; webhookSecret: string; businessNumber: string };
 type MailketingConfig = { apiToken: string; apiUrl: string; fromName: string; fromEmail: string };
-export type IntegrationConfig = { moota: MootaConfig; starsender: StarSenderConfig; mailketing: MailketingConfig };
+type OpenAIConfig = { apiKey: string; model: string };
+export type IntegrationConfig = { moota: MootaConfig; starsender: StarSenderConfig; mailketing: MailketingConfig; openai: OpenAIConfig };
 export type PublicIntegrationSettings = {
   moota: { baseUrl: string; apiTokenConfigured: boolean; webhookSecretConfigured: boolean; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
   starsender: { apiKeyConfigured: boolean; apiUrl: string; webhookSecretConfigured: boolean; businessNumber: string };
   mailketing: { apiTokenConfigured: boolean; apiUrl: string; fromName: string; fromEmail: string };
+  openai: { apiKeyConfigured: boolean; model: string };
 };
 
 const envConfig = (): IntegrationConfig => ({
@@ -40,6 +42,7 @@ const envConfig = (): IntegrationConfig => ({
     fromName: (process.env.MAILKETING_FROM_NAME || 'KonsepSTIFIn').trim(),
     fromEmail: (process.env.MAILKETING_FROM_EMAIL || '').trim(),
   },
+  openai: { apiKey: (process.env.OPENAI_API_KEY || '').trim(), model: (process.env.OPENAI_MODEL || 'gpt-4.1-mini').trim() },
 });
 
 function encryptionKey() {
@@ -68,6 +71,7 @@ function decrypt(row: Record<string, unknown>): IntegrationConfig {
     moota,
     starsender: { ...fallback.starsender, ...(value.starsender || {}) },
     mailketing: { ...fallback.mailketing, ...(value.mailketing || {}) },
+    openai: { ...fallback.openai, ...(value.openai || {}) },
   };
 }
 async function storedConfig(): Promise<IntegrationConfig | null> {
@@ -92,6 +96,7 @@ export async function getPublicIntegrationSettings(): Promise<PublicIntegrationS
     moota: { baseUrl: c.moota.baseUrl, apiTokenConfigured: Boolean(c.moota.apiToken), webhookSecretConfigured: Boolean(c.moota.webhookSecret), bankAccountId: c.moota.bankAccountId, receiveMoneyCreatePath: c.moota.receiveMoneyCreatePath, bankAccountField: c.moota.bankAccountField, timeoutMs: c.moota.timeoutMs },
     starsender: { apiKeyConfigured: Boolean(c.starsender.apiKey), apiUrl: c.starsender.apiUrl, webhookSecretConfigured: Boolean(c.starsender.webhookSecret), businessNumber: c.starsender.businessNumber },
     mailketing: { apiTokenConfigured: Boolean(c.mailketing.apiToken), apiUrl: c.mailketing.apiUrl, fromName: c.mailketing.fromName, fromEmail: c.mailketing.fromEmail },
+    openai: { apiKeyConfigured: Boolean(c.openai.apiKey), model: c.openai.model },
   };
 }
 function safeUrl(value: unknown, label: string) {
@@ -117,6 +122,7 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
   const mootaInput = input.moota && typeof input.moota === 'object' ? input.moota as Record<string, unknown> : {};
   const senderInput = input.starsender && typeof input.starsender === 'object' ? input.starsender as Record<string, unknown> : {};
   const mailketingInput = input.mailketing && typeof input.mailketing === 'object' ? input.mailketing as Record<string, unknown> : {};
+  const openaiInput = input.openai && typeof input.openai === 'object' ? input.openai as Record<string, unknown> : {};
   const secret = (next: unknown, old: string, key: string) => clear.includes(key) ? '' : String(next ?? '').trim() || old;
   const moota: MootaConfig = {
     baseUrl: safeUrl(mootaInput.baseUrl ?? current.moota.baseUrl, 'URL dasar Moota'),
@@ -146,7 +152,9 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
   const mailketingUrl = new URL(mailketing.apiUrl);
   if (mailketingUrl.hostname !== 'api.mailketing.co.id' || mailketingUrl.pathname !== '/api/v2/send') throw new Error('Endpoint Mailketing harus https://api.mailketing.co.id/api/v2/send.');
   if (mailketing.apiToken && (!mailketing.fromName || !mailketing.fromEmail)) throw new Error('Nama dan email pengirim Mailketing wajib diisi jika API token diaktifkan.');
-  const config: IntegrationConfig = { moota, starsender, mailketing };
+  const openai: OpenAIConfig = { apiKey: secret(openaiInput.apiKey, current.openai.apiKey, 'openai.apiKey'), model: String(openaiInput.model ?? current.openai.model).trim().slice(0, 100) || 'gpt-4.1-mini' };
+  if (!/^[a-zA-Z0-9._-]{2,100}$/.test(openai.model)) throw new Error('Nama model AI tidak valid.');
+  const config: IntegrationConfig = { moota, starsender, mailketing, openai };
   const encrypted = encrypt(config);
   const sql = getDatabaseClient();
   await sql.begin(async tx => {
@@ -154,7 +162,7 @@ export async function saveIntegrationSettings(actor: string, input: Record<strin
       VALUES ('all',${encrypted.iv},${encrypted.ciphertext},${encrypted.tag},${actor}::uuid,now())
       ON CONFLICT(provider) DO UPDATE SET iv=EXCLUDED.iv,ciphertext=EXCLUDED.ciphertext,auth_tag=EXCLUDED.auth_tag,updated_by=EXCLUDED.updated_by,updated_at=now()`;
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details)
-      VALUES (${actor}::uuid,'integration.settings.updated','external-integrations',${JSON.stringify({mootaApiTokenConfigured:Boolean(moota.apiToken),mootaWebhookConfigured:Boolean(moota.webhookSecret),starsenderConfigured:Boolean(starsender.apiKey),starsenderWebhookConfigured:Boolean(starsender.webhookSecret),starsenderBusinessNumberConfigured:Boolean(starsender.businessNumber),mailketingConfigured:Boolean(mailketing.apiToken),mailketingSenderConfigured:Boolean(mailketing.fromEmail),clearedSecrets:clear})}::jsonb)`;
+      VALUES (${actor}::uuid,'integration.settings.updated','external-integrations',${JSON.stringify({mootaApiTokenConfigured:Boolean(moota.apiToken),mootaWebhookConfigured:Boolean(moota.webhookSecret),starsenderConfigured:Boolean(starsender.apiKey),starsenderWebhookConfigured:Boolean(starsender.webhookSecret),starsenderBusinessNumberConfigured:Boolean(starsender.businessNumber),mailketingConfigured:Boolean(mailketing.apiToken),mailketingSenderConfigured:Boolean(mailketing.fromEmail),openaiConfigured:Boolean(openai.apiKey),openaiModel:openai.model,clearedSecrets:clear})}::jsonb)`;
   });
   return getPublicIntegrationSettings();
 }

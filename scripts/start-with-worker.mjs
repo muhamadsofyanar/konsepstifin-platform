@@ -1,4 +1,4 @@
-/** Container entrypoint: web, fulfillment, and notification workers share the container lifecycle. */
+/** Container entrypoint: web, fulfillment, learning, notification, and WhatsApp automation workers share the container lifecycle. */
 import {spawn} from 'node:child_process';
 const children=[];
 let stopping=false;
@@ -22,3 +22,7 @@ learningWorker.on('exit',code=>{if(!stopping){console.error('Learning worker exi
 const notificationWorker=spawn(process.execPath,['scripts/notification-worker.mjs'],{stdio:'inherit',env:process.env});children.push(notificationWorker);
 notificationWorker.on('error',()=>{console.error('Notification worker could not start.');stop('SIGTERM',1);});
 notificationWorker.on('exit',code=>{if(!stopping){console.error('Notification worker exited.');stop('SIGTERM',code||1);}});
+
+const whatsappWorker=spawn(process.execPath,['scripts/whatsapp-worker.mjs'],{stdio:'inherit',env:process.env});children.push(whatsappWorker);
+whatsappWorker.on('error',()=>{console.error('WhatsApp automation worker could not start.');stop('SIGTERM',1);});
+whatsappWorker.on('exit',code=>{if(!stopping){console.error('WhatsApp automation worker exited.');stop('SIGTERM',code||1);}});

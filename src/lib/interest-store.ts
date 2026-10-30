@@ -508,6 +508,15 @@ async function createInterestLeadFromCommand(command: CreateInterestLeadCommand)
       await transaction`INSERT INTO lead_status_history (
         lead_id, old_status, new_status, note, actor, event_type, details
       ) VALUES (${rows[0].id}, NULL, ${status}, ${command.actor ? 'Data dibuat manual oleh admin; persetujuan dikonfirmasi admin' : 'Lead dibuat dari formulir publik'}, ${command.actor ? compact(command.actor, 160) : 'system'}, 'created', ${transaction.json({ leadType: interest.leadType, productKey: interest.productKey })})`;
+      // Attach a conversation that started before the public form was submitted.
+      const [whatsappSchema] = await transaction`SELECT to_regclass('public.whatsapp_conversations') AS table_name`;
+      if (whatsappSchema?.table_name) {
+        const digits = interest.phone.replace(/[^0-9]/g, '');
+        const normalized = digits.startsWith('00') ? digits.slice(2) : digits.startsWith('0') ? `62${digits.slice(1)}` : digits.startsWith('8') ? `62${digits}` : digits;
+        const variants = [normalized, normalized.slice(2), `0${normalized.slice(2)}`];
+        await transaction`UPDATE whatsapp_conversations c SET lead_id=${rows[0].id},assigned_promoter_code=${match?.assignedPromoterCode ?? ''},updated_at=now()
+          WHERE regexp_replace(c.phone_e164,'[^0-9]','','g')=ANY(${variants}::text[]) AND c.lead_id IS NULL`;
+      }
     }
     return mapLead(rows[0] as Record<string, unknown>);
   });

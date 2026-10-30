@@ -1,5 +1,5 @@
 import { getIntegrationConfig } from './integration-settings.ts';
-export type StarSenderResult = { success: boolean; status: number; message: string; response: unknown };
+export type StarSenderResult = { success: boolean; status: number; message: string; response: unknown; messageId: string };
 export async function starsenderStatus() {
   const config = (await getIntegrationConfig()).starsender;
   return { configured: Boolean(config.apiKey), endpoint: config.apiUrl };
@@ -28,5 +28,7 @@ export async function sendStarSenderText(to: string, body: string): Promise<Star
   try { data = JSON.parse(raw) as unknown; } catch { data = { message: raw.slice(0, 300) }; }
   const result = data && typeof data === 'object' ? data as Record<string, unknown> : {};
   const success = response.ok && result.success === true;
-  return { success, status: response.status, message: typeof result.message === 'string' ? result.message : success ? 'Pesan diterima StarSender.' : `StarSender gagal (HTTP ${response.status}).`, response: data };
+  const responseData = result.data && typeof result.data === 'object' ? result.data as Record<string, unknown> : {};
+  const messageId = String(responseData.message_id ?? responseData.messageId ?? result.message_id ?? result.id ?? '').trim();
+  return { success, status: response.status, message: typeof result.message === 'string' ? result.message : success ? 'Pesan diterima StarSender.' : `StarSender gagal (HTTP ${response.status}).`, response: data, messageId };
 }

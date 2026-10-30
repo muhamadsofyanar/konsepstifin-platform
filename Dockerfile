@@ -9,6 +9,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Fail during build, not after rollout, if Node cannot resolve the voucher worker runtime imports.
 RUN node -e "import('./src/lib/voucher-service.ts').then(() => console.log('Voucher worker runtime imports OK'))"
+RUN node -e "Promise.all([import('./src/lib/starsender-client.ts'), import('./src/lib/integration-settings.ts')]).then(() => console.log('WhatsApp worker runtime imports OK'))"
 RUN npm run build
 
 FROM node:24-alpine AS runner
@@ -24,7 +25,7 @@ COPY --from=builder /app/src/lib/identity ./src/lib/identity
 COPY --from=builder /app/src/lib/network-domain.ts /app/src/lib/network-service.ts ./src/lib/
 COPY --from=builder /app/src/lib/voucher-domain.ts /app/src/lib/voucher-api.ts /app/src/lib/voucher-service.ts ./src/lib/
 COPY --from=deps /app/node_modules/postgres ./node_modules/postgres
-COPY --from=builder /app/src/lib/learning-service.ts /app/src/lib/slug.ts /app/src/lib/portal-ui.ts /app/src/lib/starsender-client.ts /app/src/lib/integration-settings.ts ./src/lib/
+COPY --from=builder /app/src/lib/learning-service.ts /app/src/lib/slug.ts /app/src/lib/portal-ui.ts /app/src/lib/starsender-client.ts /app/src/lib/integration-settings.ts /app/src/lib/whatsapp-store.ts ./src/lib/
 RUN mkdir -p /app/storage/learning /app/storage/stifin-sources && chown -R node:node /app
 USER node
 EXPOSE 3000

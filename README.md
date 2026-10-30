@@ -35,3 +35,8 @@ Rilis peningkatan pengalaman pengunjung dengan fokus pada kebutuhan pengguna, in
 - Validasi JSON package dan lockfile: wajib lulus.
 - Test interaksi pemilih jalur pengunjung: ditambahkan.
 - Build produksi Next.js dan test suite penuh: harus diverifikasi melalui build Coolify jika dependensi lokal tidak tersedia.
+
+
+## WhatsApp Command Center 0.10.21
+
+Rilis 0.10.21 menambahkan Inbox percakapan dua arah StarSender Premium, balasan admin/promotor dengan pembatasan akses lead, chatbot internal berbasis OpenAI dan pustaka STIFIn, template balasan cepat, ringkasan Inbox, serta drip campaign yang memeriksa persetujuan promosi, STOP/MULAI, dan jendela percakapan 24 jam. Lihat `UPGRADE-KONSEPSTIFIN-0.10.21.md` untuk prasyarat, migrasi 015, dan prosedur verifikasi.
