@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     if (!/^[0-9a-f-]{36}$/i.test(conversationId)) throw new Error('ID percakapan tidak valid.');
     if (input.action === 'send') {
       if (typeof input.message !== 'string') throw new Error('Isi pesan tidak valid.');
-      return json(await queueWhatsappReply(principal, conversationId, input.message), 202);
+      return json(await queueWhatsappReply(principal, conversationId, input.message, typeof input.mediaUrl === 'string' ? input.mediaUrl : ''), 202);
     }
     if (input.action === 'mode' && (input.mode === 'bot' || input.mode === 'human' || input.mode === 'closed')) {
       return json({ conversation: await setWhatsappConversationMode(principal, conversationId, input.mode) });

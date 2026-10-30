@@ -1,4 +1,5 @@
 'use client';
+import { AttachmentInput, ContentPicker } from '@/components/whatsapp/content-tools';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 
 type WaGroup = { group_jid: string; group_name: string; device_name: string; allow_broadcast: boolean; last_synced_at: string | null };
@@ -27,6 +28,8 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
   const [broadcastPresetId, setBroadcastPresetId] = useState('');
   const [broadcastGroups, setBroadcastGroups] = useState<string[]>([]);
   const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [mediaUrl,setMediaUrl] = useState('');
+  const [uploading,setUploading] = useState(false);
   const [sendMode, setSendMode] = useState<'now' | 'scheduled'>('scheduled');
   const [scheduleLocal, setScheduleLocal] = useState(() => jakartaInput(new Date(Date.now() + 10 * 60 * 1000)));
   const [confirmPermission, setConfirmPermission] = useState(false);
@@ -75,7 +78,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
   }
 
   function toggleSelection(current: string[], value: string, checked: boolean) {
-    return checked ? [...new Set([...current, value])] : current.filter(item => item !== value);
+    return checked ? [...new Set([...current, value])].slice(0,100) : current.filter(item => item !== value);
   }
 
   async function renameGroup(group: WaGroup) {
@@ -106,8 +109,8 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
     event.preventDefault();
     if (!effectiveBroadcastGroups.length) { setError('Pilih preset atau minimal satu grup yang diizinkan.'); return; }
     const scheduledAt = sendMode === 'now' ? new Date().toISOString() : new Date(`${scheduleLocal}:00+07:00`).toISOString();
-    const result = await runAction('broadcast', { action: 'createBroadcast', name: broadcastName, presetId: broadcastPresetId || undefined, groupJids: broadcastGroups, message: broadcastMessage, scheduledAt, confirmGroupPermission: confirmPermission });
-    if (result) { setBroadcastName(''); setBroadcastPresetId(''); setBroadcastGroups([]); setBroadcastMessage(''); setConfirmPermission(false); setSendMode('scheduled'); setScheduleLocal(jakartaInput(new Date(Date.now() + 10 * 60 * 1000))); }
+    const result = await runAction('broadcast', { action: 'createBroadcast', name: broadcastName, presetId: broadcastPresetId || undefined, groupJids: broadcastGroups, message: broadcastMessage, mediaUrl, scheduledAt, confirmGroupPermission: confirmPermission });
+    if (result) { setBroadcastName(''); setBroadcastPresetId(''); setBroadcastGroups([]); setBroadcastMessage(''); setMediaUrl(''); setConfirmPermission(false); setSendMode('scheduled'); setScheduleLocal(jakartaInput(new Date(Date.now() + 10 * 60 * 1000))); }
   }
 
   async function broadcastAction(id: string, statusAction: 'pause' | 'resume' | 'cancel') {
@@ -129,6 +132,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
     <section className="portal-card wa-group-list-card">
       <div className="wa-section-heading"><div><span className="portal-eyebrow">GROUP ALLOWLIST</span><h2>Daftar grup yang terhubung</h2></div><span className="wa-mode bot">{allowedGroups.length} diizinkan</span></div>
       <input className="wa-search" value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Cari nama grup atau ID grup…" aria-label="Cari grup WhatsApp" />
+      <div className="wa-bulk-tools"><button type="button" disabled={Boolean(busy)||!visibleGroups.length} onClick={()=>void runAction('bulk-allow',{action:'bulkAllow',groupJids:visibleGroups.map(g=>g.group_jid),allowed:true})}>Izinkan semua grup yang ditampilkan</button><button type="button" disabled={Boolean(busy)||!visibleGroups.length} onClick={()=>void runAction('bulk-block',{action:'bulkAllow',groupJids:visibleGroups.map(g=>g.group_jid),allowed:false})}>Blokir semua grup yang ditampilkan</button><small>Izin mengikuti hasil pencarian, maksimal 500 grup. Izin ini tidak langsung mengirim pesan.</small></div>
       <div className="wa-group-table-wrap"><table className="wa-group-table"><thead><tr><th>Nama grup</th><th>ID grup</th><th>Perangkat</th><th>Izin broadcast</th></tr></thead><tbody>
         {visibleGroups.map(group => <tr key={group.group_jid}><td><strong>{group.group_name || 'Grup tanpa nama'}</strong><small>Sinkron {jakartaDateTime(group.last_synced_at)}</small><button type="button" disabled={Boolean(busy)} onClick={() => void renameGroup(group)}>Atur nama</button></td><td><code>{group.group_jid}</code></td><td>{group.device_name || 'Device utama'}</td><td><label className="wa-allow-toggle"><input type="checkbox" checked={group.allow_broadcast} disabled={busy === `allow-${group.group_jid}`} onChange={e => void runAction(`allow-${group.group_jid}`, { action: 'allow', groupJid: group.group_jid, allowed: e.target.checked })}/><span>{group.allow_broadcast ? 'Diizinkan' : 'Diblokir'}</span></label></td></tr>)}
         {!visibleGroups.length && <tr><td colSpan={4}>{dashboard.groups.length ? 'Tidak ada grup yang cocok dengan pencarian.' : 'Belum ada daftar grup. Klik Sinkronkan grup dari StarSender.'}</td></tr>}
@@ -143,7 +147,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
           <label>Nama preset<input required maxLength={120} value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="Contoh: Promotor Jawa Barat"/></label>
           <label>Catatan internal<input maxLength={500} value={presetDescription} onChange={e => setPresetDescription(e.target.value)} placeholder="Tujuan dan segmentasi grup"/></label>
           <label>Pesan default<textarea rows={4} maxLength={4000} required value={presetMessage} onChange={e => setPresetMessage(e.target.value)} placeholder="Tulis pesan yang biasa dikirim ke grup…"/></label>
-          <div className="wa-group-picker"><div className="wa-section-heading"><strong>Pilih grup preset</strong><span>{presetGroups.length} dipilih</span></div>{allowedGroups.map(group => <label className="wa-pick-contact" key={group.group_jid}><input type="checkbox" checked={presetGroups.includes(group.group_jid)} onChange={e => setPresetGroups(current => toggleSelection(current, group.group_jid, e.target.checked))}/><span><strong>{group.group_name}</strong><small>{group.group_jid}</small></span></label>)}{!allowedGroups.length && <small className="wa-muted">Belum ada grup yang diizinkan broadcast. Aktifkan izin pada daftar grup terlebih dahulu.</small>}</div>
+          <div className="wa-group-picker"><div className="wa-section-heading"><strong>Pilih grup preset</strong><span>{presetGroups.length} dipilih</span></div><div className="wa-bulk-tools"><button type="button" onClick={()=>setPresetGroups(allowedGroups.slice(0,100).map(g=>g.group_jid))}>Pilih semua grup preset (maks. 100)</button><button type="button" onClick={()=>setPresetGroups([])}>Kosongkan pilihan preset</button></div>{allowedGroups.map(group => <label className="wa-pick-contact" key={group.group_jid}><input type="checkbox" checked={presetGroups.includes(group.group_jid)} onChange={e => setPresetGroups(current => toggleSelection(current, group.group_jid, e.target.checked))}/><span><strong>{group.group_name}</strong><small>{group.group_jid}</small></span></label>)}{!allowedGroups.length && <small className="wa-muted">Belum ada grup yang diizinkan broadcast. Aktifkan izin pada daftar grup terlebih dahulu.</small>}</div>
           <div className="wa-template-actions"><button className="portal-primary" disabled={busy === 'preset'}>{busy === 'preset' ? 'Menyimpan…' : presetId ? 'Simpan perubahan preset' : 'Simpan preset grup'}</button>{presetId && <button type="button" onClick={() => { setPresetId(''); setPresetName(''); setPresetDescription(''); setPresetMessage(''); setPresetGroups([]); }}>Batal edit</button>}</div>
         </form>
         <div className="wa-template-list">{dashboard.presets.map(preset => <div key={preset.id}><span><strong>{preset.name}</strong><small>{preset.group_count} grup · {preset.active ? 'Aktif' : 'Nonaktif'}</small></span><span><button type="button" onClick={() => editPreset(preset)}>Edit</button><button type="button" onClick={() => editPreset(preset, true)}>Duplikat</button><button type="button" disabled={busy === `preset-${preset.id}`} onClick={() => void runAction(`preset-${preset.id}`, { action: 'togglePreset', id: preset.id, active: !preset.active })}>{preset.active ? 'Nonaktifkan' : 'Aktifkan'}</button></span></div>)}{!dashboard.presets.length && <small className="wa-muted">Belum ada preset grup.</small>}</div>
@@ -155,15 +159,17 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
         <form className="portal-form" onSubmit={createBroadcast}>
           <label>Nama broadcast<input required maxLength={120} value={broadcastName} onChange={e => setBroadcastName(e.target.value)} placeholder="Contoh: Informasi jadwal tes November"/></label>
           <label>Gunakan preset grup<select value={broadcastPresetId} onChange={e => { const id = e.target.value; setBroadcastPresetId(id); const preset = dashboard.presets.find(item => item.id === id); if (preset) { setBroadcastGroups(preset.group_jids || []); setBroadcastMessage(preset.message); } }}><option value="">Pilih grup secara manual</option>{dashboard.presets.filter(preset => preset.active).map(preset => <option key={preset.id} value={preset.id}>{preset.name} · {preset.group_count} grup</option>)}</select></label>
-          {!broadcastPresetId && <div className="wa-group-picker"><div className="wa-section-heading"><strong>Target grup</strong><span>{broadcastGroups.length} dipilih</span></div>{allowedGroups.map(group => <label className="wa-pick-contact" key={group.group_jid}><input type="checkbox" checked={broadcastGroups.includes(group.group_jid)} onChange={e => setBroadcastGroups(current => toggleSelection(current, group.group_jid, e.target.checked))}/><span><strong>{group.group_name}</strong><small>{group.group_jid}</small></span></label>)}{!allowedGroups.length && <small className="wa-muted">Aktifkan izin broadcast minimal satu grup.</small>}</div>}
+          {!broadcastPresetId && <div className="wa-group-picker"><div className="wa-section-heading"><strong>Target grup</strong><span>{broadcastGroups.length} dipilih</span></div><div className="wa-bulk-tools"><button type="button" onClick={()=>setBroadcastGroups(allowedGroups.slice(0,100).map(g=>g.group_jid))}>Pilih semua grup broadcast (maks. 100)</button><button type="button" onClick={()=>setBroadcastGroups([])}>Kosongkan pilihan broadcast</button></div>{allowedGroups.map(group => <label className="wa-pick-contact" key={group.group_jid}><input type="checkbox" checked={broadcastGroups.includes(group.group_jid)} onChange={e => setBroadcastGroups(current => toggleSelection(current, group.group_jid, e.target.checked))}/><span><strong>{group.group_name}</strong><small>{group.group_jid}</small></span></label>)}{!allowedGroups.length && <small className="wa-muted">Aktifkan izin broadcast minimal satu grup.</small>}</div>}
           {selectedPreset && <p className="wa-inline-note">Preset <b>{selectedPreset.name}</b> dipilih. Target otomatis mengikuti {selectedPreset.group_count} grup di preset tersebut.</p>}
           {blockedPresetGroups.length > 0 && <p className="wa-warning">{blockedPresetGroups.length} grup pada preset sedang diblokir. Aktifkan kembali izin broadcast grup tersebut atau edit preset sebelum menjadwalkan.</p>}
-          <label>Isi pesan<textarea required maxLength={4000} rows={6} value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} placeholder="Tulis pesan broadcast. Pesan akan dikirim ke setiap grup yang dipilih."/></label>
+          <ContentPicker onSelect={t=>{setBroadcastMessage(t.body);setMediaUrl(t.media_url || '');}}/>
+          <AttachmentInput value={mediaUrl} onChange={setMediaUrl} onBusyChange={setUploading}/>
+          <label>Isi pesan<textarea required={!mediaUrl} maxLength={4000} rows={6} value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} placeholder="Tulis pesan broadcast. Pesan akan dikirim ke setiap grup yang dipilih."/></label>
           <div className="wa-schedule-mode"><label><input type="radio" name="send-mode" checked={sendMode === 'now'} onChange={() => setSendMode('now')}/> Kirim secepatnya</label><label><input type="radio" name="send-mode" checked={sendMode === 'scheduled'} onChange={() => setSendMode('scheduled')}/> Jadwalkan tanggal dan jam</label></div>
           {sendMode === 'scheduled' && <label>Waktu pengiriman (WIB)<input type="datetime-local" required value={scheduleLocal} onChange={e => setScheduleLocal(e.target.value)}/></label>}
           <div className="wa-schedule-preview"><small>WAKTU PENGIRIMAN</small><strong>{scheduledPreview}</strong><small>{effectiveBroadcastGroups.length} grup tujuan · zona waktu Asia/Jakarta</small></div>
           <label className="wa-toggle-label"><input type="checkbox" checked={confirmPermission} onChange={e => setConfirmPermission(e.target.checked)}/> Saya memastikan grup tujuan memang dikelola atau telah memberi izin menerima informasi ini.</label>
-          <button className="portal-primary" disabled={busy === 'broadcast' || effectiveBroadcastGroups.length === 0 || blockedPresetGroups.length > 0 || !confirmPermission}>{busy === 'broadcast' ? 'Menyimpan jadwal…' : sendMode === 'now' ? 'Masukkan ke antrean kirim' : 'Jadwalkan broadcast'}</button>
+          <button className="portal-primary" disabled={uploading || busy === 'broadcast' || effectiveBroadcastGroups.length === 0 || blockedPresetGroups.length > 0 || !confirmPermission}>{busy === 'broadcast' ? 'Menyimpan jadwal…' : sendMode === 'now' ? 'Masukkan ke antrean kirim' : 'Jadwalkan broadcast'}</button>
           <small className="wa-muted">Broadcast grup tidak memakai jendela 24 jam personal. Gunakan hanya pada grup yang relevan dan memang mengizinkan informasi dari KonsepSTIFIn. Pengiriman dibatasi maksimal 100 grup per campaign.</small>
         </form>
       </section>

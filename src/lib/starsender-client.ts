@@ -1,3 +1,4 @@
+import { whatsappMediaUrl } from './whatsapp-media.ts';
 import { getIntegrationConfig } from './integration-settings.ts';
 export type StarSenderResult = { success: boolean; status: number; message: string; response: unknown; messageId: string };
 export async function starsenderStatus() {
@@ -12,15 +13,16 @@ export function normalizeWhatsAppNumber(value: string): string {
   if (number.length < 9 || number.length > 15) throw new Error('Nomor WhatsApp tidak valid. Gunakan nomor dengan kode negara.');
   return number;
 }
-export async function sendStarSenderText(to: string, body: string): Promise<StarSenderResult> {
+export async function sendStarSenderText(to: string, body: string, attachment = ''): Promise<StarSenderResult> {
   const config = (await getIntegrationConfig()).starsender;
   if (!config.apiKey) throw new Error('API key StarSender belum dikonfigurasi. Buka Admin → Pengaturan → Integrasi eksternal.');
+  const mediaUrl = whatsappMediaUrl(attachment);
   const message = body.trim();
-  if (!message || message.length > 4000) throw new Error('Pesan WhatsApp wajib diisi dan maksimal 4.000 karakter.');
+  if ((!message && !mediaUrl) || message.length > 4000) throw new Error('Pesan WhatsApp wajib diisi dan maksimal 4.000 karakter.');
   const response = await fetch(config.apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: config.apiKey, Accept: 'application/json' },
-    body: JSON.stringify({ messageType: 'text', to: normalizeWhatsAppNumber(to), body: message, delay: 0 }),
+    body: JSON.stringify({ messageType: mediaUrl ? 'media' : 'text', to: normalizeWhatsAppNumber(to), body: message, ...(mediaUrl ? { file: mediaUrl } : {}), delay: 0 }),
     signal: AbortSignal.timeout(15000), cache: 'no-store',
   });
   let data: unknown;
@@ -89,17 +91,18 @@ export async function listStarSenderGroups(): Promise<StarSenderGroup[]> {
   return groups;
 }
 
-export async function sendStarSenderGroupText(to: string, body: string): Promise<StarSenderResult> {
+export async function sendStarSenderGroupText(to: string, body: string, attachment = ''): Promise<StarSenderResult> {
   const config = (await getIntegrationConfig()).starsender;
   if (!config.apiKey) throw new Error('Device API key StarSender belum dikonfigurasi.');
   const target = String(to ?? '').trim();
+  const mediaUrl = whatsappMediaUrl(attachment);
   const message = String(body ?? '').trim();
   if (!target || target.length > 255) throw new Error('ID grup WhatsApp tidak valid.');
-  if (!message || message.length > 4000) throw new Error('Pesan grup wajib diisi dan maksimal 4.000 karakter.');
+  if ((!message && !mediaUrl) || message.length > 4000) throw new Error('Pesan grup wajib diisi dan maksimal 4.000 karakter.');
   const response = await fetch(starsenderApiUrl('/api/send/grup', config.apiUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: config.apiKey, Accept: 'application/json' },
-    body: JSON.stringify({ messageType: 'text', to: target, body: message, delay: 0 }),
+    body: JSON.stringify({ messageType: mediaUrl ? 'media' : 'text', to: target, body: message, ...(mediaUrl ? { file: mediaUrl } : {}), delay: 0 }),
     signal: AbortSignal.timeout(20000),
     cache: 'no-store',
   });

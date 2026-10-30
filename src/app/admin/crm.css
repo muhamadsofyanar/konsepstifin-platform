@@ -201,3 +201,15 @@
 .wa-group-messages article>a{font-size:11px;color:#087453}
 @media(max-width:900px){.wa-group-two-col{grid-template-columns:1fr}}
 @media(max-width:760px){.wa-group-intro .wa-section-heading{align-items:flex-start;flex-direction:column}.wa-group-intro .wa-section-heading .portal-primary{width:100%}.wa-group-status-row{display:grid}.wa-group-webhook-note code{font-size:9px}.wa-group-table{min-width:650px}.wa-group-two-col{grid-template-columns:1fr}.wa-group-preset-card .wa-template-list>div>span:last-child{justify-content:flex-start}}
+
+/* WhatsApp content tools and bulk actions */
+.wa-bulk-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}
+.wa-bulk-tools small{flex-basis:100%;color:var(--muted,#617578)}
+.wa-bulk-tools button,.wa-attachment button{border:1px solid #cfdfd8;border-radius:8px;padding:8px 12px;background:#f6faf7;color:#075d4a;cursor:pointer}
+.wa-attachment{margin:10px 0;border:1px solid #d8e7df;border-radius:10px;padding:10px}
+.wa-attachment summary{cursor:pointer;font-weight:600;color:#075d4a}
+.wa-attachment fieldset{border:0;padding:8px 0;display:grid;gap:8px;min-width:0}
+.wa-attachment label{display:grid;gap:5px;font-size:13px}
+.wa-attachment input{width:100%;min-width:0;border:1px solid #cfdfd8;border-radius:8px;padding:8px}
+.wa-attachment small{font-size:12px;line-height:1.5;color:#617578}
+.wa-composer .wa-attachment{max-height:230px;overflow:auto}

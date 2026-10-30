@@ -9,3 +9,6 @@ tests
 **/*.spec.*
 vitest.config.*
 vitest.setup.*
+
+# Folder cadangan lokal tidak termasuk sumber aplikasi.
+src - Salin/

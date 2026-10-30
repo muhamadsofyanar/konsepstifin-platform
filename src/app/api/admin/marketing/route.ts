@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       if (!Array.isArray(input.leadIds) || input.leadIds.length > 100 || input.leadIds.some(id => typeof id !== 'number')) throw new Error('Daftar kontak tidak valid.');
       if (input.scheduledAt !== undefined && typeof input.scheduledAt !== 'string') throw new Error('Jadwal kirim harus berupa tanggal dan waktu.');
       if (input.sendMode !== undefined && typeof input.sendMode !== 'string') throw new Error('Mode pengiriman tidak valid.');
-      const result = await createMarketingCampaign({ title: String(input.title ?? ''), message: String(input.message ?? ''), leadIds: input.leadIds as number[], actor: actor.userId, scheduledAt: typeof input.scheduledAt === 'string' ? input.scheduledAt : undefined, sendMode: typeof input.sendMode === 'string' ? input.sendMode : undefined });
+      const result = await createMarketingCampaign({ title: String(input.title ?? ''), message: String(input.message ?? ''), leadIds: input.leadIds as number[], actor: actor.userId, scheduledAt: typeof input.scheduledAt === 'string' ? input.scheduledAt : undefined, sendMode: typeof input.sendMode === 'string' ? input.sendMode : undefined, mediaUrl: typeof input.mediaUrl === 'string' ? input.mediaUrl : undefined });
       return json({ ...result, message: `${result.queued} pesan dijadwalkan pada ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(result.scheduledAt))} WIB.` }, 201);
     }
     throw new Error('Tindakan marketing tidak dikenal.');

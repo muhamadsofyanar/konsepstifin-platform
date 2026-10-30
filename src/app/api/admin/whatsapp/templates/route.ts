@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     if (!admin(principal)) return json({ message: 'Hanya admin yang dapat mengelola template.' }, 403);
     const input = await request.json() as Record<string, unknown>;
     if (input.action === 'toggle') return json({ template: await toggleWhatsappTemplate(principal!, Number(input.id), input.active === true) });
-    const template = await saveWhatsappTemplate(principal!, { id: input.id ? Number(input.id) : undefined, title: String(input.title ?? ''), category: String(input.category ?? 'umum'), body: String(input.body ?? ''), active: input.active !== false });
+    const template = await saveWhatsappTemplate(principal!, { id: input.id ? Number(input.id) : undefined, title: String(input.title ?? ''), category: String(input.category ?? 'umum'), body: String(input.body ?? ''), active: input.active !== false, mediaUrl: typeof input.mediaUrl === 'string' ? input.mediaUrl : undefined });
     return json({ template, message: 'Template berhasil disimpan.' });
   } catch (error) { return json({ message: error instanceof Error ? error.message : 'Template gagal disimpan.' }, 400); }
 }

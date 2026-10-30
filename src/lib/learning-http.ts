@@ -6,4 +6,12 @@ export async function learningGuard(request: Request, write = false, admin = fal
     return { response: learningJson({ message: 'Silakan masuk.' }, 401) }; if (write && !isSameOriginMutation(request))
     return { response: learningJson({ message: 'Origin permintaan tidak valid.' }, 403) }; if (admin && !p.roles.some(r => ['admin', 'super_admin'].includes(r)))
     return { response: learningJson({ message: 'Akses admin diperlukan.' }, 403) }; return { principal: p }; }
-export function learningFailure(e: unknown) { return e instanceof LearningError || e instanceof SyntaxError ? learningJson({ message: e instanceof SyntaxError ? 'JSON tidak valid.' : e.message }, 400) : learningJson({ message: 'Layanan belum dapat diakses. Silakan coba kembali atau hubungi pengelola.' }, 503); }
+export function learningFailure(e: unknown) {
+    if (e instanceof SyntaxError) {
+        return learningJson({ message: 'JSON tidak valid.' }, 400);
+    }
+    if (e instanceof LearningError) {
+        return learningJson({ message: e.message }, 400);
+    }
+    return learningJson({ message: 'Layanan belum dapat diakses. Silakan coba kembali atau hubungi pengelola.' }, 503);
+}

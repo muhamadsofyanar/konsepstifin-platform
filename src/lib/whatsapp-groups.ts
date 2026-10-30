@@ -1,3 +1,4 @@
+import { whatsappMediaUrl } from './whatsapp-media.ts';
 import { randomUUID } from 'node:crypto';
 import { getDatabaseClient } from '@/lib/article-store';
 import { type Principal } from '@/lib/identity/access-policy';
@@ -9,7 +10,7 @@ function requireAdmin(principal: Principal) {
 }
 
 function uniqueStrings(values: unknown[]) {
-  return [...new Set(values.map(value => String(value ?? '').trim()).filter(Boolean))].slice(0, 100);
+  return [...new Set(values.map(value => String(value ?? '').trim()).filter(Boolean))];
 }
 
 export async function syncWhatsappGroups(principal: Principal) {
@@ -82,7 +83,7 @@ export async function saveWhatsappGroupPreset(principal: Principal, input: { id?
   const groupJids = uniqueStrings(input.groupJids);
   if (!name) throw new Error('Nama preset wajib diisi.');
   if (!message) throw new Error('Isi pesan preset wajib diisi.');
-  if (!groupJids.length) throw new Error('Pilih minimal satu grup yang sudah diizinkan menerima broadcast.');
+  if (!groupJids.length || groupJids.length > 100) throw new Error('Pilih 1 sampai 100 grup yang diizinkan menerima broadcast.');
   const sql = getDatabaseClient();
   const allowed = await sql`SELECT group_jid FROM whatsapp_groups WHERE group_jid=ANY(${groupJids}::text[]) AND allow_broadcast=TRUE`;
   if (allowed.length !== groupJids.length) throw new Error('Preset hanya boleh memuat grup yang berstatus Diizinkan broadcast.');
@@ -109,12 +110,14 @@ export async function toggleWhatsappGroupPreset(principal: Principal, id: string
   return row;
 }
 
-export async function createWhatsappGroupBroadcast(principal: Principal, input: { name: string; message: string; presetId?: string; groupJids: string[]; scheduledAt: string; confirmGroupPermission: boolean }) {
+export async function createWhatsappGroupBroadcast(principal: Principal, input: { name: string; message: string; presetId?: string; groupJids: string[]; scheduledAt: string; mediaUrl?: string; confirmGroupPermission: boolean }) {
   requireAdmin(principal);
   if (!input.confirmGroupPermission) throw new Error('Konfirmasi bahwa grup yang dipilih memang boleh menerima pesan ini wajib diberikan.');
   const name = input.name.trim().slice(0, 120);
   const message = input.message.trim().slice(0, 4000);
-  if (!name || !message) throw new Error('Nama broadcast dan isi pesan wajib diisi.');
+  const mediaUrl = whatsappMediaUrl(input.mediaUrl);
+  if (/\{\{\s*(kota|referensi)\s*\}\}/i.test(message)) throw new Error('Konten grup mendukung {{nama}} untuk nama grup. Ganti variabel kota atau referensi dengan teks sebelum mengirim.');
+  if (!name || (!message && !mediaUrl)) throw new Error('Nama broadcast dan isi atau lampiran wajib diisi.');
   const scheduledAt = new Date(input.scheduledAt);
   if (Number.isNaN(scheduledAt.getTime())) throw new Error('Tanggal dan waktu pengiriman tidak valid.');
   if (scheduledAt.getTime() < Date.now() - 60_000) throw new Error('Waktu pengiriman tidak boleh berada di masa lalu.');
@@ -129,8 +132,8 @@ export async function createWhatsappGroupBroadcast(principal: Principal, input: 
   if (allowed.length !== groupJids.length) throw new Error('Ada grup yang belum diizinkan broadcast. Perbarui preset atau izin grup terlebih dahulu.');
   const id = randomUUID();
   await sql.begin(async tx => {
-    await tx`INSERT INTO whatsapp_group_broadcasts(id,preset_id,name,message,timezone,scheduled_at,status,created_by)
-      VALUES (${id}::uuid,${input.presetId || null}::uuid,${name},${message},'Asia/Jakarta',${scheduledAt.toISOString()}::timestamptz,'scheduled',${principal.userId}::uuid)`;
+    await tx`INSERT INTO whatsapp_group_broadcasts(id,preset_id,name,message,media_url,timezone,scheduled_at,status,created_by)
+      VALUES (${id}::uuid,${input.presetId || null}::uuid,${name},${message},${mediaUrl},'Asia/Jakarta',${scheduledAt.toISOString()}::timestamptz,'scheduled',${principal.userId}::uuid)`;
     for (const groupJid of groupJids) await tx`INSERT INTO whatsapp_group_broadcast_jobs(broadcast_id,group_jid,status,scheduled_at)
       VALUES (${id}::uuid,${groupJid},'pending',${scheduledAt.toISOString()}::timestamptz)`;
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details)
@@ -174,5 +177,17 @@ export async function renameWhatsappGroup(principal: Principal, groupJid: string
     if (!group) throw new Error('Grup tidak ditemukan.');
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details) VALUES (${principal.userId}::uuid,'whatsapp.group.renamed',${groupJid},${JSON.stringify({name: trimmed})}::jsonb)`;
     return group;
+  });
+}
+
+export async function bulkWhatsappGroupPermission(principal: Principal, rawIds: string[], allowed: boolean) {
+  requireAdmin(principal);
+  const ids = [...new Set(rawIds)];
+  if (!ids.length || ids.length > 500 || ids.some(id => !id.endsWith('@g.us'))) throw new Error('Pilih 1 sampai 500 grup.');
+  const sql = getDatabaseClient();
+  return sql.begin(async tx => {
+    const rows = await tx`UPDATE whatsapp_groups SET allow_broadcast=${allowed},updated_at=now() WHERE group_jid=ANY(${ids}::text[]) RETURNING group_jid`;
+    await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details) VALUES (${principal.userId}::uuid,'whatsapp.groups.bulk_permission','groups',${JSON.stringify({allowed,groupJids:rows.map(row=>row.group_jid)})}::jsonb)`;
+    return { updated: rows.length };
   });
 }

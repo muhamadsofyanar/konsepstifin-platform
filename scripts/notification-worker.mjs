@@ -62,7 +62,7 @@ async function tick() {
             }
           }
           if (!blocked) {
-            const result = await sendStarSenderText(String(job.recipient_phone), String(job.message));
+            const result = await sendStarSenderText(String(job.recipient_phone), String(job.message), String(job.media_url || ''));
             if (result.success) {
               await sql`UPDATE notification_outbox SET status='sent',provider_response=${JSON.stringify(result.response)}::jsonb,last_error='',sent_at=now(),updated_at=now() WHERE id=${job.id}`;
               if (job.conversation_id) {

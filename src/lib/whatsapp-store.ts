@@ -1,3 +1,4 @@
+import { whatsappMediaUrl } from './whatsapp-media.ts';
 import { randomUUID } from 'node:crypto';
 import { getDatabaseClient } from '@/lib/article-store';
 import { accessScope, type Principal } from '@/lib/identity/access-policy';
@@ -51,10 +52,11 @@ export async function getWhatsappConversation(principal: Principal, conversation
   return { conversation: { ...conversation, unread_count: 0 }, messages: messages.reverse() };
 }
 
-export async function queueWhatsappReply(principal: Principal, conversationId: string, rawMessage: string) {
+export async function queueWhatsappReply(principal: Principal, conversationId: string, rawMessage: string, attachment = '') {
   const scope = assertScope(principal);
   const message = rawMessage.trim();
-  if (!message || message.length > 4000) throw new Error('Pesan wajib diisi dan maksimal 4.000 karakter.');
+  const mediaUrl = whatsappMediaUrl(attachment);
+  if ((!message && !mediaUrl) || message.length > 4000) throw new Error('Pesan wajib diisi dan maksimal 4.000 karakter.');
   const sql = getDatabaseClient();
   const promoterCode = scope.kind === 'assigned' ? scope.promoterCode : '';
   return await sql.begin(async tx => {
@@ -73,11 +75,11 @@ export async function queueWhatsappReply(principal: Principal, conversationId: s
     }
     const dedupe = `whatsapp-agent:${conversationId}:${randomUUID()}`;
     const [job] = await tx`
-      INSERT INTO notification_outbox(event_type,lead_id,conversation_id,recipient_phone,recipient_name,message,dedupe_key,created_by,sender_type,sender_user_id)
-      VALUES ('whatsapp_agent_reply',${conversation.lead_id},${conversationId}::uuid,${conversation.phone_e164},'',${message},${dedupe},${principal.userId},'agent',${principal.userId}::uuid)
+      INSERT INTO notification_outbox(event_type,lead_id,conversation_id,recipient_phone,recipient_name,message,dedupe_key,created_by,sender_type,sender_user_id,media_url)
+      VALUES ('whatsapp_agent_reply',${conversation.lead_id},${conversationId}::uuid,${conversation.phone_e164},'',${message},${dedupe},${principal.userId},'agent',${principal.userId}::uuid,${mediaUrl})
       RETURNING id,status`;
-    await tx`INSERT INTO whatsapp_messages(conversation_id,outbox_id,direction,sender_type,sender_user_id,content,delivery_status)
-      VALUES (${conversationId}::uuid,${job.id},'outgoing','agent',${principal.userId}::uuid,${message},'queued') ON CONFLICT DO NOTHING`;
+    await tx`INSERT INTO whatsapp_messages(conversation_id,outbox_id,direction,sender_type,sender_user_id,content,delivery_status,media_url)
+      VALUES (${conversationId}::uuid,${job.id},'outgoing','agent',${principal.userId}::uuid,${message},'queued',${mediaUrl}) ON CONFLICT DO NOTHING`;
     await tx`UPDATE whatsapp_conversations SET bot_mode='human',status='open',unread_count=0,last_message_text=${message.slice(0,1000)},last_message_at=now(),updated_at=now() WHERE id=${conversationId}::uuid`;
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details) VALUES (${principal.userId}::uuid,'whatsapp.message.queued',${conversationId},${JSON.stringify({outboxId:Number(job.id)})}::jsonb)`;
     return { queued: true, outboxId: Number(job.id), message: 'Balasan masuk antrean pengiriman StarSender.' };
@@ -237,19 +239,20 @@ export async function getWhatsappInboxSummary(principal: Principal) {
 export async function listWhatsappTemplates(principal: Principal, includeInactive = false) {
   assertScope(principal);
   const sql = getDatabaseClient();
-  return await sql`SELECT id,title,category,body,active,updated_at FROM whatsapp_templates WHERE (${includeInactive} OR active=TRUE) ORDER BY category,title LIMIT 200`;
+  return await sql`SELECT id,title,category,body,media_url,active,updated_at FROM whatsapp_templates WHERE (${includeInactive} OR active=TRUE) ORDER BY category,title LIMIT 200`;
 }
 
-export async function saveWhatsappTemplate(principal: Principal, input: { id?: number; title: string; category?: string; body: string; active?: boolean }) {
+export async function saveWhatsappTemplate(principal: Principal, input: { id?: number; title: string; category?: string; body: string; active?: boolean; mediaUrl?: string }) {
   if (!principal.roles.includes('admin') && !principal.roles.includes('super_admin')) throw new Error('Hanya admin yang dapat mengubah template.');
   const title = input.title.trim().slice(0, 100);
   const category = String(input.category ?? 'umum').trim().slice(0, 40) || 'umum';
   const body = input.body.trim().slice(0, 4000);
-  if (!title || !body) throw new Error('Judul dan isi template wajib diisi.');
+  const mediaUrl = whatsappMediaUrl(input.mediaUrl);
+  if (!title || (!body && !mediaUrl)) throw new Error('Judul dan isi atau lampiran template wajib diisi.');
   const sql = getDatabaseClient();
   const [row] = input.id
-    ? await sql`UPDATE whatsapp_templates SET title=${title},category=${category},body=${body},active=${input.active !== false},updated_at=now() WHERE id=${input.id} RETURNING id,title,category,body,active,updated_at`
-    : await sql`INSERT INTO whatsapp_templates(title,category,body,active,created_by) VALUES (${title},${category},${body},${input.active !== false},${principal.userId}::uuid) RETURNING id,title,category,body,active,updated_at`;
+    ? await sql`UPDATE whatsapp_templates SET title=${title},category=${category},body=${body},media_url=${mediaUrl},active=${input.active !== false},updated_at=now() WHERE id=${input.id} RETURNING id,title,category,body,active,updated_at`
+    : await sql`INSERT INTO whatsapp_templates(title,category,body,media_url,active,created_by) VALUES (${title},${category},${body},${mediaUrl},${input.active !== false},${principal.userId}::uuid) RETURNING id,title,category,body,active,updated_at`;
   if (!row) throw new Error('Template tidak ditemukan.');
   await sql`INSERT INTO platform_admin_audit(actor_id,action,target,details) VALUES (${principal.userId}::uuid,'whatsapp.template.saved',${String(row.id)},${JSON.stringify({title,category,active:row.active})}::jsonb)`;
   return row;

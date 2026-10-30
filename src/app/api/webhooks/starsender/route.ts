@@ -84,7 +84,7 @@ export async function POST(request: Request) {
           WITH candidate AS (
             SELECT id FROM whatsapp_messages
             WHERE conversation_id=${conversation.id}::uuid AND direction='outgoing' AND delivery_status='queued'
-              AND content=${message.slice(0,4000)} AND created_at>now()-interval '15 minutes'
+              AND content=${textMessage.slice(0,4000)} AND created_at>now()-interval '15 minutes'
             ORDER BY created_at DESC,id DESC LIMIT 1 FOR UPDATE
           )
           UPDATE whatsapp_messages m SET provider_message_id=${messageId},delivery_status='sent',

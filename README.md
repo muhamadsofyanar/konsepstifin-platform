@@ -1,3 +1,9 @@
+# KonsepSTIFIn 0.10.24
+
+Bank konten, lampiran personal/grup, dan pilihan massal. Baca **UPGRADE-KONSEPSTIFIN-0.10.24.md**. Dari versi 0.10.23, terapkan **018-whatsapp-content-media.sql**. Rancangan lanjutan tersedia pada **RANCANGAN-CRM-INBOUND-FUNNEL-FLYWHEEL.md**.
+
+## Catatan rilis sebelumnya
+
 # KonsepSTIFIn 0.10.23
 
 Rilis ini memperbaiki jadwal pesan personal di Marketing, penerimaan pesan grup melalui Webhook Premium, dan pengelolaan nama tampilan grup. Baca **UPGRADE-KONSEPSTIFIN-0.10.23.md** terlebih dahulu. Migrasi tambahan: **017-whatsapp-personal-schedule.sql**.

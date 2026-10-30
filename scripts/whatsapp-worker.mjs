@@ -2,7 +2,7 @@
 import postgres from 'postgres';
 import { randomUUID } from 'node:crypto';
 import { getIntegrationConfig } from '../src/lib/integration-settings.ts';
-import { sendStarSenderText, sendStarSenderGroupText } from '../src/lib/starsender-client.ts';
+import { sendStarSenderGroupText } from '../src/lib/starsender-client.ts';
 
 let stopping = false;
 let timer;
@@ -219,17 +219,17 @@ async function processGroupBroadcast() {
   });
   if (!job) return;
   try {
-    const [campaign] = await sql`SELECT message,status FROM whatsapp_group_broadcasts WHERE id=${job.broadcast_id}::uuid`;
+    const [campaign] = await sql`SELECT message,media_url,status FROM whatsapp_group_broadcasts WHERE id=${job.broadcast_id}::uuid`;
     if (!campaign || campaign.status === 'cancelled') {
       await sql`UPDATE whatsapp_group_broadcast_jobs SET status='cancelled',last_error='Broadcast dibatalkan sebelum pengiriman.',updated_at=now() WHERE id=${job.id}`;
     } else if (campaign.status === 'paused') {
       await sql`UPDATE whatsapp_group_broadcast_jobs SET status='pending',scheduled_at=now()+interval '15 seconds',last_error='Broadcast sedang dijeda.',updated_at=now() WHERE id=${job.id}`;
     } else {
-      const [group] = await sql`SELECT allow_broadcast FROM whatsapp_groups WHERE group_jid=${String(job.group_jid)}`;
+      const [group] = await sql`SELECT allow_broadcast,COALESCE(NULLIF(display_name_override,''),group_name) AS group_name FROM whatsapp_groups WHERE group_jid=${String(job.group_jid)}`;
       if (!group?.allow_broadcast) {
         await sql`UPDATE whatsapp_group_broadcast_jobs SET status='failed',last_error='Izin broadcast grup telah dinonaktifkan.',updated_at=now() WHERE id=${job.id}`;
       } else {
-        const result = await sendStarSenderGroupText(String(job.group_jid), String(campaign.message));
+        const result = await sendStarSenderGroupText(String(job.group_jid), String(campaign.message).replace(/\{\{\s*(?:nama|name)\s*\}\}/gi, String(group.group_name || job.group_jid)), String(campaign.media_url || ''));
         if (result.success) {
           await sql`UPDATE whatsapp_group_broadcast_jobs SET status='sent',provider_message_id=${result.messageId},last_error='',sent_at=now(),updated_at=now() WHERE id=${job.id}`;
         } else {

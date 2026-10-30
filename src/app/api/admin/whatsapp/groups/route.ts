@@ -2,6 +2,7 @@ import { getAccountPrincipal } from '@/lib/identity/server';
 import { isSameOriginMutation } from '@/lib/admin-request';
 import {
   createWhatsappGroupBroadcast,
+  bulkWhatsappGroupPermission,
   listWhatsappGroupsDashboard,
   saveWhatsappGroupPreset,
   setWhatsappGroupBroadcastStatus,
@@ -28,6 +29,10 @@ export async function POST(request: Request) {
     const principal = await getAccountPrincipal();
     if (!admin(principal)) return json({ message: 'Hanya admin yang dapat mengelola grup dan broadcast.' }, 403);
     const input = await request.json() as Record<string, unknown>;
+    if (input.action === 'bulkAllow') {
+      if (!Array.isArray(input.groupJids) || typeof input.allowed !== 'boolean') throw new Error('Pilihan grup tidak valid.');
+      return json({ ...await bulkWhatsappGroupPermission(principal!, input.groupJids.map(String), input.allowed), message: 'Izin grup yang ditampilkan diperbarui.' });
+    }
     if (input.action === 'sync') return json({ ...await syncWhatsappGroups(principal!), message: 'Daftar grup berhasil disinkronkan dari StarSender.' });
     if (input.action === 'rename') return json({ group: await renameWhatsappGroup(principal!, String(input.groupJid || ''), String(input.name ?? '')), message: 'Nama tampilan grup tersimpan.' });
     if (input.action === 'allow') return json({ group: await setWhatsappGroupBroadcastAllowed(principal!, String(input.groupJid || ''), input.allowed === true), message: input.allowed === true ? 'Grup diizinkan menerima broadcast.' : 'Izin broadcast grup dinonaktifkan.' });
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
     }
     if (input.action === 'togglePreset') return json({ preset: await toggleWhatsappGroupPreset(principal!, String(input.id || ''), input.active === true), message: 'Status preset diperbarui.' });
     if (input.action === 'createBroadcast') {
-      const broadcast = await createWhatsappGroupBroadcast(principal!, { name: String(input.name || ''), message: String(input.message || ''), presetId: input.presetId ? String(input.presetId) : undefined, groupJids: Array.isArray(input.groupJids) ? input.groupJids.map(String) : [], scheduledAt: String(input.scheduledAt || ''), confirmGroupPermission: input.confirmGroupPermission === true });
+      const broadcast = await createWhatsappGroupBroadcast(principal!, { name: String(input.name || ''), message: String(input.message || ''), presetId: input.presetId ? String(input.presetId) : undefined, groupJids: Array.isArray(input.groupJids) ? input.groupJids.map(String) : [], scheduledAt: String(input.scheduledAt || ''), mediaUrl: typeof input.mediaUrl === 'string' ? input.mediaUrl : undefined, confirmGroupPermission: input.confirmGroupPermission === true });
       return json({ broadcast, message: `Broadcast dibuat untuk ${broadcast.groups} grup. Jadwal: ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(broadcast.scheduledAt))} WIB.` }, 201);
     }
     if (input.action === 'broadcastStatus') {

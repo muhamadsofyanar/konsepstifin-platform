@@ -1,3 +1,4 @@
+import { whatsappMediaUrl } from './whatsapp-media.ts';
 import { randomUUID } from 'node:crypto';
 import { getDatabaseClient } from '@/lib/article-store';
 import { normalizeWhatsAppNumber, starsenderStatus } from '@/lib/starsender-client';
@@ -31,12 +32,13 @@ export async function setMarketingConsent(leadId: number, enabled: boolean, acto
   return lead;
 }
 
-export async function createMarketingCampaign(input: { title: string; message: string; leadIds: number[]; actor: string; scheduledAt?: string; sendMode?: string }) {
+export async function createMarketingCampaign(input: { title: string; message: string; leadIds: number[]; actor: string; scheduledAt?: string; sendMode?: string; mediaUrl?: string }) {
   if (!(await starsenderStatus()).configured) throw new Error('API StarSender belum dikonfigurasi. Buka Admin → Pengaturan → Integrasi eksternal.');
   const title = input.title.trim();
   const message = input.message.trim();
+  const mediaUrl = whatsappMediaUrl(input.mediaUrl);
   if (!title || title.length > 120) throw new Error('Judul kampanye wajib diisi dan maksimal 120 karakter.');
-  if (!message || message.length > 2000) throw new Error('Pesan wajib diisi dan maksimal 2.000 karakter.');
+  if ((!message && !mediaUrl) || message.length > 4000) throw new Error('Pesan wajib diisi dan maksimal 4.000 karakter.');
   const scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : new Date();
   if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() - 60_000) throw new Error('Jadwal kirim tidak valid atau berada di masa lalu.');
   const sendMode = input.sendMode ?? 'inbound_first';
@@ -48,25 +50,28 @@ export async function createMarketingCampaign(input: { title: string; message: s
   const queued = await sql.begin(async tx => {
     // Lock and re-check consent in the same transaction as queue insertion.
     const contacts = await tx`
-      SELECT id,name,phone FROM public_interest_leads
+      SELECT id,name,phone,city FROM public_interest_leads
       WHERE id=ANY(${ids}::bigint[]) AND whatsapp_marketing_consent=TRUE
       ORDER BY id FOR UPDATE`;
     const accepted: Array<{ id: number; name: string; phone: string; message: string }> = [];
+    const phones = new Set<string>();
     for (const contact of contacts) {
       try {
-        normalizeWhatsAppNumber(String(contact.phone));
-        const personalized = message.replace(/\{\{\s*(?:nama|name)\s*\}\}/gi, String(contact.name || 'Bapak/Ibu'));
+        const phone = normalizeWhatsAppNumber(String(contact.phone));
+        if (phones.has(phone)) continue;
+        phones.add(phone);
+        const personalized = message.replace(/\{\{\s*(?:nama|name)\s*\}\}/gi, String(contact.name || 'Bapak/Ibu')).replace(/\{\{\s*kota\s*\}\}/gi, String(contact.city || 'wilayah Anda')).replace(/\{\{\s*referensi\s*\}\}/gi, `KSF-${contact.id}`);
         accepted.push({ id: Number(contact.id), name: String(contact.name || ''), phone: String(contact.phone), message: personalized });
       } catch { /* Invalid phone numbers are excluded and not queued. */ }
     }
     if (!accepted.length) throw new Error('Tidak ada kontak valid yang terpilih dengan persetujuan marketing aktif.');
     await tx`
-      INSERT INTO marketing_campaigns(id,title,message,created_by,recipient_count,scheduled_at,send_mode)
-      VALUES (${campaignId}::uuid,${title},${message},${input.actor},${accepted.length},${scheduledAt.toISOString()}::timestamptz,${sendMode})`;
+      INSERT INTO marketing_campaigns(id,title,message,created_by,recipient_count,scheduled_at,send_mode,media_url)
+      VALUES (${campaignId}::uuid,${title},${message},${input.actor},${accepted.length},${scheduledAt.toISOString()}::timestamptz,${sendMode},${mediaUrl})`;
     for (const contact of accepted) {
       await tx`
-        INSERT INTO notification_outbox(event_type,lead_id,campaign_id,recipient_phone,recipient_name,message,dedupe_key,created_by,available_at,send_mode)
-        VALUES ('marketing_campaign',${contact.id},${campaignId}::uuid,${contact.phone},${contact.name},${contact.message},${`campaign:${campaignId}:${contact.id}`},${input.actor},${scheduledAt.toISOString()}::timestamptz,${sendMode})
+        INSERT INTO notification_outbox(event_type,lead_id,campaign_id,recipient_phone,recipient_name,message,dedupe_key,created_by,available_at,send_mode,media_url)
+        VALUES ('marketing_campaign',${contact.id},${campaignId}::uuid,${contact.phone},${contact.name},${contact.message},${`campaign:${campaignId}:${contact.id}`},${input.actor},${scheduledAt.toISOString()}::timestamptz,${sendMode},${mediaUrl})
         ON CONFLICT(dedupe_key) DO NOTHING`;
     }
     await tx`
@@ -80,7 +85,7 @@ export async function listMarketingCampaigns(limit = 20) {
   const sql = getDatabaseClient();
   const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
   return await sql`
-    SELECT c.id,c.title,c.recipient_count,c.created_by,c.created_at,c.scheduled_at,c.send_mode,
+    SELECT c.id,c.title,c.recipient_count,c.created_by,c.created_at,c.scheduled_at,c.send_mode,c.media_url,
       COUNT(o.id) FILTER (WHERE o.status='pending')::int AS pending_count,
       COUNT(o.id) FILTER (WHERE o.status='sending')::int AS sending_count,
       COUNT(o.id) FILTER (WHERE o.status='sent')::int AS sent_count,
