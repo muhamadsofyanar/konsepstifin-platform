@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const [contacts, campaigns] = await Promise.all([listMarketingContacts(url.searchParams.get('q') || ''), listMarketingCampaigns(20)]);
     return json({ contacts, campaigns, starsender: await starsenderStatus() });
-  } catch { return json({ message: 'Daftar kontak marketing belum dapat dimuat. Pastikan migrasi 011 sudah dijalankan.' }, 503); }
+  } catch { return json({ message: 'Data marketing belum dapat dimuat. Pastikan migrasi 011 sampai 017 yang diperlukan sudah dijalankan.' }, 503); }
 }
 export async function POST(request: Request) {
   const actor = await requireAdminRequest(request);
@@ -24,8 +24,10 @@ export async function POST(request: Request) {
     if (input.action === 'campaign') {
       if (typeof input.title !== 'string' || typeof input.message !== 'string') throw new Error('Judul dan isi kampanye harus berupa teks.');
       if (!Array.isArray(input.leadIds) || input.leadIds.length > 100 || input.leadIds.some(id => typeof id !== 'number')) throw new Error('Daftar kontak tidak valid.');
-      const result = await createMarketingCampaign({ title: String(input.title ?? ''), message: String(input.message ?? ''), leadIds: input.leadIds as number[], actor: actor.userId });
-      return json({ ...result, message: `${result.queued} pesan dimasukkan ke antrean StarSender.` }, 201);
+      if (input.scheduledAt !== undefined && typeof input.scheduledAt !== 'string') throw new Error('Jadwal kirim harus berupa tanggal dan waktu.');
+      if (input.sendMode !== undefined && typeof input.sendMode !== 'string') throw new Error('Mode pengiriman tidak valid.');
+      const result = await createMarketingCampaign({ title: String(input.title ?? ''), message: String(input.message ?? ''), leadIds: input.leadIds as number[], actor: actor.userId, scheduledAt: typeof input.scheduledAt === 'string' ? input.scheduledAt : undefined, sendMode: typeof input.sendMode === 'string' ? input.sendMode : undefined });
+      return json({ ...result, message: `${result.queued} pesan dijadwalkan pada ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(result.scheduledAt))} WIB.` }, 201);
     }
     throw new Error('Tindakan marketing tidak dikenal.');
   } catch (error) { return json({ message: error instanceof Error ? error.message : 'Permintaan marketing gagal.' }, 400); }

@@ -17,6 +17,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
+  const [messageGroup, setMessageGroup] = useState('');
   const [presetId, setPresetId] = useState('');
   const [presetName, setPresetName] = useState('');
   const [presetDescription, setPresetDescription] = useState('');
@@ -31,7 +32,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
   const [confirmPermission, setConfirmPermission] = useState(false);
 
   const refresh = useCallback(async () => {
-    const response = await fetch('/api/admin/whatsapp/groups', { cache: 'no-store' });
+    const response = await fetch(`/api/admin/whatsapp/groups?groupJid=${encodeURIComponent(messageGroup)}`, { cache: 'no-store' });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || 'Data grup WhatsApp gagal dimuat.');
     setDashboard({
@@ -40,9 +41,14 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
       broadcasts: Array.isArray(result.broadcasts) ? result.broadcasts as Broadcast[] : [],
       groupMessages: Array.isArray(result.groupMessages) ? result.groupMessages as GroupMessage[] : [],
     });
-  }, []);
+  }, [messageGroup]);
 
-  useEffect(() => { void refresh().catch(e => setError(e instanceof Error ? e.message : 'Data WhatsApp gagal dimuat.')); }, [refresh]);
+  useEffect(() => {
+    const update = () => { void refresh().catch(e => setError(e instanceof Error ? e.message : 'Data WhatsApp gagal dimuat.')); };
+    update();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') update(); }, 10000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
   const allowedGroups = useMemo(() => dashboard.groups.filter(group => group.allow_broadcast), [dashboard.groups]);
   const visibleGroups = useMemo(() => {
@@ -70,6 +76,12 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
 
   function toggleSelection(current: string[], value: string, checked: boolean) {
     return checked ? [...new Set([...current, value])] : current.filter(item => item !== value);
+  }
+
+  async function renameGroup(group: WaGroup) {
+    const name = window.prompt('Nama tampilan grup. Kosongkan untuk memakai nama dari StarSender.', group.group_name === group.group_jid ? '' : group.group_name);
+    if (name === null) return;
+    await runAction(`rename-${group.group_jid}`, { action: 'rename', groupJid: group.group_jid, name });
   }
 
   async function syncGroups() { await runAction('sync', { action: 'sync' }); }
@@ -110,7 +122,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
       <div className="wa-section-heading"><div><span className="portal-eyebrow">STARSENDER DEVICE API</span><h2>Grup WhatsApp &amp; Broadcast</h2></div><button type="button" className="portal-primary" disabled={busy === 'sync'} onClick={() => void syncGroups()}>{busy === 'sync' ? 'Menyinkronkan…' : 'Sinkronkan grup dari StarSender'}</button></div>
       <p>Ambil daftar grup langsung dari perangkat StarSender. Grup baru otomatis masuk daftar, tetapi tidak langsung boleh menerima broadcast. Admin harus mengaktifkan izin tiap grup terlebih dahulu.</p>
       <div className="wa-group-status-row"><span><i className="ready"/>Device API dipakai untuk membaca daftar grup dan mengirim pesan</span><span>{dashboard.groups.length} grup tersimpan</span><span>{allowedGroups.length} grup diizinkan broadcast</span></div>
-      <div className="wa-group-webhook-note"><strong>Pesan masuk dari grup</strong><p>Untuk membaca percakapan grup secara realtime, akun StarSender memerlukan add-on <b>Webhook Group</b>. Webhook Premium personal yang sudah aktif tidak otomatis mencakup pesan grup.</p>{groupWebhookUrl ? <><code>{groupWebhookUrl.replace(/([?&]token=)[^&]+/i, '$1••••••••••••')}</code><button type="button" onClick={() => void navigator.clipboard?.writeText(groupWebhookUrl)}>Salin URL Webhook Group</button><small>Pasang URL ini pada pengaturan Webhook Group di StarSender setelah add-on diaktifkan.</small></> : <small>URL webhook grup tersedia untuk super admin setelah secret webhook dan PLATFORM_ORIGIN terkonfigurasi.</small>}</div>
+      <div className="wa-group-webhook-note"><strong>Pesan masuk dari grup</strong><p>Webhook Premium dapat menerima pesan masuk dan keluar personal maupun grup. Pastikan event grup dikirim ke webhook utama. Jika memakai add-on Webhook Group terpisah, gunakan URL berikut.</p>{groupWebhookUrl ? <><code>{groupWebhookUrl.replace(/([?&]token=)[^&]+/i, '$1••••••••••••')}</code><button type="button" onClick={() => void navigator.clipboard?.writeText(groupWebhookUrl)}>Salin URL Webhook Group</button><small>Pasang URL ini pada pengaturan Webhook Group di StarSender setelah add-on diaktifkan.</small></> : <small>URL webhook grup tersedia untuk super admin setelah secret webhook dan PLATFORM_ORIGIN terkonfigurasi.</small>}</div>
       <small className="wa-muted">StarSender mendokumentasikan daftar grup melalui GET /api/whatsapp/groups dan pengiriman melalui POST /api/send/grup. Data anggota dan status admin grup tidak dijamin tersedia dari endpoint daftar grup.</small>
     </section>
 
@@ -118,7 +130,7 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
       <div className="wa-section-heading"><div><span className="portal-eyebrow">GROUP ALLOWLIST</span><h2>Daftar grup yang terhubung</h2></div><span className="wa-mode bot">{allowedGroups.length} diizinkan</span></div>
       <input className="wa-search" value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Cari nama grup atau ID grup…" aria-label="Cari grup WhatsApp" />
       <div className="wa-group-table-wrap"><table className="wa-group-table"><thead><tr><th>Nama grup</th><th>ID grup</th><th>Perangkat</th><th>Izin broadcast</th></tr></thead><tbody>
-        {visibleGroups.map(group => <tr key={group.group_jid}><td><strong>{group.group_name || 'Grup tanpa nama'}</strong><small>Sinkron {jakartaDateTime(group.last_synced_at)}</small></td><td><code>{group.group_jid}</code></td><td>{group.device_name || 'Device utama'}</td><td><label className="wa-allow-toggle"><input type="checkbox" checked={group.allow_broadcast} disabled={busy === `allow-${group.group_jid}`} onChange={e => void runAction(`allow-${group.group_jid}`, { action: 'allow', groupJid: group.group_jid, allowed: e.target.checked })}/><span>{group.allow_broadcast ? 'Diizinkan' : 'Diblokir'}</span></label></td></tr>)}
+        {visibleGroups.map(group => <tr key={group.group_jid}><td><strong>{group.group_name || 'Grup tanpa nama'}</strong><small>Sinkron {jakartaDateTime(group.last_synced_at)}</small><button type="button" disabled={Boolean(busy)} onClick={() => void renameGroup(group)}>Atur nama</button></td><td><code>{group.group_jid}</code></td><td>{group.device_name || 'Device utama'}</td><td><label className="wa-allow-toggle"><input type="checkbox" checked={group.allow_broadcast} disabled={busy === `allow-${group.group_jid}`} onChange={e => void runAction(`allow-${group.group_jid}`, { action: 'allow', groupJid: group.group_jid, allowed: e.target.checked })}/><span>{group.allow_broadcast ? 'Diizinkan' : 'Diblokir'}</span></label></td></tr>)}
         {!visibleGroups.length && <tr><td colSpan={4}>{dashboard.groups.length ? 'Tidak ada grup yang cocok dengan pencarian.' : 'Belum ada daftar grup. Klik Sinkronkan grup dari StarSender.'}</td></tr>}
       </tbody></table></div>
     </section>
@@ -167,9 +179,11 @@ export default function GroupBroadcastPanel({ groupWebhookUrl }: { groupWebhookU
     </section>
 
     <section className="portal-card wa-group-inbox-card">
-      <div className="wa-section-heading"><div><span className="portal-eyebrow">GROUP WEBHOOK INBOX</span><h2>Pesan masuk dari grup</h2></div><span className="wa-mode human">Add-on Webhook Group</span></div>
-      <p>Daftar ini terisi setelah add-on Webhook Group aktif dan URL webhook dipasang pada StarSender.</p>
-      <div className="wa-group-messages">{dashboard.groupMessages.map(message => <article key={message.id}><div><strong>{message.group_name || message.group_jid}</strong><small>{jakartaDateTime(message.provider_timestamp || message.created_at)} · {message.direction === 'incoming' ? 'Masuk' : 'Keluar'}</small></div><p>{message.content}</p><small>Pengirim: {message.sender_name || message.sender_jid || 'Tidak disertakan StarSender'} · {message.sender_is_admin === true ? 'Admin grup' : message.sender_is_admin === false ? 'Anggota' : 'Peran tidak tersedia'}</small>{message.media_url && <a href={message.media_url} target="_blank" rel="noreferrer">Lihat media</a>}</article>)}{!dashboard.groupMessages.length && <div className="wa-empty"><span>Belum ada pesan grup yang diterima</span><small>Pesan grup tidak akan muncul hanya dengan Webhook Premium personal. Aktifkan add-on Webhook Group untuk mengirim event grup ke KonsepSTIFIn.</small></div>}</div>
+      <div className="wa-section-heading"><div><span className="portal-eyebrow">GROUP WEBHOOK INBOX</span><h2>Percakapan grup</h2></div><span className="wa-mode human">Premium / Webhook Group</span></div>
+      <p>Menampilkan maksimal 100 pesan terbaru yang diterima melalui webhook. Pesan baru dapat muncul tanpa harus mengirim pesan ke grup terlebih dahulu. Riwayat lama WhatsApp tidak diimpor otomatis.</p>
+      <label>Filter percakapan grup<select value={messageGroup} onChange={e => setMessageGroup(e.target.value)}><option value="">Semua grup</option>{dashboard.groups.map(group => <option key={group.group_jid} value={group.group_jid}>{group.group_name}</option>)}</select></label>
+      <button type="button" onClick={() => void refresh().catch(e => setError(e instanceof Error ? e.message : 'Percakapan gagal dimuat.'))}>Perbarui percakapan</button>
+      <div className="wa-group-messages">{dashboard.groupMessages.map(message => <article key={message.id}><div><strong>{message.group_name || message.group_jid}</strong><small>{jakartaDateTime(message.provider_timestamp || message.created_at)} · {message.direction === 'incoming' ? 'Masuk' : 'Keluar'}</small></div><p>{message.content}</p><small>Pengirim: {message.sender_name || message.sender_jid || 'Tidak disertakan StarSender'} · {message.sender_is_admin === true ? 'Admin grup' : message.sender_is_admin === false ? 'Anggota' : 'Peran tidak tersedia'}</small>{message.media_url && <a href={message.media_url} target="_blank" rel="noreferrer">Lihat media</a>}</article>)}{!dashboard.groupMessages.length && <div className="wa-empty"><span>Belum ada pesan grup yang diterima</span><small>Periksa Webhook Premium atau Webhook Group pada StarSender, lalu minta anggota mengirim satu pesan baru. Aplikasi menampilkan pesan yang diterima sejak webhook aktif.</small></div>}</div>
       <small className="wa-muted">Dokumentasi StarSender yang tersedia mengirimkan nama grup, ID grup, pesan, file, perangkat, dan timestamp. Identitas pengirim atau status admin hanya akan tampil jika payload provider memang menyertakannya.</small>
     </section>
   </div>;

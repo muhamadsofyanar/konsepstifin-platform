@@ -72,15 +72,16 @@ export async function listStarSenderGroups(): Promise<StarSenderGroup[]> {
   const data = root.data;
   const dataObject = groupRecord(data);
   const groupContainer = dataObject.groups ?? dataObject.data ?? root.groups;
-  const candidates = Array.isArray(data)
+  const candidates: unknown[] = Array.isArray(data)
     ? data
     : Array.isArray(groupContainer) ? groupContainer
-    : groupContainer && typeof groupContainer === 'object' ? Object.values(groupRecord(groupContainer))
-    : Object.values(dataObject).filter(value => value && typeof value === 'object' && !Array.isArray(value));
+    : groupContainer && typeof groupContainer === 'object' ? Object.entries(groupRecord(groupContainer)).map(([id, value]) => ({ id, ...groupRecord(value) }))
+    : Object.entries(dataObject).filter(([,value]) => value && typeof value === 'object' && !Array.isArray(value)).map(([id,value]) => ({ id, ...groupRecord(value) }));
   const groups = candidates.map((item): StarSenderGroup | null => {
     const row = groupRecord(item);
-    const groupJid = groupString(row.jid ?? row.group_jid ?? row.groupId ?? row.group_id ?? row.id ?? row.to);
-    const groupName = groupString(row.group_name ?? row.groupName ?? row.subject ?? row.name ?? row.title) || groupJid;
+    const metadata = groupRecord(row.groupMetadata ?? row.metadata);
+    const groupJid = [row.jid,row.group_jid,row.groupId,row.group_id,row.id,row.to,metadata.id].map(groupString).find(value => value.endsWith('@g.us')) || '';
+    const groupName = [row.group_name,row.groupName,row.subject,row.name,row.title,row.nama_grup,row.nama,metadata.subject,metadata.name].map(groupString).find(value => value && value !== groupJid) || groupJid;
     if (!groupJid) return null;
     return { groupJid, groupName, deviceName: groupString(row.device_name ?? row.deviceName ?? row.device), raw: row };
   }).filter((item): item is StarSenderGroup => Boolean(item));

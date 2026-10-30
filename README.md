@@ -1,3 +1,9 @@
+# KonsepSTIFIn 0.10.23
+
+Rilis ini memperbaiki jadwal pesan personal di Marketing, penerimaan pesan grup melalui Webhook Premium, dan pengelolaan nama tampilan grup. Baca **UPGRADE-KONSEPSTIFIN-0.10.23.md** terlebih dahulu. Migrasi tambahan: **017-whatsapp-personal-schedule.sql**.
+
+Dokumentasi versi sebelumnya di bawah merupakan catatan historis. Pernyataan versi lama bahwa Webhook Premium tidak mencakup grup telah dikoreksi pada 0.10.23 berdasarkan dokumentasi StarSender.
+
 # KonsepSTIFIn 0.10.18
 
 Rilis peningkatan pengalaman pengunjung dengan fokus pada kebutuhan pengguna, informasi awal yang relevan, alur pemilihan layanan, konsistensi visual, dan animasi yang menghormati preferensi aksesibilitas.

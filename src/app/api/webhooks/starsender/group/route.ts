@@ -27,19 +27,19 @@ export async function POST(request: Request) {
   const root = obj(payload);
   const data = obj(root.data ?? root.payload ?? root);
   const groupJid = str(data.from ?? data.group_jid ?? data.groupId ?? data.chat_id);
-  const groupName = str(data.group_name ?? data.groupName ?? data.subject ?? data.name);
+  const groupName = [data.group_name,data.groupName,data.subject,data.push_name,data.name].map(str).find(Boolean) || '';
   if (!groupJid || (!groupJid.includes('@g.us') && str(data.chat_type).toLowerCase() !== 'group' && flag(data.is_group) !== true)) {
     return Response.json({ message: 'Payload bukan pesan grup WhatsApp atau ID grup tidak tersedia.' }, { status: 200 });
   }
-  const isMe = data.is_me === true || data.isMe === true || data.from_me === true;
+  const isMe = flag(data.is_me ?? data.isMe ?? data.from_me) === true;
   const senderJid = str(data.participant ?? data.author ?? data.sender_jid ?? data.sender ?? obj(data.key).participant);
-  const senderName = str(data.participant_name ?? data.sender_name ?? data.push_name ?? data.author_name ?? data.name);
+  const senderName = str(data.participant_name ?? data.sender_name ?? data.author_name);
   const senderIsAdmin = flag(data.sender_is_admin ?? data.is_admin ?? data.isAdmin ?? data.admin);
   const messageText = str(data.message ?? data.body ?? data.text);
   const mediaUrl = str(data.file ?? data.media_url ?? data.url);
   const content = messageText || (mediaUrl ? '[Pesan media grup]' : '[Pesan grup]');
   const timestamp = providerTime(data.timestamp);
-  const providerId = str(data.message_id ?? data.id ?? data.key);
+  const providerId = str(data.message_id ?? data.id ?? obj(data.key).id);
   const messageId = providerId || createHash('sha256').update(`${groupJid}|${senderJid}|${str(data.timestamp)}|${content}|${mediaUrl}|${isMe}`).digest('hex');
   const safePayload = { device: str(data.device), device_name: str(data.device_name), chat_type: str(data.chat_type), is_me: isMe, timestamp: str(data.timestamp), sender_is_admin: senderIsAdmin };
   try {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const result = await sql.begin(async tx => {
       await tx`INSERT INTO whatsapp_groups(group_jid,group_name,device_name,last_synced_at,updated_at)
         VALUES (${groupJid},${groupName || groupJid},${str(data.device ?? data.device_name)},now(),now())
-        ON CONFLICT(group_jid) DO UPDATE SET group_name=CASE WHEN EXCLUDED.group_name<>'' THEN EXCLUDED.group_name ELSE whatsapp_groups.group_name END,
+        ON CONFLICT(group_jid) DO UPDATE SET group_name=CASE WHEN EXCLUDED.group_name<>'' AND EXCLUDED.group_name<>EXCLUDED.group_jid THEN EXCLUDED.group_name ELSE whatsapp_groups.group_name END,
           device_name=CASE WHEN EXCLUDED.device_name<>'' THEN EXCLUDED.device_name ELSE whatsapp_groups.device_name END,
           last_synced_at=now(),updated_at=now()`;
       const [row] = await tx`INSERT INTO whatsapp_group_messages(provider_message_id,group_jid,group_name,direction,sender_jid,sender_name,sender_is_admin,content,media_url,device_name,provider_timestamp,raw_payload)

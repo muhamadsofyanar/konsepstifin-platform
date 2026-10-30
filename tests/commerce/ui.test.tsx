@@ -11,10 +11,10 @@ it('shows empty orders and permits creating a draft from an explicit lead',async
  await waitFor(()=>expect(screen.getByText(/Ayu/)).toBeInTheDocument());
  expect(screen.getByRole('button',{name:'Simpan draf'})).toBeEnabled();
 });
-it('shows configured transfer instructions only within the admin order detail',()=>{
+it('shows the Moota payment link within the admin order detail',()=>{
  const order={id:1,number:'KS-1',leadId:1,customerName:'Ayu',customerPhone:'081',customerEmail:'',state:'issued',lines:[{name:'Tes',unitPrice:100000,quantity:1}],total:100000,balance:0,paymentStatus:'unpaid',createdAt:'2026-10-28T00:00:00Z',ledger:[],audit:[]};
- render(<CommerceWorkspace initialOrder={order} bank={{bankName:'Bank Contoh',accountNumber:'123456',accountHolder:'PT Contoh',instructions:'Cantumkan nomor pesanan.'}}/>);
- expect(screen.getByText(/123456/)).toBeInTheDocument();expect(screen.getByText(/Cantumkan nomor pesanan/)).toBeInTheDocument();
+ render(<CommerceWorkspace initialOrder={{...order,mootaPaymentUrl:'https://pay.example.test/invoice/KS-1'}}/>);
+ for(const link of screen.getAllByRole('link',{name:'Buka link pembayaran Moota ↗'})) expect(link).toHaveAttribute('href','https://pay.example.test/invoice/KS-1');
 });
 it('preserves the selected lead filter in both pagination directions',()=>{
  render(<CommerceWorkspace initialOrders={[]} total={76} page={2} initialLeadId="42"/>);

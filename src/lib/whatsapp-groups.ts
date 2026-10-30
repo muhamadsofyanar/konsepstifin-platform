@@ -22,7 +22,7 @@ export async function syncWhatsappGroups(principal: Principal) {
     for (const group of groups) {
       await tx`INSERT INTO whatsapp_groups(group_jid,group_name,device_name,last_synced_at,raw_payload,updated_at)
         VALUES (${group.groupJid},${group.groupName},${group.deviceName},now(),${JSON.stringify(group.raw)}::jsonb,now())
-        ON CONFLICT(group_jid) DO UPDATE SET group_name=EXCLUDED.group_name,
+        ON CONFLICT(group_jid) DO UPDATE SET group_name=CASE WHEN EXCLUDED.group_name<>'' AND EXCLUDED.group_name<>EXCLUDED.group_jid THEN EXCLUDED.group_name ELSE whatsapp_groups.group_name END,
           device_name=CASE WHEN EXCLUDED.device_name<>'' THEN EXCLUDED.device_name ELSE whatsapp_groups.device_name END,
           last_synced_at=now(),raw_payload=EXCLUDED.raw_payload,updated_at=now()`;
     }
@@ -30,10 +30,10 @@ export async function syncWhatsappGroups(principal: Principal) {
   return { synced: groups.length };
 }
 
-export async function listWhatsappGroupsDashboard() {
+export async function listWhatsappGroupsDashboard(selectedGroup = '') {
   const sql = getDatabaseClient();
   const [groups, presets, broadcasts, groupMessages] = await Promise.all([
-    sql`SELECT group_jid,group_name,device_name,allow_broadcast,last_synced_at,updated_at
+    sql`SELECT group_jid,COALESCE(NULLIF(display_name_override,''),group_name) AS group_name,device_name,allow_broadcast,last_synced_at,updated_at
       FROM whatsapp_groups ORDER BY allow_broadcast DESC,group_name ASC LIMIT 500`,
     sql`SELECT p.id,p.name,p.description,p.message,p.active,p.created_at,p.updated_at,
         COUNT(i.group_jid)::int AS group_count,
@@ -49,8 +49,12 @@ export async function listWhatsappGroupsDashboard() {
         COUNT(j.id) FILTER (WHERE j.status='unknown')::int AS unknown_count
       FROM whatsapp_group_broadcasts b LEFT JOIN whatsapp_group_broadcast_jobs j ON j.broadcast_id=b.id
       GROUP BY b.id ORDER BY b.created_at DESC LIMIT 50`,
-    sql`SELECT id,provider_message_id,group_jid,group_name,direction,sender_jid,sender_name,sender_is_admin,content,media_url,device_name,provider_timestamp,created_at
-      FROM whatsapp_group_messages ORDER BY COALESCE(provider_timestamp,created_at) DESC,id DESC LIMIT 40`,
+    sql`SELECT m.id,m.provider_message_id,m.group_jid,
+        COALESCE(NULLIF(g.display_name_override,''),NULLIF(g.group_name,g.group_jid),NULLIF(m.group_name,''),m.group_jid) AS group_name,
+        m.direction,m.sender_jid,m.sender_name,m.sender_is_admin,m.content,m.media_url,m.device_name,m.provider_timestamp,m.created_at
+      FROM whatsapp_group_messages m LEFT JOIN whatsapp_groups g ON g.group_jid=m.group_jid
+      WHERE (${selectedGroup}='' OR m.group_jid=${selectedGroup})
+      ORDER BY COALESCE(m.provider_timestamp,m.created_at) DESC,m.id DESC LIMIT 100`,
   ]);
   return { groups, presets, broadcasts, groupMessages };
 }
@@ -157,5 +161,18 @@ export async function setWhatsappGroupBroadcastStatus(principal: Principal, id: 
       VALUES (${principal.userId}::uuid,'whatsapp.group_broadcast.status',${id},${JSON.stringify({action})}::jsonb)`;
     const [updated] = await tx`SELECT id,status,scheduled_at FROM whatsapp_group_broadcasts WHERE id=${id}::uuid`;
     return updated;
+  });
+}
+
+export async function renameWhatsappGroup(principal: Principal, groupJid: string, name: string) {
+  requireAdmin(principal);
+  const trimmed = name.trim();
+  if (trimmed.length > 160) throw new Error('Nama grup maksimal 160 karakter.');
+  const sql = getDatabaseClient();
+  return sql.begin(async tx => {
+    const [group] = await tx`UPDATE whatsapp_groups SET display_name_override=${trimmed},updated_at=now() WHERE group_jid=${groupJid} RETURNING group_jid`;
+    if (!group) throw new Error('Grup tidak ditemukan.');
+    await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details) VALUES (${principal.userId}::uuid,'whatsapp.group.renamed',${groupJid},${JSON.stringify({name: trimmed})}::jsonb)`;
+    return group;
   });
 }

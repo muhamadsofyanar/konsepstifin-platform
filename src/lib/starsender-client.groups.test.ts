@@ -30,3 +30,15 @@ it('sends group text through the documented StarSender group endpoint', async ()
   vi.stubGlobal('fetch', fetchMock);
   await expect(sendStarSenderGroupText('120363@g.us', 'Informasi tes')).resolves.toMatchObject({ success: true, status: 200, messageId: 'msg-1' });
 });
+
+it('reads keyed metadata and skips empty name aliases', async () => {
+  process.env.STARSENDER_API_KEY = 'device-test-key';
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true, data: {
+    '120363@g.us': { group_name: '', groupMetadata: { subject: 'TARGET STIFIN MULIA' } },
+    '987654@g.us': { name: 'Praktisi' },
+  } }))));
+  const groups = await listStarSenderGroups();
+  expect(groups.map(group => [group.groupJid, group.groupName])).toEqual([
+    ['120363@g.us', 'TARGET STIFIN MULIA'], ['987654@g.us', 'Praktisi'],
+  ]);
+});

@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { getDatabaseClient } from '@/lib/article-store';
 import { getIntegrationConfig } from '@/lib/integration-settings';
 import { normalizeWhatsAppNumber } from '@/lib/starsender-client';
+import { POST as receiveGroup } from './group/route';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -30,8 +31,8 @@ export async function POST(request: Request) {
   try { payload = JSON.parse(raw) as unknown; } catch { return Response.json({ message: 'JSON tidak valid.' }, { status: 400 }); }
   const root = obj(payload);
   const data = obj(root.data ?? root.payload ?? root);
-  if (flag(data.is_group) || str(data.chat_type).toLowerCase() === 'group' || str(data.from).includes('@g.us')) {
-    return Response.json({ message: 'Event grup tidak diproses dalam inbox personal.' }, { status: 200 });
+  if (flag(data.is_group) || str(data.chat_type).toLowerCase() === 'group' || [data.from,data.group_jid,data.groupId,data.chat_id].some(value => str(value).endsWith('@g.us'))) {
+    return receiveGroup(new Request(request.url, { method: 'POST', headers: request.headers, body: raw }));
   }
   const isMe = flag(data.is_me);
   const remoteCandidates = isMe
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
         await tx`UPDATE whatsapp_bot_jobs SET status='skipped',last_error='Pelanggan mengirim perintah STOP.',updated_at=now() WHERE conversation_id=${conversation.id}::uuid AND status IN ('pending','processing','queued')`;
         if (lead?.id) await tx`UPDATE whatsapp_drip_enrollments SET status='cancelled',last_error='Pelanggan mengirim perintah STOP.' WHERE lead_id=${lead.id} AND status IN ('active','paused')`;
       } else if (!isMe && optsIn) {
-        await tx`UPDATE notification_outbox SET status='pending',available_at=now(),last_error='',updated_at=now()
+        await tx`UPDATE notification_outbox SET status='pending',available_at=GREATEST(available_at,now()),last_error='',updated_at=now()
           WHERE status='awaiting_inbound' AND (expires_at IS NULL OR expires_at>now()) AND regexp_replace(recipient_phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])`;
       }
       let botQueued = false;
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
             VALUES (${conversation.id}::uuid,${stored.id},'pending',now()+interval '3 seconds') ON CONFLICT(inbound_message_id) DO NOTHING`;
           botQueued = true;
         }
-        await tx`UPDATE notification_outbox SET status='pending',available_at=now(),last_error='',updated_at=now()
+        await tx`UPDATE notification_outbox SET status='pending',available_at=GREATEST(available_at,now()),last_error='',updated_at=now()
           WHERE status='awaiting_inbound' AND (expires_at IS NULL OR expires_at>now()) AND regexp_replace(recipient_phone,'[^0-9]','','g')=ANY(${phoneDigits}::text[])`;
       }
       return { duplicate: false, conversationId: String(conversation.id), botQueued, optedOut: Boolean(session?.opted_out_at) };

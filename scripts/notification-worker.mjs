@@ -41,7 +41,7 @@ async function tick() {
               if (String(job.event_type)==='whatsapp_bot_reply') await sql`UPDATE whatsapp_bot_jobs SET status='skipped',last_error='Kontak opt-out.',updated_at=now() WHERE outbox_id=${job.id}`;
               if (job.drip_enrollment_id) await sql`UPDATE whatsapp_drip_enrollments SET status='cancelled',last_error='Pelanggan memilih berhenti menerima pesan.',completed_at=now() WHERE id=${job.drip_enrollment_id}`;
               blocked = true;
-            } else if (!session || new Date(String(session.last_inbound_at)).getTime() < Date.now() - 24 * 60 * 60 * 1000) {
+            } else if (!(String(job.event_type) === 'marketing_campaign' && job.send_mode === 'consented_outbound') && (!session || new Date(String(session.last_inbound_at)).getTime() < Date.now() - 24 * 60 * 60 * 1000)) {
               if (String(job.event_type)==='whatsapp_bot_reply') {
                 await sql`UPDATE notification_outbox SET status='failed',last_error='Balasan chatbot kedaluwarsa karena jendela 24 jam berakhir.',updated_at=now() WHERE id=${job.id}`;
                 await sql`UPDATE whatsapp_messages SET delivery_status='failed' WHERE outbox_id=${job.id}`;

@@ -31,12 +31,16 @@ export async function setMarketingConsent(leadId: number, enabled: boolean, acto
   return lead;
 }
 
-export async function createMarketingCampaign(input: { title: string; message: string; leadIds: number[]; actor: string }) {
+export async function createMarketingCampaign(input: { title: string; message: string; leadIds: number[]; actor: string; scheduledAt?: string; sendMode?: string }) {
   if (!(await starsenderStatus()).configured) throw new Error('API StarSender belum dikonfigurasi. Buka Admin → Pengaturan → Integrasi eksternal.');
   const title = input.title.trim();
   const message = input.message.trim();
   if (!title || title.length > 120) throw new Error('Judul kampanye wajib diisi dan maksimal 120 karakter.');
   if (!message || message.length > 2000) throw new Error('Pesan wajib diisi dan maksimal 2.000 karakter.');
+  const scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : new Date();
+  if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() - 60_000) throw new Error('Jadwal kirim tidak valid atau berada di masa lalu.');
+  const sendMode = input.sendMode ?? 'inbound_first';
+  if (!['inbound_first','consented_outbound'].includes(sendMode)) throw new Error('Mode pengiriman tidak valid.');
   const ids = [...new Set(input.leadIds)].filter(id => Number.isSafeInteger(id) && id > 0);
   if (!ids.length || ids.length > 100) throw new Error('Pilih 1 sampai 100 kontak yang telah menyetujui pesan promosi.');
   const sql = getDatabaseClient();
@@ -57,26 +61,26 @@ export async function createMarketingCampaign(input: { title: string; message: s
     }
     if (!accepted.length) throw new Error('Tidak ada kontak valid yang terpilih dengan persetujuan marketing aktif.');
     await tx`
-      INSERT INTO marketing_campaigns(id,title,message,created_by,recipient_count)
-      VALUES (${campaignId}::uuid,${title},${message},${input.actor},${accepted.length})`;
+      INSERT INTO marketing_campaigns(id,title,message,created_by,recipient_count,scheduled_at,send_mode)
+      VALUES (${campaignId}::uuid,${title},${message},${input.actor},${accepted.length},${scheduledAt.toISOString()}::timestamptz,${sendMode})`;
     for (const contact of accepted) {
       await tx`
-        INSERT INTO notification_outbox(event_type,lead_id,campaign_id,recipient_phone,recipient_name,message,dedupe_key,created_by)
-        VALUES ('marketing_campaign',${contact.id},${campaignId}::uuid,${contact.phone},${contact.name},${contact.message},${`campaign:${campaignId}:${contact.id}`},${input.actor})
+        INSERT INTO notification_outbox(event_type,lead_id,campaign_id,recipient_phone,recipient_name,message,dedupe_key,created_by,available_at,send_mode)
+        VALUES ('marketing_campaign',${contact.id},${campaignId}::uuid,${contact.phone},${contact.name},${contact.message},${`campaign:${campaignId}:${contact.id}`},${input.actor},${scheduledAt.toISOString()}::timestamptz,${sendMode})
         ON CONFLICT(dedupe_key) DO NOTHING`;
     }
     await tx`
       INSERT INTO platform_admin_audit(actor_id,action,target,details)
-      VALUES (${input.actor}::uuid,'marketing.campaign.queued',${campaignId},${JSON.stringify({recipientCount:accepted.length,title})}::jsonb)`;
+      VALUES (${input.actor}::uuid,'marketing.campaign.queued',${campaignId},${JSON.stringify({recipientCount:accepted.length,title,scheduledAt:scheduledAt.toISOString(),sendMode})}::jsonb)`;
     return accepted.length;
   });
-  return { campaignId, queued };
+  return { campaignId, queued, scheduledAt: scheduledAt.toISOString(), sendMode };
 }
 export async function listMarketingCampaigns(limit = 20) {
   const sql = getDatabaseClient();
   const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
   return await sql`
-    SELECT c.id,c.title,c.recipient_count,c.created_by,c.created_at,
+    SELECT c.id,c.title,c.recipient_count,c.created_by,c.created_at,c.scheduled_at,c.send_mode,
       COUNT(o.id) FILTER (WHERE o.status='pending')::int AS pending_count,
       COUNT(o.id) FILTER (WHERE o.status='sending')::int AS sending_count,
       COUNT(o.id) FILTER (WHERE o.status='sent')::int AS sent_count,
