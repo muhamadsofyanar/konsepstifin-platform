@@ -1,0 +1,11 @@
+KonsepSTIFIn 0.10.3
+
+Vitest: 295 lulus, 6 dilewati. 67 file lulus, 3 file dilewati.
+Identity Node: 78 lulus.
+API daftar + formulir layanan terarah: 10 lulus.
+ESLint, TypeScript, build produksi: lulus.
+Smoke standalone dan pemeriksaan browser: lihat docs/AUDIT-0.10.3.md.
+
+Data pengujian sintetis dengan PGlite/PostgreSQL wire dan Chromium.
+Video diperiksa penyematan dan layout, bukan jaminan playback eksternal.
+Paket belum dideploy ke server pengguna. Migrasi 009 wajib setelah upgrade.

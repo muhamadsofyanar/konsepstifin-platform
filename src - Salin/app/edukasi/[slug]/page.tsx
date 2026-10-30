@@ -1,0 +1,102 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { bodyToBlocks, getPublishedArticleBySlug, getPublishedArticles, type StoredArticle } from '@/lib/article-store';
+import ArticleEngagement from './article-engagement';
+import ArticleProductCta from './article-product-cta';
+import JsonLd from '../../json-ld';
+
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await getPublishedArticleBySlug(slug);
+  if (!article) return {};
+  return {
+    title: `${article.title} | Konsep STIFIn`,
+    description: article.excerpt,
+    alternates: { canonical: `/edukasi/${article.slug}` },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt,
+      type: 'article',
+      publishedTime: article.publishedAt,
+      url: `/edukasi/${article.slug}`,
+      siteName: 'Konsep STIFIn',
+      locale: 'id_ID',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description: article.excerpt,
+    },
+  };
+}
+
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const article = await getPublishedArticleBySlug(slug);
+  if (!article) notFound();
+  const allPublished = await getPublishedArticles();
+  const selectedRelated = article.relatedSlugs
+    .map((relatedSlug) => allPublished.find((item) => item.slug === relatedSlug))
+    .filter((item): item is StoredArticle => Boolean(item && item.slug !== article.slug));
+  const related = [...selectedRelated, ...allPublished.filter((item) => item.slug !== article.slug
+    && !selectedRelated.some((selected) => selected.slug === item.slug))].slice(0, 3);
+  const publicSources = article.sourceReferences.filter((source) => source.accessLevel === 'reference');
+  const blocks = bodyToBlocks(article.body);
+  const articleUrl = `https://konsepstifin.com/edukasi/${article.slug}`;
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${articleUrl}#article`,
+        headline: article.title,
+        description: article.excerpt,
+        keywords: [article.primaryKeyword, ...article.secondaryKeywords].filter(Boolean).join(', '),
+        articleSection: article.topicCluster || article.category,
+        datePublished: article.publishedAt,
+        dateModified: article.updatedAt || article.publishedAt,
+        inLanguage: 'id-ID',
+        mainEntityOfPage: articleUrl,
+        image: `${articleUrl}/opengraph-image`,
+        author: { '@id': 'https://konsepstifin.com/#organization' },
+        publisher: { '@id': 'https://konsepstifin.com/#organization' },
+        ...(article.reviewerName ? { reviewedBy: {
+          '@type': 'Person',
+          name: article.reviewerName,
+          jobTitle: article.reviewerRole || undefined,
+        } } : {}),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://konsepstifin.com/' },
+          { '@type': 'ListItem', position: 2, name: 'Edukasi', item: 'https://konsepstifin.com/edukasi' },
+          { '@type': 'ListItem', position: 3, name: article.title, item: articleUrl },
+        ],
+      },
+    ],
+  };
+
+  return <main id="main-content" className="article-main">
+    <JsonLd data={articleSchema} />
+    <section className="article-heading"><Link href="/edukasi">← Kembali ke pusat edukasi</Link><div><span>{article.category}</span><span>{article.readTime}</span><time dateTime={article.publishedAt}>{article.publishedLabel}</time></div><h1>{article.title}</h1><p>{article.excerpt}</p></section>
+    <div className={`article-hero-cover article-cover ${article.tone}`}><span>{article.category}</span><b>WAWASAN<br/>UNTUK<br/>BERTUMBUH</b><small>KONSEP STIFIn · EDUKASI</small></div>
+    <div className="article-layout">
+      <article className="article-body">
+        {blocks.map((block) => <section key={block.heading}><h2>{block.heading}</h2>{block.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{block.bullets && <ul>{block.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>}</section>)}
+        {article.experienceEvidence && <aside className="article-experience-evidence"><span>BUKTI & KONTEKS PENGALAMAN</span><p>{article.experienceEvidence}</p></aside>}
+        <aside className="article-takeaway"><span>INTI ARTIKEL</span><p>{article.takeaway}</p></aside>
+        {(article.reviewerName || article.sourceReferences.length > 0) && <section className="article-trust-panel"><header><span>PEMERIKSAAN KONTEN</span><h2>Ditulis dengan jejak sumber dan tinjauan manusia.</h2></header>{article.reviewerName && <div className="article-reviewer"><b>{article.reviewerName}</b><span>{article.reviewerRole || 'Reviewer konten'}{article.reviewedAt ? ` · Ditinjau ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${article.reviewedAt}T00:00:00Z`))}` : ''}</span></div>}{publicSources.length > 0 ? <ul>{publicSources.map((source) => <li key={`${source.sourceId}-${source.pageNumber}`}><b>{source.title}</b><span>Halaman {source.pageNumber} · {source.category}</span></li>)}</ul> : article.sourceReferences.length > 0 && <p>Materi artikel diperiksa menggunakan Pustaka STIFIn internal. Dokumen terbatas tidak dipublikasikan melalui website.</p>}</section>}
+        {article.contentType !== 'education' && article.productName && article.productUrl && <ArticleProductCta slug={article.slug} contentType={article.contentType} productName={article.productName} productUrl={article.productUrl} ctaLabel={article.ctaLabel} />}
+        <div className="article-disclaimer"><b>Catatan edukasi</b><p>Artikel ini bersifat umum dan tidak dimaksudkan sebagai diagnosis atau pengganti layanan medis, psikologis, pendidikan, maupun profesional lainnya.</p></div>
+        <ArticleEngagement slug={article.slug} title={article.title} />
+      </article>
+      <aside className="article-side"><div><span>TENTANG EDUKASI</span><p>Kami menyajikan materi sebagai bahan refleksi dan percakapan yang perlu disesuaikan dengan konteks pembaca.</p></div><Link className="public-cta" href="/tes-stifin#layanan">Bandingkan layanan tes →</Link></aside>
+    </div>
+
+    <section className="related-articles"><div className="education-section-head"><div><span>BACA SELANJUTNYA</span><h2>Artikel terkait.</h2></div><Link href="/edukasi">Lihat semua artikel →</Link></div><div className="related-grid">{related.map((item) => <Link href={`/edukasi/${item.slug}`} key={item.slug}><span>{item.category}</span><h3>{item.title}</h3><small>{item.readTime} →</small></Link>)}</div></section>
+  </main>;
+}

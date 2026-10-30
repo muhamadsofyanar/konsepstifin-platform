@@ -1,0 +1,22 @@
+KonsepSTIFIn 0.10.4
+
+Vitest: 298 lulus, 6 dilewati. 67 file lulus, 3 file dilewati.
+ESLint dan build produksi Next.js beserta pemeriksaan TypeScript: lulus.
+Smoke paket standalone melalui HTTP: lulus.
+
+Regresi khusus:
+- ID & Alat menyimpan sumber referral meski persetujuan berbagi tidak dicentang.
+- Pengajuan tersebut tidak ditugaskan otomatis kepada promotor.
+- Referensi KSF dan alias tersimpan dikembalikan ke konfirmasi klien.
+- Nomor KSF muncul pada daftar pengajuan milik affiliate terkait.
+- Nama, email, telepon dan catatan klien tidak ditampilkan pada daftar aktivitas.
+- Asal pengundang ditampilkan pada detail CRM admin.
+- Formulir tidak mengumumkan sukses tanpa nomor referensi tersimpan.
+- Atribusi tetap berasal dari server, bukan kolom referral yang dipalsukan klien.
+
+Pengujian memakai data sintetis PGlite dan adapter PostgreSQL wire.
+Tidak memakai database produksi atau menjalankan transfer/voucher riil.
+Tidak ada pemeriksaan browser tambahan pada rilis ini. Tampilan formulir diuji
+melalui React Testing Library. Smoke memakai image standalone lokal,
+bukan build Docker pada VPS pengguna. Tidak ada klaim pengukuran kecepatan VPS.
+Paket belum dideploy oleh asisten ke server pengguna.

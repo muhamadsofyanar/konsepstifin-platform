@@ -1,0 +1,21 @@
+KonsepSTIFIn 0.10.2 | hasil pengujian
+
+Suite utama Vitest: 279 lulus, 6 dilewati (64 berkas lulus, 3 dilewati).
+Pengujian kalkulasi angka terakhir: 5 lulus, termasuk satu kasus batas
+baru setelah suite utama. Tidak menjumlahkan ulang empat kasus yang sama.
+ESLint: lulus tanpa error/warning.
+TypeScript dan production build: lulus.
+Smoke standalone HTTP dan browser: lulus.
+
+Browser: 9 halaman publik pada lebar 1440 px dan 390 px.
+Menu ponsel: 320 px.
+Halaman: beranda, layanan tes, calon promotor, affiliate, kontak,
+tentang, direktori promotor, wilayah, edukasi.
+Materi/video, sertifikat, admin produk, detail produk, dan pusat mitra
+juga diperiksa dalam smoke. Font lokal, canonical produk, dan versi
+health diperiksa. Aplikasi diuji dengan data sintetis.
+
+Database pengujian: PGlite dengan adapter PostgreSQL wire.
+Tidak memakai database produksi pengguna atau mengirim voucher riil.
+Tidak ada deployment ke server pengguna dalam pekerjaan ini.
+Lihat docs/AUDIT-0.10.2.md untuk cakupan dan batas pengujian.

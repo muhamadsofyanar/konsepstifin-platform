@@ -1,0 +1,27 @@
+KonsepSTIFIn 0.10.1 | hasil verifikasi source
+
+Vitest: 273 lulus, 6 dilewati. 62 berkas lulus, 3 berkas dilewati.
+ESLint: lulus tanpa error atau warning pada pemeriksaan akhir.
+Next.js production build / TypeScript: lulus.
+Smoke standalone HTTP: lulus.
+Browser Chromium: diperiksa pada desktop 1440 px dan ponsel 390 px.
+Sertifikat PDF: 1 halaman A4 mendatar pada data uji.
+
+Cakupan smoke: migrasi, sesi akun, CRM, referral, voucher simulasi,
+worker, checkout/idempotensi, pembayaran, hak akses ebook dan materi,
+progres, sertifikat, komisi dan pencairan manual, hapus/arsip,
+detail produk canonical, tautan landing dan legacy, serta tampilan
+materi/video, admin produk, pusat mitra dan sertifikat di browser.
+
+Dalam pengujian browser dengan PGlite wire ditemukan respons GET 503
+sementara. Pembacaan data kini mencoba ulang satu kali. Kegagalan
+permanen tetap ditampilkan dan tidak mengubah pembayaran/hak akses.
+Kesalahan katalog tidak lagi ditampilkan sebagai kegagalan materi.
+Rekening pembayaran dimuat pada bagian Pembelian dan menyediakan retry.
+
+Pengujian menggunakan data sintetis. Tidak menggunakan database
+produksi pengguna, mengirim voucher riil, atau melakukan transfer bank.
+Embed/frame video dan kontrolnya diperiksa. Pemutaran setiap video
+pihak ketiga tetap bergantung pada izin video dan jaringan provider.
+
+Lihat docs/AUDIT-0.10.1.md dan docs/UPGRADE-0.10.1.md.

@@ -1,0 +1,24 @@
+import { beforeEach, it, expect, vi } from 'vitest';
+const account = vi.hoisted(() => vi.fn());
+const service = vi.hoisted(() => ({ saveProduct: vi.fn(), checkout: vi.fn(), catalog: vi.fn(), material: vi.fn(), classroom: vi.fn() }));
+vi.mock('@/lib/identity/server', () => ({ getAccountPrincipal: account }));
+vi.mock('@/lib/learning-store', () => ({ getLearningService: () => service }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
+import { GET, POST } from '../../src/app/api/learning/route';
+beforeEach(() => { process.env.PLATFORM_ORIGIN = 'https://example.test'; account.mockResolvedValue(null); });
+const req = (body: object, origin = 'https://example.test') => new Request('https://example.test/api/learning', { method: 'POST', headers: { origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+it('requires session for checkout and rejects cross origin', async () => { expect((await POST(req({ action: 'checkout' }))).status).toBe(401); account.mockResolvedValue({ userId: 'u', active: true, sessionValid: true, roles: ['member'] }); expect((await POST(req({ action: 'checkout' }, 'https://evil.test'))).status).toBe(403); expect(service.checkout).not.toHaveBeenCalled(); });
+it('member cannot edit products or read admin data', async () => { account.mockResolvedValue({ userId: 'u', active: true, sessionValid: true, roles: ['member'] }); expect((await POST(req({ action: 'product.save', title: 'Changed' }))).status).toBe(403); expect((await GET(new Request('https://example.test/api/learning?view=admin'))).status).toBe(403); expect(service.saveProduct).not.toHaveBeenCalled(); });
+it('checkout gets user and referral from verified session, never supplied identity', async () => { account.mockResolvedValue({ userId: 'trusted', active: true, sessionValid: true, roles: ['member'] }); service.checkout.mockResolvedValue({ id: 1 }); const result = await POST(req({ action: 'checkout', productId: 1, key: 'x', name: 'A', phone: '08', userId: 'victim', referral: 'fake' })); expect(result.status).toBe(200); expect(service.checkout.mock.calls[0][0]).toBe('trusted'); expect(service.checkout.mock.calls[0][2]).toBeNull(); });
+it('does not expose raw database errors', async () => { service.catalog.mockRejectedValue(new Error('secret-db-password')); const result = await GET(new Request('https://example.test/api/learning?view=catalog')); expect(result.status).toBe(503); expect(await result.text()).not.toContain('secret-db-password'); });
+it('readiness diagnostics are admin only',async()=>{account.mockResolvedValue({userId:'member',active:true,sessionValid:true,roles:['member']});for(const view of ['setup','users&q=older'])expect((await GET(new Request('https://example.test/api/learning?view='+view))).status).toBe(403);});
+it('requires administrator for deletion and partner role for payout or partner dashboard',async()=>{
+ account.mockResolvedValue({userId:'u',active:true,sessionValid:true,roles:['member']});
+ for(const action of ['product.delete','lesson.delete','payout.request'])expect((await POST(req({action,id:1}))).status).toBe(403);
+ expect((await GET(new Request('https://example.test/api/learning?view=partner'))).status).toBe(403);
+});
+
+it('returns one scoped classroom response without exposing private file paths or trusting a supplied user',async()=>{
+ account.mockResolvedValue({userId:'trusted',active:true,sessionValid:true,roles:['member']});service.classroom.mockResolvedValue({grant:{product_id:1},lessons:[{id:2}],progress:[],material:{id:2,file_path:'secret/private.pdf',body:'Owned'},materialError:''});
+ const response=await GET(new Request('https://example.test/api/learning?view=classroom&id=1&lesson=2&userId=victim'));expect(response.status).toBe(200);const data=await response.json();expect(data.material.hasFile).toBe(true);expect(JSON.stringify(data)).not.toContain('secret/private.pdf');expect(service.classroom).toHaveBeenCalledWith('trusted',1,2);
+});

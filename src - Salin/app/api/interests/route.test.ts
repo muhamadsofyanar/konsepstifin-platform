@@ -1,0 +1,124 @@
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST, publicInterestErrorResponse } from './route';
+import { submitInterest } from '@/lib/interest-service';
+
+const referral = vi.hoisted(()=>({resolveToken:vi.fn(),resolveRegistered:vi.fn()}));
+const notificationQueue = vi.hoisted(()=>({queueWhatsAppMessage:vi.fn().mockResolvedValue(true),stableNotificationKey:vi.fn((prefix:string,value:string)=>`${prefix}:${value}`)}));
+vi.mock('@/lib/identity/server',()=>({getAccountPrincipal:vi.fn().mockResolvedValue(null)}));
+vi.mock('@/lib/referral-store',()=>({getReferralService:()=>referral}));
+
+vi.mock('@/lib/interest-service', () => ({ submitInterest: vi.fn() }));
+vi.mock('@/lib/notification-outbox', () => notificationQueue);
+
+let address = 0;
+function request(body: Record<string, unknown>, ip = `198.51.100.${++address}`) {
+  return new NextRequest('http://localhost/api/interests', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+    body: JSON.stringify({ ...body, startedAt: Date.now() - 2_000 }),
+  });
+}
+
+describe('POST /api/interests', () => {
+  beforeEach(() => { vi.mocked(submitInterest).mockReset(); notificationQueue.queueWhatsAppMessage.mockClear(); });
+
+  it('mengembalikan referensi, match aman, dan checkout resmi untuk lead tes', async () => {
+    vi.mocked(submitInterest).mockResolvedValue({
+      lead: { id: 42, leadType: 'test_service', status: 'ditawarkan' },
+      reference: 'KSF-42',
+      referralRecorded: false,
+      referralAlias: '',
+      status: 'ditawarkan',
+      match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
+      checkoutUrl: 'https://app.konsepstifin.com/product/tes/',
+    } as Awaited<ReturnType<typeof submitInterest>>);
+    const response = await POST(request({ leadType: 'test_service' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      ok: true,
+      reference: 'KSF-42',
+      referralRecorded: false,
+      referralAlias: '',
+      status: 'ditawarkan',
+      match: { method: 'area', promoter: { code: 'P-1', name: 'Promotor Aman', branchCode: 'BDG-CAB-1', area: 'Bandung', province: 'Jawa Barat' } },
+    });
+    expect(JSON.stringify(body)).not.toMatch(/phone|email|pass|saldo/i);
+  });
+
+  it('tidak pernah mengembalikan match atau checkout untuk calon promotor', async () => {
+    vi.mocked(submitInterest).mockResolvedValue({
+      lead: { id: 43, leadType: 'promoter_candidate', status: 'baru' },
+      reference: 'KSF-43',
+      status: 'baru',
+      match: null,
+      checkoutUrl: 'https://evil.example/checkout',
+    } as Awaited<ReturnType<typeof submitInterest>>);
+    const response = await POST(request({ leadType: 'promoter_candidate' }));
+    expect(await response.json()).toEqual({ ok: true, reference: 'KSF-43', referralRecorded: false, referralAlias: '', status: 'baru', match: null });
+  });
+
+  it('mengantrikan instruksi calon promotor dan menunggu chat masuk sebelum pengiriman', async () => {
+    vi.mocked(submitInterest).mockResolvedValue({
+      lead: { id: 88, leadType: 'promoter_candidate', status: 'baru', name: 'Muhamad Sofyan AR', phone: '6281333362649', service: 'Paket Promotor', consentToContact: true },
+      reference: 'KSF-88', status: 'baru', match: null,
+    } as Awaited<ReturnType<typeof submitInterest>>);
+    const response = await POST(request({ leadType: 'promoter_candidate', consentToContact: true, phone: '081333362649', name: 'Muhamad Sofyan AR' }));
+    expect(response.status).toBe(201);
+    expect(notificationQueue.queueWhatsAppMessage).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: 'promoter_candidate_instructions', leadId: 88, phone: '6281333362649',
+      dedupeKey: 'promoter-candidate-instructions:88:6281333362649',
+    }));
+  });
+
+  it('menyembunyikan detail PostgreSQL dari respons publik', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = publicInterestErrorResponse(new Error(
+      'there is no unique or exclusion constraint matching the ON CONFLICT specification',
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ error: 'Permintaan belum dapat disimpan. Silakan coba kembali.' });
+    expect(JSON.stringify(body)).not.toMatch(/postgres|constraint|conflict|sql/i);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it('menolak bot cepat dan membatasi delapan permintaan per alamat', async () => {
+    const fast = await POST(new NextRequest('http://localhost/api/interests', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.1' },
+      body: JSON.stringify({ startedAt: Date.now() }),
+    }));
+    expect(fast.status).toBe(400);
+
+    vi.mocked(submitInterest).mockResolvedValue({
+      lead: { id: 1, leadType: 'promoter_candidate', status: 'baru' }, reference: 'KSF-1', status: 'baru', match: null, checkoutUrl: '',
+    } as Awaited<ReturnType<typeof submitInterest>>);
+    const responses = [];
+    for (let index = 0; index < 9; index += 1) responses.push(await POST(request({}, '203.0.113.2')));
+    expect(responses.slice(0, 8).every((response) => response.status === 201)).toBe(true);
+    expect(responses[8].status).toBe(429);
+  });
+});
+
+
+it('resolves attribution from the HttpOnly cookie rather than body fields',async()=>{
+ const source={userId:'u',promoterCode:'REAL',alias:'budi',name:'Budi',branchCode:'JML-CAB-62',area:''};
+ referral.resolveToken.mockResolvedValue(source);
+ vi.mocked(submitInterest).mockResolvedValue({lead:{id:1,leadType:'test_service',status:'ditawarkan'},reference:'KSF-1',status:'ditawarkan',match:null} as Awaited<ReturnType<typeof submitInterest>>);
+ const req=new NextRequest('http://localhost/api/interests',{method:'POST',headers:{'content-type':'application/json',cookie:`konsepstifin_referral=${'a'.repeat(64)}`},body:JSON.stringify({startedAt:Date.now()-2000,sourcePartnerCode:'FORGED'})});
+ const response=await POST(req);expect(response.status).toBe(201);
+ expect(referral.resolveToken).toHaveBeenCalledWith('a'.repeat(64));expect(vi.mocked(submitInterest).mock.calls.at(-1)?.[1].referralSource).toEqual(source);
+});
+it('uses the authenticated registration referral when a buyer submits a service request from another browser',async()=>{
+ const {getAccountPrincipal}=await import('@/lib/identity/server');
+ vi.mocked(getAccountPrincipal).mockResolvedValueOnce({userId:'buyer',active:true,sessionValid:true,roles:['member'],email:'buyer@example.test',promoterCode:null});
+ const source={userId:'partner',promoterCode:'REAL',alias:'original',name:'Mitra',branchCode:'JML-CAB-62',area:''};
+ referral.resolveRegistered.mockResolvedValueOnce(source);
+ vi.mocked(submitInterest).mockResolvedValue({lead:{id:2,leadType:'test_service',status:'baru'},reference:'KSF-2',status:'baru',match:null} as Awaited<ReturnType<typeof submitInterest>>);
+ const req=new NextRequest('http://localhost/api/interests',{method:'POST',headers:{'content-type':'application/json',cookie:'konsepstifin_account='+ 'b'.repeat(64),'x-forwarded-for':'198.51.100.210'},body:JSON.stringify({startedAt:Date.now()-2000,sourcePartnerCode:'FORGED'})});
+ expect((await POST(req)).status).toBe(201);expect(referral.resolveRegistered).toHaveBeenCalledWith('buyer');expect(vi.mocked(submitInterest).mock.calls.at(-1)?.[1].referralSource).toEqual(source);
+});

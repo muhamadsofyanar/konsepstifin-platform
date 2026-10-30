@@ -1,0 +1,16 @@
+KonsepSTIFIn 0.10.1 | source lengkap
+
+Baca docs/UPGRADE-0.10.1.md dan docs/AUDIT-0.10.1.md.
+Unggah isi folder ke repository aplikasi yang sama, lalu redeploy.
+Dari 0.10.0 dengan migrasi 008 sudah berhasil: tidak ada migrasi atau ENV baru.
+Jika migrasi 008 belum dijalankan:
+IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+
+Admin produk: /admin/kelas?section=products
+Pusat produk & affiliate: /akun/mitra
+Detail layanan keluarga: /produk/layanan/paketKeluarga
+Detail produk digital: /produk/SLUG
+
+Akun, password, komisi, transaksi, dan nomor sertifikat tetap memakai data yang sama.
+Sertifikat lama langsung memakai desain baru. Video harus mengizinkan embed.
+Jangan provision ulang akun atau mengganti database.

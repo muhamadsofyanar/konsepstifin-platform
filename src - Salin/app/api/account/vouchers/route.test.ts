@@ -1,0 +1,21 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('@/lib/identity/server', () => ({ getAccountPrincipal: vi.fn() }));
+vi.mock('@/lib/admin-auth', () => ({ getAdminPrincipal: vi.fn() }));
+vi.mock('@/lib/voucher-store', () => ({ getVoucherPortal: vi.fn(), createVoucherOrder: vi.fn(), getVoucherOrder: vi.fn(), getVoucherBalance: vi.fn(), getVoucherFulfillment: vi.fn(), reconcileVoucherOrder: vi.fn() }));
+import { getAccountPrincipal } from '@/lib/identity/server';
+import { getAdminPrincipal } from '@/lib/admin-auth';
+import { createVoucherOrder, getVoucherOrder, reconcileVoucherOrder } from '@/lib/voucher-store';
+import { POST } from './route';
+import { GET as ownOrder } from './[id]/route';
+import { POST as reconcile } from '../../admin/vouchers/[id]/route';
+const makeRequest = (body: unknown, origin = 'https://example.com') => new Request('https://example.com/api/account/vouchers', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const principal = { userId: 'owner', email: 'owner@example.com', active: true, sessionValid: true, roles: ['promoter'], promoterCode: 'OWN' };
+beforeEach(() => { vi.resetAllMocks(); process.env.PLATFORM_ORIGIN = 'https://example.com'; vi.mocked(getAccountPrincipal).mockResolvedValue(principal); });
+describe('private voucher routes', () => {
+  it('requires current active session and role', async () => { vi.mocked(getAccountPrincipal).mockResolvedValue({ ...principal, active: false }); expect((await POST(makeRequest({ quantity: 1, key: '1234567890123456' }))).status).toBe(401); expect(createVoucherOrder).not.toHaveBeenCalled(); });
+  it('rejects cross-origin writes before creating an order', async () => { expect((await POST(makeRequest({ quantity: 1, key: '1234567890123456' }, 'https://evil.example'))).status).toBe(403); expect(createVoucherOrder).not.toHaveBeenCalled(); });
+  it('rejects caller-selected promoter and fractional quantity', async () => { for (const body of [{ quantity: 1, key: '1234567890123456', promoterCode: 'OTHER' }, { quantity: 1.5, key: '1234567890123456' }]) expect((await POST(makeRequest(body))).status).toBe(400); expect(createVoucherOrder).not.toHaveBeenCalled(); });
+  it('passes only own verified user id and idempotency key', async () => { vi.mocked(createVoucherOrder).mockResolvedValue({ id: 7 } as never); const response = await POST(makeRequest({ quantity: 17, key: '1234567890123456' })); expect(response.status).toBe(201); expect(createVoucherOrder).toHaveBeenCalledWith('owner', { quantity: 17, key: '1234567890123456' }); expect(response.headers.get('cache-control')).toContain('no-store'); });
+  it('scopes order lookup to owner and returns 404 for unavailable order', async () => { vi.mocked(getVoucherOrder).mockResolvedValue(null); const response = await ownOrder(new Request('https://example.com/api/account/vouchers/9'), { params: Promise.resolve({ id: '9' }) }); expect(response.status).toBe(404); expect(getVoucherOrder).toHaveBeenCalledWith('owner', 9); });
+  it('requires admin and evidence for reconciliation; no resend action exists', async () => { vi.mocked(getAdminPrincipal).mockResolvedValue({ userId: 'admin', email: 'admin@example.com', roles: ['admin'] }); for (const body of [{ action: 'resend', note: 'checked', reference: 'ref' }, { action: 'confirm_success', note: '', reference: 'ref' }]) expect((await reconcile(makeRequest(body), { params: Promise.resolve({ id: '9' }) })).status).toBe(400); expect(reconcileVoucherOrder).not.toHaveBeenCalled(); });
+});

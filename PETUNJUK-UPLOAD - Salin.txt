@@ -1,0 +1,21 @@
+KONSEPSTIFIN 0.8.0 - MITRA DAN VOUCHER
+
+1. Ekstrak ZIP, lalu unggah seluruh ISI folder ke root repository GitHub.
+   Jangan hanya unggah src. Dockerfile, package*.json dan scripts wajib ikut.
+2. Redeploy melalui Coolify dengan Dockerfile bawaan.
+3. Di terminal container baru jalankan:
+   cd /app
+   IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+4. Tambahkan ENV:
+   STIFIN_VOUCHER_MODE=test
+   STIFIN_VOUCHER_USER_ID=user
+   Pertahankan DATABASE_URL dan PLATFORM_ORIGIN yang sudah benar.
+5. Jangan provision/import ulang akun aktif. Periksa /akun/tautan,
+   /akun/voucher dan /admin/voucher.
+6. Worker otomatis dijalankan Dockerfile dengan start-with-worker.mjs.
+   Hapus override command Coolify lama jika hanya menjalankan server.js.
+7. Setelah konfigurasi API benar, ubah mode menjadi live dan redeploy.
+   Mode test tidak mengirim voucher riil. Jangan transfer untuk pesanan uji.
+
+Panduan lengkap: MITRA-DAN-VOUCHER.md
+Hasil uji dan batas verifikasi: HASIL-PENGUJIAN.md

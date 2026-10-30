@@ -1,0 +1,72 @@
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+# Origin persis situs (tanpa slash akhir), untuk pemeriksaan CSRF login/mutasi.
+PLATFORM_ORIGIN=http://localhost:3000
+# Admin awal disiapkan lewat scripts/identity-admin.mjs; kredensial JSON dari stdin.
+# Tidak ada login admin berbasis environment atau reset password saat redeploy.
+# IDENTITY_ADMIN_CONFIRM=yes hanya pada command operator migrasi/provision/verify.
+
+STIFIN_API_BASE=https://apro.stifin.id/api
+STIFIN_PROMOTER_MODE=national
+STIFIN_PROMOTER_NATIONAL_PATH=/proGet/pro/PRO
+STIFIN_API_TIMEOUT_MS=15000
+
+# Alternatif mode branch (jangan aktifkan bersama mode national):
+# STIFIN_PROMOTER_MODE=branch
+# STIFIN_BRANCH_CODE=KODE_CABANG
+# STIFIN_PROMOTER_BRANCH_PATH=/proGet/pro/{branch}
+
+# Alternatif mode manual untuk pemulihan terkontrol:
+# STIFIN_PROMOTER_MODE=manual
+# STIFIN_PROMOTERS_JSON=[{"code":"PRO-001","name":"Nama Aman","branchCode":"ABC-CAB-1","area":"Kota Contoh","province":"Provinsi Contoh","active":true,"regionCodes":["12.71"]}]
+
+STIFIN_PROMOTER_REGION_MAP={"KODE-ID-PROMOTOR":["12.71"]}
+# Nilai autentikasi adalah secret. Simpan hanya di Environment Variables Coolify.
+# STIFIN_API_AUTH_HEADER=Authorization
+# STIFIN_API_AUTH_VALUE=Bearer TOKEN_RAHASIA
+
+# Bantuan artikel opsional. Pilih provider dan model yang tersedia pada akun Anda.
+# AI_PROVIDER=openai
+# OPENAI_API_KEY=
+# OPENAI_MODEL=
+# AI_PROVIDER=gemini
+# GEMINI_API_KEY=
+# GEMINI_MODEL=
+
+# Voucher: test tidak mengirim voucher riil. Aktifkan live setelah migrasi dan konfigurasi.
+STIFIN_VOUCHER_MODE=test
+STIFIN_VOUCHER_USER_ID=user
+# Harga dan batas jumlah per pesanan diatur admin lewat /admin/voucher.
+# Worker antrean berjalan otomatis bersama web pada Dockerfile bawaan.
+
+# Private learning files. Mount this path as a persistent volume in Coolify.
+# Default: storage/learning inside the application working directory.
+LEARNING_STORAGE_PATH=/app/storage/learning
+
+# Moota API V2. After migration 012, configure secrets in Admin > Pengaturan.
+# Environment values remain optional fallback for older deployments.
+MOOTA_API_BASE_URL=https://app.moota.co
+MOOTA_API_TOKEN=
+MOOTA_WEBHOOK_SECRET=
+MOOTA_BANK_ACCOUNT_ID=
+# Default path found in Moota API V2 docs; verify request/response contract with the connected account before live sales.
+MOOTA_RECEIVE_MONEY_CREATE_PATH=/api/v2/create-transaction
+# Usually bank_id; adjust only if the active Moota API schema specifies another field.
+MOOTA_BANK_ACCOUNT_FIELD=bank_id
+MOOTA_API_TIMEOUT_MS=12000
+
+# StarSender V3. Configure the Device API key in Admin > Pengaturan after migration 012.
+# The API key is sent as Authorization without Bearer; environment values are an optional fallback.
+STARSENDER_API_KEY=
+STARSENDER_API_URL=https://api.starsender.online/api/send
+STARSENDER_WEBHOOK_SECRET=
+# Public business number used to prompt customers to start WhatsApp chat (not a secret).
+STARSENDER_BUSINESS_NUMBER=
+
+# Mailketing API V2 transactional email fallback. Prefer setting secrets from Admin > Pengaturan.
+MAILKETING_API_TOKEN=
+MAILKETING_API_URL=https://api.mailketing.co.id/api/v2/send
+MAILKETING_FROM_NAME=KonsepSTIFIn
+MAILKETING_FROM_EMAIL=
+# Optional internal WhatsApp chatbot. Prefer saving this key through Admin > Pengaturan > Integrasi.
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini

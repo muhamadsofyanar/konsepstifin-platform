@@ -1,0 +1,15 @@
+PEMERIKSAAN SOURCE KONSEPSTIFIN 0.10.19
+
+Diperiksa secara statis:
+- package.json dan package-lock.json menggunakan versi 0.10.19.
+- Route formulir membuat antrean instruksi untuk calon promotor dengan persetujuan kontak dan data telepon yang tersedia.
+- Kunci deduplikasi memuat ID lead dan nomor telepon.
+- Webhook inbound dapat membuat antrean untuk lead calon promotor lama setelah pesan pertama masuk, jika consent aktif dan lead belum ditutup/selesai.
+- Kegagalan enqueue tidak membatalkan lead yang sudah tersimpan.
+- Tidak ada migrasi database baru atau perubahan konfigurasi Moota/Mailketing.
+
+Belum dapat diverifikasi dari lingkungan ini:
+- Test Vitest, typecheck, dan build Next.js penuh karena dependensi node_modules tidak tersedia dan npm install sebelumnya mengalami timeout.
+- Koneksi API StarSender, webhook inbound produksi, worker, dan pengiriman pesan nyata.
+
+Syarat rilis: build Coolify berhasil dan container healthy. Lakukan uji end-to-end dari formulir sampai status notification_outbox=sent sebelum menyatakan integrasi aktif.

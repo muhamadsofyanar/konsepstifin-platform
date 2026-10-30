@@ -1,0 +1,15 @@
+KonsepSTIFIn 0.10.0 | source lengkap
+
+1. Baca docs/UPGRADE-0.10.0.md dan docs/AUDIT-0.10.0.md.
+2. Backup database dan volume. Unggah isi folder ke root repository aplikasi yang sama.
+3. Pertahankan DATABASE_URL, akun, password, dan konfigurasi lama.
+4. Pastikan PLATFORM_ORIGIN memakai domain publik dan volume /app/storage/learning persisten.
+5. Redeploy memakai Dockerfile bawaan.
+6. Jalankan di terminal container baru:
+   IDENTITY_ADMIN_CONFIRM=yes node scripts/identity-admin.mjs migrate
+7. Muat ulang /admin/kelas?section=products.
+8. Atur kebijakan dan persentase komisi per produk. Mitra membuka /akun/produk.
+
+Migrasi 008 wajib. Jangan membuat database baru atau menjalankan provision ulang.
+Layanan lama kini terhubung dengan produk promosi. Transaksi lama tidak diberi komisi surut otomatis.
+Pengujian source memakai data sintetis. Server Coolify/database produksi belum diakses.

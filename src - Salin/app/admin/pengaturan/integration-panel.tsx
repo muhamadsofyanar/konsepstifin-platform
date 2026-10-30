@@ -1,0 +1,98 @@
+'use client';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+type UnmatchedEvent = { event_id: string; event_type: string; amount: number | null; reference: string; processing_note: string; received_at: string; order_id: number | null };
+type PublicSettings = {
+  moota: { baseUrl: string; apiTokenConfigured: boolean; webhookSecretConfigured: boolean; bankAccountId: string; receiveMoneyCreatePath: string; bankAccountField: string; timeoutMs: number };
+  starsender: { apiKeyConfigured: boolean; apiUrl: string; webhookSecretConfigured: boolean; businessNumber: string };
+  mailketing: { apiTokenConfigured: boolean; apiUrl: string; fromName: string; fromEmail: string };
+  openai: { apiKeyConfigured: boolean; model: string };
+};
+type Props = { moota: { apiConfigured: boolean; webhookConfigured: boolean; receiveMoneyPathConfigured: boolean; bankAccountConfigured: boolean }; starsender: { configured: boolean; endpoint: string }; settings: PublicSettings; isOwner: boolean; webhookUrl: string; starsenderWebhookUrl: string };
+export default function IntegrationPanel({ moota, starsender, settings: initial, isOwner, webhookUrl, starsenderWebhookUrl }: Props) {
+  const router = useRouter();
+  const [settings, setSettings] = useState(initial);
+  const [apiToken, setApiToken] = useState(''), [webhookSecret, setWebhookSecret] = useState(''), [senderKey, setSenderKey] = useState(''), [senderWebhookSecret, setSenderWebhookSecret] = useState(''), [mailketingToken, setMailketingToken] = useState(''), [openaiKey, setOpenaiKey] = useState('');
+  const [clearSecrets, setClearSecrets] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
+  const [events, setEvents] = useState<UnmatchedEvent[]>([]), [eventsOpen, setEventsOpen] = useState(false);
+  const status = (ready: boolean) => <span className={`integration-status ${ready ? 'is-ready' : 'is-missing'}`}>{ready ? 'Terkonfigurasi' : 'Belum diatur'}</span>;
+  const maskedStarsenderWebhookUrl = starsenderWebhookUrl.replace(/([?&]token=)[^&]+/i, '$1••••••••••••');
+  function toggleClear(key: string, checked: boolean) { setClearSecrets(old => checked ? [...new Set([...old, key])] : old.filter(item => item !== key)); }
+  async function save(event: FormEvent) {
+    event.preventDefault(); setBusy(true); setMessage(''); setError('');
+    try {
+      const response = await fetch('/api/admin/integrations/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        moota: { ...settings.moota, apiToken, webhookSecret }, starsender: { ...settings.starsender, apiKey: senderKey, webhookSecret: senderWebhookSecret }, mailketing: { ...settings.mailketing, apiToken: mailketingToken }, openai: { ...settings.openai, apiKey: openaiKey }, clearSecrets,
+      }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Pengaturan integrasi gagal disimpan.');
+      setSettings(data.settings); setApiToken(''); setWebhookSecret(''); setSenderKey(''); setSenderWebhookSecret(''); setMailketingToken(''); setOpenaiKey(''); setClearSecrets([]);
+      setMessage('Pengaturan integrasi tersimpan. Perubahan berlaku tanpa redeploy.'); router.refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Pengaturan integrasi gagal disimpan.'); }
+    finally { setBusy(false); }
+  }
+  async function test() {
+    setBusy(true); setMessage(''); setError('');
+    try { const response = await fetch('/api/admin/integrations/moota/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Tes koneksi Moota gagal.'); setMessage(data.message || 'Moota terhubung.'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Tes koneksi Moota gagal.'); } finally { setBusy(false); }
+  }
+  async function testMailketing() {
+    setBusy(true); setMessage(''); setError('');
+    try { const response = await fetch('/api/admin/integrations/mailketing/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Tes koneksi Mailketing gagal.'); setMessage(data.message || 'Mailketing terhubung.'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Tes koneksi Mailketing gagal.'); } finally { setBusy(false); }
+  }
+  async function loadUnmatched() {
+    setError('');
+    try { const response = await fetch('/api/admin/integrations/moota/events', { cache: 'no-store' }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Riwayat webhook gagal dibaca.'); setEvents(data.events || []); setEventsOpen(true); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Riwayat webhook gagal dibaca.'); }
+  }
+  async function reconcileEvent(event: UnmatchedEvent) {
+    const value = window.prompt(`Masukkan ID pesanan KonsepSTIFIn untuk webhook ${event.event_id}:`); if (value === null) return;
+    const orderId = Number(value.trim()); if (!Number.isSafeInteger(orderId) || orderId < 1) { setError('ID pesanan tidak valid.'); return; }
+    setError(''); setMessage('');
+    try { const response = await fetch('/api/admin/integrations/moota/events/reconcile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: event.event_id, orderId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Rekonsiliasi gagal.'); setMessage(data.message || 'Rekonsiliasi berhasil.'); await loadUnmatched(); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Rekonsiliasi gagal.'); }
+  }
+  return <section className="portal-card" style={{ marginBottom: 20 }}>
+    <h2>Integrasi eksternal</h2>
+    <p>API key dan secret dapat diubah dari halaman ini tanpa redeploy. Nilai rahasia tidak pernah ditampilkan kembali setelah disimpan. Kosongkan kolom secret untuk mempertahankan nilai lama.</p>
+    {!isOwner && <p className="portal-error">Hanya akun pemilik platform yang dapat mengubah kredensial integrasi.</p>}
+    <div className="portal-columns"><div><h3>Moota API V2 / Terima Uang</h3><ul className="integration-status-list"><li><span>API token</span>{status(moota.apiConfigured)}</li><li><span>Secret webhook</span>{status(moota.webhookConfigured)}</li><li><span>Path Create Terima Uang</span>{status(moota.receiveMoneyPathConfigured)}</li><li><span>ID rekening Moota</span>{status(moota.bankAccountConfigured)}</li></ul><p><strong>URL webhook:</strong><br/><code className="integration-code">{webhookUrl || 'PLATFORM_ORIGIN belum diatur'}</code><small className="integration-help">Tempel URL ini pada pengaturan webhook Moota. URL webhook berbeda dari Path Create Terima Uang.</small></p><button type="button" onClick={test} disabled={busy || !moota.apiConfigured}>Tes koneksi Moota</button></div>
+      <div><h3>StarSender WhatsApp</h3><p>Device API key: {status(starsender.configured)}</p><p>Webhook Premium masuk & keluar: {status(settings.starsender.webhookSecretConfigured)}</p><p>Endpoint: <code>{settings.starsender.apiUrl}</code></p><p>Nomor WhatsApp resmi: {settings.starsender.businessNumber || 'Belum diatur'}</p><p>Pesan otomatis hanya dikirim setelah pelanggan memulai chat dalam 24 jam terakhir. Kampanye tetap memerlukan persetujuan promosi terpisah.</p>{starsenderWebhookUrl ? <p><strong>URL webhook pesan masuk:</strong><br/><code className="integration-code">{maskedStarsenderWebhookUrl}</code><br/><button type="button" onClick={() => void navigator.clipboard?.writeText(starsenderWebhookUrl)}>Salin URL lengkap untuk StarSender</button><small className="integration-help">Token disamarkan di layar agar tidak mudah terekspos. Tombol salin tetap menyalin URL lengkap.</small></p> : <p>Isi secret webhook minimal 32 karakter, simpan, lalu salin URL webhook yang muncul.</p>}<a href="https://docs.starsender.online/docs/message-api/kirim-pesan/" target="_blank" rel="noopener noreferrer">Dokumentasi StarSender ↗</a></div><div><h3>Mailketing Email</h3><p>API token: {status(settings.mailketing.apiTokenConfigured)}</p><p>Pengirim: {settings.mailketing.fromEmail || 'Belum diatur'}</p><p>Email transaksional digunakan untuk instruksi pembayaran dan tanda terima. Email marketing harus memakai persetujuan terpisah.</p><p>Endpoint: <code>{settings.mailketing.apiUrl}</code></p><button type="button" onClick={testMailketing} disabled={busy || !settings.mailketing.apiTokenConfigured}>Tes koneksi Mailketing</button><br/><a href="https://api.mailketing.co.id/docs/" target="_blank" rel="noopener noreferrer">Dokumentasi Mailketing API V2 ↗</a></div></div>
+    <form className="portal-form" onSubmit={save} style={{ marginTop: 18 }}><fieldset disabled={busy || !isOwner}>
+      <h3>Konfigurasi Moota</h3>
+      <label>URL dasar API<input type="url" required value={settings.moota.baseUrl} onChange={e => setSettings({ ...settings, moota: { ...settings.moota, baseUrl: e.target.value } })} placeholder="https://app.moota.co" /></label>
+      <label>API token<input type="password" autoComplete="new-password" value={apiToken} onChange={e => { setApiToken(e.target.value); toggleClear('moota.apiToken', false); }} placeholder={settings.moota.apiTokenConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Tempel API token Moota'} /></label>
+      {settings.moota.apiTokenConfigured && <label><input type="checkbox" checked={clearSecrets.includes('moota.apiToken')} onChange={e => toggleClear('moota.apiToken', e.target.checked)} /> Hapus token Moota yang tersimpan</label>}
+      <label>Secret webhook<input type="password" autoComplete="new-password" value={webhookSecret} onChange={e => { setWebhookSecret(e.target.value); toggleClear('moota.webhookSecret', false); }} placeholder={settings.moota.webhookSecretConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Secret untuk validasi webhook'} /></label>
+      {settings.moota.webhookSecretConfigured && <label><input type="checkbox" checked={clearSecrets.includes('moota.webhookSecret')} onChange={e => toggleClear('moota.webhookSecret', e.target.checked)} /> Hapus secret webhook yang tersimpan</label>}
+      <label>ID rekening Moota<input value={settings.moota.bankAccountId} maxLength={200} onChange={e => setSettings({ ...settings, moota: { ...settings.moota, bankAccountId: e.target.value } })} placeholder="ID bank dari respons API Moota" /><small className="integration-help">Isi ID internal rekening yang diberikan API Moota, bukan nomor rekening bank yang dilihat pelanggan.</small></label>
+      <label>Path Create Terima Uang<input value={settings.moota.receiveMoneyCreatePath} maxLength={300} onChange={e => setSettings({ ...settings, moota: { ...settings.moota, receiveMoneyCreatePath: e.target.value } })} placeholder="Path POST untuk membuat link pembayaran" /><small className="integration-help">Default API V2: /api/v2/create-transaction. Isi path saja, tanpa domain. Jangan masukkan URL webhook. Uji pembuatan tagihan sebelum dipakai untuk transaksi produksi.</small></label>
+      <label>Nama field ID rekening<input value={settings.moota.bankAccountField} maxLength={80} onChange={e => setSettings({ ...settings, moota: { ...settings.moota, bankAccountField: e.target.value } })} /><small className="integration-help">Biarkan bank_id kecuali dokumentasi API V2 akun Moota Anda menyebut nama field lain.</small></label>
+      <label>Timeout API (milidetik)<input type="number" min={3000} max={30000} value={settings.moota.timeoutMs} onChange={e => setSettings({ ...settings, moota: { ...settings.moota, timeoutMs: Number(e.target.value) } })} /></label>
+      <h3>Konfigurasi StarSender</h3>
+      <label>Endpoint API<input type="url" required value={settings.starsender.apiUrl} onChange={e => setSettings({ ...settings, starsender: { ...settings.starsender, apiUrl: e.target.value } })} /></label>
+      <label>Nomor WhatsApp resmi KonsepSTIFIn<input type="tel" maxLength={24} value={settings.starsender.businessNumber} onChange={e => setSettings({ ...settings, starsender: { ...settings.starsender, businessNumber: e.target.value } })} placeholder="6281234567890" /><small className="integration-help">Nomor ini dipakai untuk membuat tombol agar calon klien memulai chat. Masukkan nomor perangkat WhatsApp yang terhubung ke StarSender.</small></label>
+      <label>API key StarSender<input type="password" autoComplete="new-password" value={senderKey} onChange={e => { setSenderKey(e.target.value); toggleClear('starsender.apiKey', false); }} placeholder={settings.starsender.apiKeyConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Tempel Device API key StarSender'} /></label>
+      {settings.starsender.apiKeyConfigured && <label><input type="checkbox" checked={clearSecrets.includes('starsender.apiKey')} onChange={e => toggleClear('starsender.apiKey', e.target.checked)} /> Hapus API key StarSender yang tersimpan</label>}
+      <label>Secret webhook Premium pesan masuk & keluar<input type="password" autoComplete="new-password" value={senderWebhookSecret} onChange={e => { setSenderWebhookSecret(e.target.value); toggleClear('starsender.webhookSecret', false); }} placeholder={settings.starsender.webhookSecretConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Gunakan secret acak minimal 32 karakter'} /></label>
+      <button type="button" onClick={() => { const bytes = crypto.getRandomValues(new Uint8Array(32)); setSenderWebhookSecret(Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')); toggleClear('starsender.webhookSecret', false); }}>Buat secret acak</button>
+      {settings.starsender.webhookSecretConfigured && <label><input type="checkbox" checked={clearSecrets.includes('starsender.webhookSecret')} onChange={e => toggleClear('starsender.webhookSecret', e.target.checked)} /> Hapus secret webhook StarSender</label>}
+      <h3>Konfigurasi Mailketing Email</h3>
+      <label>Endpoint API Mailketing<input type="url" required value={settings.mailketing.apiUrl} onChange={e => setSettings({ ...settings, mailketing: { ...settings.mailketing, apiUrl: e.target.value } })} /></label>
+      <label>API token Mailketing<input type="password" autoComplete="new-password" value={mailketingToken} onChange={e => { setMailketingToken(e.target.value); toggleClear('mailketing.apiToken', false); }} placeholder={settings.mailketing.apiTokenConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Tempel API token Mailketing'} /></label>
+      {settings.mailketing.apiTokenConfigured && <label><input type="checkbox" checked={clearSecrets.includes('mailketing.apiToken')} onChange={e => toggleClear('mailketing.apiToken', e.target.checked)} /> Hapus API token Mailketing</label>}
+      <label>Nama pengirim<input maxLength={255} value={settings.mailketing.fromName} onChange={e => setSettings({ ...settings, mailketing: { ...settings.mailketing, fromName: e.target.value } })} placeholder="KonsepSTIFIn" /></label>
+      <label>Email pengirim terverifikasi<input type="email" maxLength={255} value={settings.mailketing.fromEmail} onChange={e => setSettings({ ...settings, mailketing: { ...settings.mailketing, fromEmail: e.target.value } })} placeholder="notifikasi@domain-anda.com" /><small className="integration-help">Alamat ini harus sudah diverifikasi di dashboard Mailketing. Token disimpan terenkripsi dan tidak ditampilkan kembali.</small></label>
+      <h3>AI Chatbot KonsepSTIFIn</h3>
+      <p className="integration-help">AI dijalankan oleh server KonsepSTIFIn, bukan fitur Chat AI StarSender. API key disimpan terenkripsi di database dan dapat diubah tanpa redeploy.</p>
+      <label>OpenAI API key<input type="password" autoComplete="new-password" value={openaiKey} onChange={e => { setOpenaiKey(e.target.value); toggleClear('openai.apiKey', false); }} placeholder={settings.openai.apiKeyConfigured ? 'Sudah tersimpan. Kosongkan untuk mempertahankan.' : 'Tempel OpenAI API key'} /></label>
+      {settings.openai.apiKeyConfigured && <label><input type="checkbox" checked={clearSecrets.includes('openai.apiKey')} onChange={e => toggleClear('openai.apiKey', e.target.checked)} /> Hapus OpenAI API key yang tersimpan</label>}
+      <label>Model AI<input maxLength={100} value={settings.openai.model} onChange={e => setSettings({ ...settings, openai: { ...settings.openai, model: e.target.value } })} placeholder="gpt-4.1-mini" /><small className="integration-help">Model default: gpt-4.1-mini. Pastikan model tersedia pada akun API Anda.</small></label>
+      <button className="portal-primary" type="submit">{busy ? 'Menyimpan…' : 'Simpan integrasi tanpa redeploy'}</button>
+    </fieldset></form>
+    <div style={{ marginTop: 16 }}><button type="button" onClick={() => void loadUnmatched()}>Lihat webhook yang perlu rekonsiliasi</button></div>
+    {eventsOpen && <div style={{ marginTop: 12 }}><h3>Webhook Moota belum cocok ({events.length})</h3>{events.length ? <div style={{ overflowX: 'auto' }}><table><thead><tr><th>Waktu</th><th>Nominal</th><th>Referensi</th><th>Catatan</th><th>Tindakan</th></tr></thead><tbody>{events.map(event => <tr key={event.event_id}><td>{new Date(event.received_at).toLocaleString('id-ID')}</td><td>{event.amount === null ? '—' : `Rp${Number(event.amount).toLocaleString('id-ID')}`}</td><td>{event.reference || event.event_id}</td><td>{event.processing_note}</td><td><button type="button" onClick={() => void reconcileEvent(event)}>Cocokkan ke pesanan</button></td></tr>)}</tbody></table></div> : <p>Tidak ada webhook yang perlu rekonsiliasi.</p>}</div>}
+    {message && <p className="portal-success" role="status">{message}</p>}{error && <p className="portal-error" role="alert">{error}</p>}
+  </section>;
+}

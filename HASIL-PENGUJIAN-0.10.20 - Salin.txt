@@ -1,0 +1,17 @@
+KonsepSTIFIn 0.10.20 - hasil pemeriksaan
+
+Lulus pemeriksaan source:
+- Versi package.json dan package-lock.json konsisten pada 0.10.20.
+- Modal sukses selalu menampilkan tombol WhatsApp dengan nomor tujuan 6281333362649.
+- Pesan WhatsApp disusun dari layanan, nama, nomor WhatsApp, kota/domisili, dan nomor referensi yang diterima dari API.
+- Isi pesan berbeda sesuai funnel calon promotor atau layanan umum.
+- Tombol membuka wa.me di tab baru; pengguna tetap menekan tombol Kirim di aplikasi WhatsApp.
+- Tidak ada perubahan database, migration, Moota, StarSender worker, Mailketing, harga, atau konfigurasi promo.
+- Test otomatis untuk link WhatsApp dan pesan prefilled telah ditambahkan.
+
+Belum dapat diverifikasi:
+- npm ci tidak selesai dalam batas waktu lingkungan kerja, sehingga Vitest dan Next.js production build tidak dijalankan.
+- Pengiriman pesan WhatsApp nyata dan penerimaan webhook memerlukan pengujian setelah deployment.
+
+Penting:
+- Pastikan nomor +62 813-3336-2649 adalah nomor bisnis resmi yang aktif dan terhubung dengan StarSender.

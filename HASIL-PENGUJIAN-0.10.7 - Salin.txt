@@ -1,0 +1,20 @@
+KonsepSTIFIn 0.10.7 - status pemeriksaan sumber
+
+Perubahan yang diperiksa:
+- Riwayat kampanye dan ringkasan status antrean StarSender ditambahkan ke halaman Marketing.
+- API admin marketing sekarang mengembalikan data kontak dan 20 kampanye terakhir.
+- Tidak ada migrasi database baru dibandingkan 0.10.6. Migrasi 011 tetap wajib jika belum diterapkan.
+
+Pemeriksaan yang berhasil:
+- Transpilasi sintaks TypeScript/TSX untuk seluruh 293 file di src: 0 diagnostic sintaks.
+- Pemeriksaan sintaks Node untuk scripts/notification-worker.mjs: lulus.
+- Pemeriksaan sintaks Node untuk scripts/start-with-worker.mjs: lulus.
+- package.json dan package-lock.json sama-sama memakai versi 0.10.7.
+
+Pemeriksaan yang belum dapat dijalankan:
+- npm test, npm run typecheck, npm run lint, npm run build, dan npm run test:smoke belum dapat dijalankan karena dependensi lokal tidak tersedia dan registry npm tidak dapat diakses dari lingkungan ini.
+- Tes koneksi live Moota/StarSender tidak dilakukan karena kredensial akun tidak tersedia.
+- Pembuatan link Terima Uang Moota harus diuji setelah path create dan field payload disamakan dengan dokumentasi API aktif akun Moota.
+
+Kesimpulan:
+Pemeriksaan sintaks lulus. Rilis belum boleh dianggap lulus build produksi sebelum tes lengkap berjalan pada lingkungan Node 24 dengan dependensi terpasang dan integrasi eksternal diuji di staging.

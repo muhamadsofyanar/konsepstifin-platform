@@ -1,0 +1,11 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+const auth=vi.hoisted(()=>({principal:null as null|{userId:string;email:string;roles:string[]}}));
+vi.mock('@/lib/admin-auth',()=>({getAdminPrincipal:async()=>auth.principal}));
+vi.mock('@/lib/commerce-store',()=>({listOrders:vi.fn(async()=>({orders:[],total:0})),createOrder:vi.fn(async()=>({id:1})),getOrder:vi.fn(async()=>({id:1})),commandOrder:vi.fn(async()=>({id:1})),getCommerceLead:vi.fn(async()=>({id:1,name:'Ayu'}))}));
+import { GET,POST } from '../../src/app/api/admin/orders/route';
+import { GET as detailGET, POST as detailPOST } from '../../src/app/api/admin/orders/[id]/route';
+const request=(origin='https://example.test')=>new Request('https://example.test/api/admin/orders',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({leadId:1,lines:[{name:'Tes',unitPrice:1,quantity:1}],key:'a'})});
+beforeEach(()=>{auth.principal=null;process.env.PLATFORM_ORIGIN='https://example.test';});
+it('blocks anonymous list, detail, creation and ledger actions',async()=>{expect((await GET(new Request('https://example.test/api/admin/orders'))).status).toBe(401);expect((await POST(request())).status).toBe(401);expect((await detailGET(new Request('https://example.test'),{params:Promise.resolve({id:'1'})})).status).toBe(401);expect((await detailPOST(request(),{params:Promise.resolve({id:'1'})})).status).toBe(401);});
+it('rejects cross-origin writes for admins and sets private no-store',async()=>{auth.principal={userId:'1',email:'a@test',roles:['admin']};expect((await POST(request('https://evil.test'))).status).toBe(403);const response=await GET(new Request('https://example.test/api/admin/orders'));expect(response.headers.get('cache-control')).toContain('no-store');expect((await POST(request())).status).toBe(201);});
+it('fails closed with missing or noncanonical configured origin',async()=>{auth.principal={userId:'1',email:'a@test',roles:['admin']};delete process.env.PLATFORM_ORIGIN;expect((await POST(request())).status).toBe(403);process.env.PLATFORM_ORIGIN='https://example.test/path';expect((await POST(request())).status).toBe(403);});

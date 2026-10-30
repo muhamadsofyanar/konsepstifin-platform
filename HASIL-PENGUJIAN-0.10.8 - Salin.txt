@@ -1,0 +1,22 @@
+KonsepSTIFIn 0.10.8 - status pemeriksaan sumber
+
+Perubahan utama:
+- Pusat Mitra membuka tab Dapatkan klien secara default.
+- Tautan referral dibuat per kebutuhan layanan dan diberi label kampanye UTM.
+- Redirect referral meneruskan UTM yang diizinkan tanpa menerima tujuan eksternal.
+- Halaman utama memprioritaskan layanan Tes STIFIn dan formulir bantuan memilih layanan.
+- Test helper kampanye dan redirect ditambahkan.
+
+Pemeriksaan yang dilakukan:
+- Pemeriksaan struktur source dan rute terkait.
+- Review allowlist tujuan redirect dan parameter kampanye.
+
+Belum terverifikasi:
+- npm test
+- npm run typecheck
+- npm run lint
+- npm run build
+- npm run test:smoke
+- Pengujian browser dan integrasi produksi
+
+Alasan: node_modules tidak tersedia pada lingkungan kerja ini. Jalankan semua pemeriksaan di lingkungan build yang memasang dependensi dari package-lock.json sebelum deployment produksi.

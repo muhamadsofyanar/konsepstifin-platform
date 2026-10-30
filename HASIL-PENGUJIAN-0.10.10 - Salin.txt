@@ -1,0 +1,10 @@
+KonsepSTIFIn 0.10.11
+
+Pemeriksaan statis yang dilakukan:
+- Node syntax check untuk scripts/notification-worker.mjs: lulus.
+- JSON package.json dan package-lock.json: diverifikasi.
+- Build Next.js, typecheck penuh, lint, dan test suite: belum terverifikasi karena npm ci timeout.
+- Uji koneksi Moota/StarSender live: belum dilakukan.
+- Migrasi 013 harus diterapkan sebelum fitur inbound-first digunakan.
+
+Jangan menganggap rilis production-ready sebelum build Coolify dan uji staging lulus.

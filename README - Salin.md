@@ -1,0 +1,52 @@
+# KonsepSTIFIn 0.10.23
+
+Rilis ini memperbaiki jadwal pesan personal di Marketing, penerimaan pesan grup melalui Webhook Premium, dan pengelolaan nama tampilan grup. Baca **UPGRADE-KONSEPSTIFIN-0.10.23.md** terlebih dahulu. Migrasi tambahan: **017-whatsapp-personal-schedule.sql**.
+
+Dokumentasi versi sebelumnya di bawah merupakan catatan historis. Pernyataan versi lama bahwa Webhook Premium tidak mencakup grup telah dikoreksi pada 0.10.23 berdasarkan dokumentasi StarSender.
+
+# KonsepSTIFIn 0.10.18
+
+Rilis peningkatan pengalaman pengunjung dengan fokus pada kebutuhan pengguna, informasi awal yang relevan, alur pemilihan layanan, konsistensi visual, dan animasi yang menghormati preferensi aksesibilitas.
+
+## Perubahan utama
+
+- Menambahkan pemilih jalur pengunjung interaktif: tes personal, keluarga, kelompok, mencari promotor, menjadi promotor, atau membaca edukasi.
+- Memindahkan pilihan layanan ke area awal halaman, sebelum akses akun yang sudah terdaftar, sehingga calon klien tidak terdistraksi oleh login terlalu dini.
+- Menyusun ulang halaman beranda: kebutuhan pengunjung, layanan, konteks masalah, proses, dokumentasi nyata, informasi persiapan, batasan layanan, edukasi, FAQ, akun, dan CTA akhir.
+- Menambahkan panduan informasi minimum yang perlu disiapkan, tanpa meminta alamat lengkap atau data sensitif di tahap awal.
+- Mengirim event Meta Pixel `VisitorPathSelected` dan `VisitorPathCTA` saat Pixel tersedia, tanpa data pribadi, agar minat pengunjung dapat dianalisis.
+- Menambahkan transisi, animasi masuk ringan, efek hover, dan feedback pilihan pada kartu. Animasi dinonaktifkan saat `prefers-reduced-motion` aktif.
+- Memperluas konsistensi animasi ke landing page tes, promotor, affiliate, dan galeri dokumentasi.
+- Tidak mengubah harga, promo, checkout, integrasi Moota, StarSender, Mailketing, autentikasi, atau struktur database.
+
+## Upgrade ke 0.10.18
+
+1. Backup repository dan database produksi.
+2. Masukkan seluruh isi arsip rilis ke repository `muhamadsofyanar/konsepstifin-platform`, branch `main`.
+3. Pastikan `package.json` dan `package-lock.json` menunjukkan `0.10.18`.
+4. Commit semua perubahan dalam satu commit.
+5. Deploy sekali melalui Coolify.
+6. Pastikan build berhasil, healthcheck `healthy`, dan `/api/health` menunjukkan `0.10.18`.
+7. Uji jalur personal, keluarga, kelompok, promotor, pencarian promotor, edukasi, login, dan halaman layanan di desktop serta HP.
+
+## Database dan environment
+
+- Tidak ada migrasi database baru.
+- Tidak ada environment variable baru.
+- Tidak ada perubahan pada sumber harga/promo atau kredensial integrasi.
+
+## Status pengujian
+
+- Pemeriksaan sintaks source dan struktur JSX: dijalankan setelah perubahan.
+- Validasi JSON package dan lockfile: wajib lulus.
+- Test interaksi pemilih jalur pengunjung: ditambahkan.
+- Build produksi Next.js dan test suite penuh: harus diverifikasi melalui build Coolify jika dependensi lokal tidak tersedia.
+
+
+## WhatsApp Command Center 0.10.21
+
+Rilis 0.10.21 menambahkan Inbox percakapan dua arah StarSender Premium, balasan admin/promotor dengan pembatasan akses lead, chatbot internal berbasis OpenAI dan pustaka STIFIn, template balasan cepat, ringkasan Inbox, serta drip campaign yang memeriksa persetujuan promosi, STOP/MULAI, dan jendela percakapan 24 jam. Lihat `UPGRADE-KONSEPSTIFIN-0.10.21.md` untuk prasyarat, migrasi 015, dan prosedur verifikasi.
+
+## WhatsApp Group Broadcast 0.10.22
+
+Rilis 0.10.22 menambahkan sinkronisasi grup StarSender, izin broadcast per grup, preset target grup yang dapat diedit dan diduplikasi, broadcast terjadwal dengan riwayat status, serta Group Inbox yang bergantung pada add-on Webhook Group StarSender. Jadwal drip campaign personal juga ditampilkan secara eksplisit dalam zona Asia/Jakarta. Lihat `UPGRADE-KONSEPSTIFIN-0.10.22.md` dan jalankan migrasi 016 setelah deployment source.
