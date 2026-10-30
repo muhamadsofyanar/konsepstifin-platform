@@ -141,3 +141,63 @@
 .wa-template-list>div>span:last-child{display:flex;gap:6px;flex-wrap:wrap}
 .wa-template-list button{border:1px solid #d6e4da;background:#fff;color:#315d47;border-radius:7px;padding:6px 8px;font-size:10px;cursor:pointer}
 @media(max-width:760px){.wa-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wa-template-list>div{align-items:flex-start;flex-direction:column}}
+
+/* WhatsApp Command Center: group allowlist, editable presets and scheduled broadcasts */
+.wa-groups-workspace{display:grid;gap:18px;min-width:0}
+.wa-group-intro,.wa-group-list-card,.wa-group-preset-card,.wa-group-broadcast-card,.wa-group-broadcast-history,.wa-group-inbox-card{min-width:0}
+.wa-group-status-row{display:flex;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid #e1ebe4;background:#f7faf7;border-radius:9px;margin:14px 0}
+.wa-group-status-row span{font-size:11px;color:#526d60}
+.wa-group-status-row i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:#21956b}
+.wa-group-webhook-note{padding:14px 16px;background:#fff8e9;border:1px solid #efdfbd;border-radius:10px;margin:14px 0;display:grid;gap:8px}
+.wa-group-webhook-note strong{font-size:13px;color:#755624}
+.wa-group-webhook-note p{margin:0!important;font-size:12px!important;color:#745f3d!important}
+.wa-group-webhook-note code{display:block;overflow-wrap:anywhere;white-space:normal;font-size:11px;background:#fff;padding:8px;border-radius:6px;color:#315641}
+.wa-group-webhook-note button{justify-self:start;border:1px solid #d8c69d;background:#fff;border-radius:7px;padding:8px 11px;color:#765d2d;font-size:11px;font-weight:700;cursor:pointer}
+.wa-group-webhook-note small{font-size:10px;color:#806b47;line-height:1.5}
+.wa-group-list-card .wa-search{width:100%;box-sizing:border-box;margin:0 0 12px;padding:11px 12px;border:1px solid #d4e2d8;border-radius:8px;font:inherit;font-size:12px}
+.wa-group-table-wrap{width:100%;overflow:auto;border:1px solid #e3ece5;border-radius:9px}
+.wa-group-table{width:100%;border-collapse:collapse;font-size:11px;min-width:720px}
+.wa-group-table th,.wa-group-table td{padding:12px 13px;text-align:left;vertical-align:middle;border-bottom:1px solid #e9efeb}
+.wa-group-table th{background:#f4f8f5;color:#687d70;font-size:10px;letter-spacing:.04em}
+.wa-group-table tbody tr:last-child td{border-bottom:0}
+.wa-group-table td strong,.wa-group-table td small{display:block}
+.wa-group-table td strong{font-size:11px;color:#234d38}
+.wa-group-table td small{font-size:9px;color:#7b8d82;margin-top:5px;white-space:normal}
+.wa-group-table td code{font-size:10px;overflow-wrap:anywhere;white-space:normal}
+.wa-allow-toggle{display:inline-flex!important;align-items:center;gap:7px;margin:0!important;font-size:10px!important;font-weight:650!important;white-space:nowrap}
+.wa-allow-toggle input{width:15px;height:15px;margin:0;accent-color:#087b56}
+.wa-group-two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.wa-group-picker{padding:12px;border:1px solid #e1ebe4;border-radius:10px;margin:8px 0 16px;max-height:260px;overflow:auto}
+.wa-group-picker .wa-section-heading{margin-bottom:8px}
+.wa-group-picker .wa-section-heading strong{font-size:12px;color:#315641}
+.wa-group-picker .wa-section-heading span{font-size:10px;color:#087453}
+.wa-group-picker .wa-pick-contact{margin:0!important}
+.wa-group-picker .wa-pick-contact input{accent-color:#087b56}
+.wa-group-picker .wa-pick-contact small{white-space:normal;overflow-wrap:anywhere}
+.wa-group-preset-card .wa-template-list>div>span:last-child{justify-content:flex-end}
+.wa-inline-note{padding:10px 12px;background:#eff7f1;border:1px solid #d9e9dd;border-radius:8px;font-size:11px!important;color:#456b54!important}
+.wa-schedule-mode{display:flex;gap:14px;flex-wrap:wrap;padding:12px;border:1px solid #e1ebe4;border-radius:9px;background:#f8fbf8;margin-bottom:14px}
+.wa-schedule-mode label{display:flex!important;align-items:center;gap:7px;margin:0!important;font-size:11px!important}
+.wa-schedule-mode input{width:15px;height:15px;margin:0;accent-color:#087b56}
+.wa-schedule-preview{display:grid;gap:5px;padding:14px 16px;background:#edf7f1;border:1px solid #d3e8d9;border-radius:9px;margin:0 0 16px}
+.wa-schedule-preview small{font-size:9px;letter-spacing:.08em;color:#6b8977}
+.wa-schedule-preview strong{font-size:15px;color:#075d43}
+.wa-toggle-label input{accent-color:#087b56}
+.wa-status-pill{display:inline-flex;padding:5px 8px;border-radius:20px;background:#eef3ef;color:#53695c;font-size:10px;font-weight:700;white-space:nowrap}
+.wa-status-pill.scheduled{background:#eaf2ff;color:#3b5f94}
+.wa-status-pill.processing{background:#fff4df;color:#89621f}
+.wa-status-pill.paused{background:#f2f0e8;color:#81692b}
+.wa-status-pill.completed{background:#e4f4eb;color:#087453}
+.wa-status-pill.failed,.wa-status-pill.cancelled{background:#fff0ed;color:#9c4936}
+.wa-table-actions{display:flex;gap:5px;flex-wrap:wrap}
+.wa-table-actions button{border:1px solid #d6e4da;background:#fff;color:#315d47;border-radius:6px;padding:6px 8px;font-size:10px;font-weight:700;cursor:pointer}
+.wa-table-actions button.danger{color:#a04a35;border-color:#ecd5cd}
+.wa-group-messages{display:grid;gap:9px}
+.wa-group-messages article{padding:13px 14px;border:1px solid #e4ece6;border-radius:9px;background:#fbfdfb}
+.wa-group-messages article>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wa-group-messages article strong{font-size:12px;color:#234d38}
+.wa-group-messages article small{font-size:10px;color:#7b8d82}
+.wa-group-messages article p{font-size:12px!important;color:#355c48!important;margin:9px 0!important;white-space:pre-wrap;overflow-wrap:anywhere}
+.wa-group-messages article>a{font-size:11px;color:#087453}
+@media(max-width:900px){.wa-group-two-col{grid-template-columns:1fr}}
+@media(max-width:760px){.wa-group-intro .wa-section-heading{align-items:flex-start;flex-direction:column}.wa-group-intro .wa-section-heading .portal-primary{width:100%}.wa-group-status-row{display:grid}.wa-group-webhook-note code{font-size:9px}.wa-group-table{min-width:650px}.wa-group-two-col{grid-template-columns:1fr}.wa-group-preset-card .wa-template-list>div>span:last-child{justify-content:flex-start}}

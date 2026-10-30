@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import GroupBroadcastPanel from './group-broadcast-panel';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 
 type Conversation = { id: string; phone_e164: string; display_name: string; status: string; bot_mode: string; last_message_text: string; last_message_at: string; unread_count: number; assigned_promoter_code: string; lead_id: number | null; lead_name: string | null; lead_city: string | null; lead_service: string | null; lead_status: string | null; consent_to_share?: boolean; whatsapp_marketing_consent?: boolean };
@@ -10,6 +11,9 @@ type Template = { id: number; title: string; category: string; body: string; act
 type Summary = { total: number; unread: number; waiting: number; open: number; bot_active: number };
 const time = (value: string) => value ? new Date(value).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 const dateTime = (value: string) => value ? new Date(value).toLocaleString('id-ID') : '—';
+const jakartaInput = (value: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(value).replace(' ', 'T');
+const jakartaDateTime = (value: string) => value ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(value)) + ' WIB' : '—';
+const toJakartaIso = (value: string) => new Date(`${value}:00+07:00`).toISOString();
 const deliveryLabel = (value: string) => ({ queued: 'Menunggu kirim', sent: 'Terkirim', delivered: 'Diterima', read: 'Dibaca', failed: 'Gagal', unknown: 'Perlu diperiksa' } as Record<string,string>)[value] || ''; 
 const quickReplies: Array<{ id: string; title: string; body: string; active: boolean }> = [
   { id: 'fallback-1', title: 'Sapaan', body: 'Assalamu’alaikum {{nama}}. Terima kasih telah menghubungi KonsepSTIFIn. Ada yang dapat kami bantu?', active: true },
@@ -18,8 +22,8 @@ const quickReplies: Array<{ id: string; title: string; body: string; active: boo
   { id: 'fallback-4', title: 'Tindak lanjut', body: 'Kami ingin memastikan apakah masih ada informasi yang perlu dibantu terkait permintaan Anda. Silakan sampaikan pertanyaan atau kebutuhan Anda.', active: true },
 ];
 
-export default function WhatsappWorkspace({ isAdmin }: { isAdmin: boolean }) {
-  const [tab, setTab] = useState<'inbox'|'automation'>('inbox');
+export default function WhatsappWorkspace({ isAdmin, groupWebhookUrl }: { isAdmin: boolean; groupWebhookUrl: string }) {
+  const [tab, setTab] = useState<'inbox'|'automation'|'groups'>('inbox');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [summary, setSummary] = useState<Summary>({ total: 0, unread: 0, waiting: 0, open: 0, bot_active: 0 });
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -49,6 +53,7 @@ export default function WhatsappWorkspace({ isAdmin }: { isAdmin: boolean }) {
   const [dripSearch, setDripSearch] = useState('');
   const [dripName, setDripName] = useState('');
   const [dripDescription, setDripDescription] = useState('');
+  const [dripStartAt, setDripStartAt] = useState(() => jakartaInput(new Date(Date.now() + 10 * 60 * 1000)));
   const [steps, setSteps] = useState<Step[]>([
     { delayMinutes: 0, message: 'Halo {{nama}}, terima kasih sudah menghubungi KonsepSTIFIn. Kami siap membantu kebutuhan Anda.' },
     { delayMinutes: 1440, message: 'Halo {{nama}}, apakah ada informasi tentang layanan STIFIn yang ingin Anda tanyakan? Tim kami siap membantu.' },
@@ -182,8 +187,8 @@ export default function WhatsappWorkspace({ isAdmin }: { isAdmin: boolean }) {
   async function createDrip(event: FormEvent) {
     event.preventDefault(); setBusy('drip'); setError(''); setNotice('');
     try {
-      const result = await post('/api/admin/whatsapp/drip', { name: dripName, description: dripDescription, leadIds: dripSelected, steps });
-      setNotice(result.message); setDripName(''); setDripDescription(''); setDripSelected([]); await loadAutomation();
+      const result = await post('/api/admin/whatsapp/drip', { name: dripName, description: dripDescription, leadIds: dripSelected, scheduledAt: toJakartaIso(dripStartAt), steps });
+      setNotice(result.message); setDripName(''); setDripDescription(''); setDripSelected([]); setDripStartAt(jakartaInput(new Date(Date.now() + 10 * 60 * 1000))); await loadAutomation();
     } catch (e) { setError(e instanceof Error ? e.message : 'Campaign gagal dibuat.'); }
     finally { setBusy(''); }
   }
@@ -193,7 +198,7 @@ export default function WhatsappWorkspace({ isAdmin }: { isAdmin: boolean }) {
   return <>
     {error && <p className="portal-error" role="alert">{error}</p>}
     {notice && <p className="portal-success" role="status">{notice}</p>}
-    {isAdmin && <div className="wa-tabs" role="tablist" aria-label="Modul WhatsApp"><button type="button" role="tab" aria-selected={tab==='inbox'} className={tab==='inbox'?'active':''} onClick={()=>setTab('inbox')}>Inbox</button><button type="button" role="tab" aria-selected={tab==='automation'} className={tab==='automation'?'active':''} onClick={()=>setTab('automation')}>Chatbot &amp; Automasi</button><Link href="/admin/marketing">Broadcast &amp; persetujuan ↗</Link></div>}
+    {isAdmin && <div className="wa-tabs" role="tablist" aria-label="Modul WhatsApp"><button type="button" role="tab" aria-selected={tab==='inbox'} className={tab==='inbox'?'active':''} onClick={()=>setTab('inbox')}>Inbox</button><button type="button" role="tab" aria-selected={tab==='automation'} className={tab==='automation'?'active':''} onClick={()=>setTab('automation')}>Chatbot &amp; Automasi</button><button type="button" role="tab" aria-selected={tab==='groups'} className={tab==='groups'?'active':''} onClick={()=>setTab('groups')}>Grup &amp; Broadcast</button><Link href="/admin/marketing">Broadcast &amp; persetujuan ↗</Link></div>}
 
     {tab === 'inbox' && <><div className="wa-summary-grid"><div><small>Total percakapan</small><strong>{summary.total}</strong></div><div><small>Belum dibaca</small><strong>{summary.unread}</strong></div><div><small>Menunggu petugas</small><strong>{summary.waiting}</strong></div><div><small>Bot menangani</small><strong>{summary.bot_active}</strong></div></div><section className="wa-inbox-shell">
       <aside className="wa-conversation-list">
@@ -238,15 +243,16 @@ export default function WhatsappWorkspace({ isAdmin }: { isAdmin: boolean }) {
       </section>
       <section className="portal-card wa-drip-card"><div className="wa-section-heading"><div><span className="portal-eyebrow">CUSTOMER NURTURE</span><h2>Buat drip campaign</h2></div><span className="wa-mode human">Persetujuan wajib</span></div>
         <p>Campaign hanya dapat diikuti kontak yang sudah memiliki persetujuan promosi WhatsApp. Pengiriman tetap melewati pemeriksaan opt-out dan jendela 24 jam.</p>
-        <form className="portal-form" onSubmit={createDrip}><label>Nama campaign<input required maxLength={120} value={dripName} onChange={e=>setDripName(e.target.value)} placeholder="Contoh: Edukasi calon peserta tes"/></label><label>Deskripsi internal<input maxLength={500} value={dripDescription} onChange={e=>setDripDescription(e.target.value)} placeholder="Tujuan campaign"/></label>
+        <form className="portal-form" onSubmit={createDrip}><label>Nama campaign<input required maxLength={120} value={dripName} onChange={e=>setDripName(e.target.value)} placeholder="Contoh: Edukasi calon peserta tes"/></label><label>Deskripsi internal<input maxLength={500} value={dripDescription} onChange={e=>setDripDescription(e.target.value)} placeholder="Tujuan campaign"/></label><label>Mulai pengiriman (Waktu Indonesia Barat)<input type="datetime-local" required value={dripStartAt} onChange={e=>setDripStartAt(e.target.value)}/><small className="wa-muted">Tahap pertama dimulai pada waktu ini. Jeda tiap tahap dihitung setelah tahap sebelumnya berhasil dikirim.</small></label>
           <div className="wa-contact-picker"><div className="wa-section-heading"><strong>Pilih penerima</strong><span>{dripSelected.length} dipilih</span></div><input className="wa-search" value={dripSearch} onChange={e=>setDripSearch(e.target.value)} placeholder="Cari kontak yang setuju promosi…"/>{filteredContacts.slice(0,100).map(contact=><label className="wa-pick-contact" key={contact.id}><input type="checkbox" checked={dripSelected.includes(contact.id)} onChange={e=>toggleDripContact(contact.id,e.target.checked)}/><span><strong>{contact.name}</strong><small>{contact.phone} · {contact.service || 'Layanan belum dipilih'}</small></span></label>)}{!filteredContacts.length&&<small className="wa-muted">Belum ada kontak dengan persetujuan promosi aktif.</small>}</div>
           <div className="wa-steps-heading"><strong>Urutan pesan</strong><button type="button" onClick={()=>setSteps(current=>current.length<10?[...current,{delayMinutes:1440,message:''}]:current)}>Tambah tahap</button></div>
           {steps.map((step,index)=><div className="wa-step-editor" key={index}><div className="wa-section-heading"><strong>Tahap {index+1}</strong>{steps.length>1&&<button type="button" onClick={()=>setSteps(current=>current.filter((_,i)=>i!==index))}>Hapus</button>}</div><label>Jeda sebelum tahap (menit)<input type="number" min={0} max={525600} value={step.delayMinutes} onChange={e=>setSteps(current=>current.map((item,i)=>i===index?{...item,delayMinutes:Number(e.target.value)}:item))}/></label><label>Isi pesan<textarea required maxLength={2000} rows={3} value={step.message} onChange={e=>setSteps(current=>current.map((item,i)=>i===index?{...item,message:e.target.value}:item))} placeholder="Gunakan {{nama}} untuk nama pelanggan."/></label></div>)}
-          <button className="portal-primary" type="submit" disabled={busy==='drip'||dripSelected.length===0}>{busy==='drip'?'Membuat campaign…':'Buat dan daftarkan penerima'}</button>
+          <button className="portal-primary" type="submit" disabled={busy==='drip'||dripSelected.length===0}>{busy==='drip'?'Menjadwalkan…':'Jadwalkan drip campaign'}</button>
         </form>
       </section>
       <section className="portal-card wa-template-manager"><div className="wa-section-heading"><div><span className="portal-eyebrow">QUICK REPLIES</span><h2>Template pesan</h2></div><span className="wa-mode bot">{templates.filter(t=>t.active).length} aktif</span></div><p>Template tersedia pada Inbox untuk admin dan promotor. Gunakan variabel {'{{nama}}'}, {'{{kota}}'}, dan {'{{referensi}}'} untuk personalisasi.</p><form className="portal-form" onSubmit={saveTemplate}><label>Judul template<input required maxLength={100} value={templateTitle} onChange={e=>setTemplateTitle(e.target.value)} placeholder="Contoh: Konfirmasi jadwal"/></label><label>Kategori<select value={templateCategory} onChange={e=>setTemplateCategory(e.target.value)}><option value="umum">Umum</option><option value="tes">Tes STIFIn</option><option value="promotor">Promotor</option><option value="pembayaran">Pembayaran</option><option value="follow_up">Follow-up</option></select></label><label>Isi pesan<textarea required rows={3} maxLength={4000} value={templateBody} onChange={e=>setTemplateBody(e.target.value)} placeholder="Tulis pesan template…"/></label><div className="wa-template-actions"><button className="portal-primary" disabled={busy==='template'}>{templateEditingId?'Simpan perubahan':'Tambah template'}</button>{templateEditingId&&<button type="button" onClick={()=>{setTemplateEditingId(null);setTemplateTitle('');setTemplateCategory('umum');setTemplateBody('');}}>Batal</button>}</div></form><div className="wa-template-list">{templates.map(template=><div key={template.id}><span><strong>{template.title}</strong><small>{template.category} · {template.active?'Aktif':'Nonaktif'}</small></span><span><button type="button" onClick={()=>{setTemplateEditingId(template.id);setTemplateTitle(template.title);setTemplateCategory(template.category);setTemplateBody(template.body);}}>Edit</button><button type="button" disabled={busy===`template-${template.id}`} onClick={()=>void toggleTemplate(template)}>{template.active?'Nonaktifkan':'Aktifkan'}</button></span></div>)}{!templates.length&&<small className="wa-muted">Belum ada template.</small>}</div></section>
-      <section className="portal-card wa-campaign-history"><div className="wa-section-heading"><h2>Riwayat drip campaign</h2><button type="button" onClick={()=>void loadAutomation().catch(e=>setError(e instanceof Error?e.message:'Gagal memuat campaign.'))}>Perbarui</button></div><div className="wa-campaign-table"><table><thead><tr><th>Campaign</th><th>Tahap</th><th>Peserta</th><th>Aktif</th><th>Jeda</th><th>Selesai</th><th>Status</th></tr></thead><tbody>{dripCampaigns.map(row=><tr key={String(row.id)}><td><strong>{String(row.name||'')}</strong><small>{dateTime(String(row.created_at||''))}</small></td><td>{Number(row.step_count||0)}</td><td>{Number(row.enrolled_count||0)}</td><td>{Number(row.active_count||0)}</td><td>{Number(row.paused_count||0)}</td><td>{Number(row.completed_count||0)}</td><td><button type="button" disabled={busy===`campaign-${String(row.id)}`} onClick={()=>void toggleDripCampaign(String(row.id),row.active!==true)}>{row.active===true?'Jeda':'Aktifkan'}</button></td></tr>)}{!dripCampaigns.length&&<tr><td colSpan={7}>Belum ada drip campaign.</td></tr>}</tbody></table></div></section>
+      <section className="portal-card wa-campaign-history"><div className="wa-section-heading"><h2>Riwayat drip campaign</h2><button type="button" onClick={()=>void loadAutomation().catch(e=>setError(e instanceof Error?e.message:'Gagal memuat campaign.'))}>Perbarui</button></div><div className="wa-campaign-table"><table><thead><tr><th>Campaign</th><th>Mulai pengiriman</th><th>Jadwal berikutnya</th><th>Tahap</th><th>Peserta</th><th>Aktif</th><th>Jeda</th><th>Selesai</th><th>Status</th></tr></thead><tbody>{dripCampaigns.map(row=><tr key={String(row.id)}><td><strong>{String(row.name||'')}</strong><small>Dibuat {jakartaDateTime(String(row.created_at||''))}</small></td><td>{jakartaDateTime(String(row.scheduled_at||''))}</td><td>{row.next_send_at?jakartaDateTime(String(row.next_send_at)):'Tidak ada antrean aktif'}</td><td>{Number(row.step_count||0)}</td><td>{Number(row.enrolled_count||0)}</td><td>{Number(row.active_count||0)}</td><td>{Number(row.paused_count||0)}</td><td>{Number(row.completed_count||0)}</td><td><button type="button" disabled={busy===`campaign-${String(row.id)}`} onClick={()=>void toggleDripCampaign(String(row.id),row.active!==true)}>{row.active===true?'Jeda':'Aktifkan'}</button></td></tr>)}{!dripCampaigns.length&&<tr><td colSpan={9}>Belum ada drip campaign.</td></tr>}</tbody></table></div></section>
     </div>}
+    {isAdmin && tab === 'groups' && <GroupBroadcastPanel groupWebhookUrl={groupWebhookUrl} />}
   </>;
 }

@@ -2,7 +2,7 @@
 import postgres from 'postgres';
 import { randomUUID } from 'node:crypto';
 import { getIntegrationConfig } from '../src/lib/integration-settings.ts';
-import { sendStarSenderText } from '../src/lib/starsender-client.ts';
+import { sendStarSenderText, sendStarSenderGroupText } from '../src/lib/starsender-client.ts';
 
 let stopping = false;
 let timer;
@@ -204,11 +204,62 @@ async function processDrip() {
   }
 }
 
+async function processGroupBroadcast() {
+  const [job] = await sql.begin(async tx => {
+    const [row] = await tx`
+      UPDATE whatsapp_group_broadcast_jobs SET status='processing',attempts=attempts+1,updated_at=now()
+      WHERE id=(
+        SELECT j.id FROM whatsapp_group_broadcast_jobs j
+        JOIN whatsapp_group_broadcasts b ON b.id=j.broadcast_id
+        WHERE j.status='pending' AND j.scheduled_at<=now() AND b.status IN ('scheduled','processing')
+        ORDER BY j.scheduled_at,j.id FOR UPDATE OF j SKIP LOCKED LIMIT 1
+      ) RETURNING id,broadcast_id,group_jid,attempts`;
+    if (row) await tx`UPDATE whatsapp_group_broadcasts SET status='processing',started_at=COALESCE(started_at,now()),updated_at=now() WHERE id=${row.broadcast_id}::uuid AND status='scheduled'`;
+    return row ? [row] : [];
+  });
+  if (!job) return;
+  try {
+    const [campaign] = await sql`SELECT message,status FROM whatsapp_group_broadcasts WHERE id=${job.broadcast_id}::uuid`;
+    if (!campaign || campaign.status === 'cancelled') {
+      await sql`UPDATE whatsapp_group_broadcast_jobs SET status='cancelled',last_error='Broadcast dibatalkan sebelum pengiriman.',updated_at=now() WHERE id=${job.id}`;
+    } else if (campaign.status === 'paused') {
+      await sql`UPDATE whatsapp_group_broadcast_jobs SET status='pending',scheduled_at=now()+interval '15 seconds',last_error='Broadcast sedang dijeda.',updated_at=now() WHERE id=${job.id}`;
+    } else {
+      const [group] = await sql`SELECT allow_broadcast FROM whatsapp_groups WHERE group_jid=${String(job.group_jid)}`;
+      if (!group?.allow_broadcast) {
+        await sql`UPDATE whatsapp_group_broadcast_jobs SET status='failed',last_error='Izin broadcast grup telah dinonaktifkan.',updated_at=now() WHERE id=${job.id}`;
+      } else {
+        const result = await sendStarSenderGroupText(String(job.group_jid), String(campaign.message));
+        if (result.success) {
+          await sql`UPDATE whatsapp_group_broadcast_jobs SET status='sent',provider_message_id=${result.messageId},last_error='',sent_at=now(),updated_at=now() WHERE id=${job.id}`;
+        } else {
+          const retry = (result.status === 429 || result.status >= 500) && Number(job.attempts) < 3;
+          await sql`UPDATE whatsapp_group_broadcast_jobs SET status=${retry ? 'pending' : 'failed'},
+            scheduled_at=CASE WHEN ${retry} THEN now()+interval '1 minute'*${Math.max(1,Number(job.attempts))} ELSE scheduled_at END,
+            last_error=${safeText(result.message,500)},updated_at=now() WHERE id=${job.id}`;
+        }
+      }
+    }
+  } catch (error) {
+    // A network timeout may occur after StarSender accepted the message. Never auto-send it again.
+    await sql`UPDATE whatsapp_group_broadcast_jobs SET status='unknown',last_error=${safeText(error instanceof Error ? error.message : 'Status pengiriman tidak diketahui',500)},updated_at=now() WHERE id=${job.id}`;
+  }
+  const [counts] = await sql`SELECT COUNT(*) FILTER (WHERE status IN ('pending','processing'))::int AS unfinished,
+      COUNT(*) FILTER (WHERE status='sent')::int AS sent,
+      COUNT(*) FILTER (WHERE status IN ('failed','unknown'))::int AS failed
+    FROM whatsapp_group_broadcast_jobs WHERE broadcast_id=${job.broadcast_id}::uuid`;
+  if (Number(counts?.unfinished || 0) === 0) {
+    const status = Number(counts?.sent || 0) === 0 && Number(counts?.failed || 0) > 0 ? 'failed' : 'completed';
+    await sql`UPDATE whatsapp_group_broadcasts SET status=${status},completed_at=now(),updated_at=now()
+      WHERE id=${job.broadcast_id}::uuid AND status='processing'`;
+  }
+}
+
 async function tick() {
   if (stopping) return;
   if (sql) {
     try {
-      const [schema] = await sql`SELECT to_regclass('public.whatsapp_bot_jobs') AS bot_jobs,to_regclass('public.whatsapp_drip_enrollments') AS drip_enrollments`;
+      const [schema] = await sql`SELECT to_regclass('public.whatsapp_bot_jobs') AS bot_jobs,to_regclass('public.whatsapp_drip_enrollments') AS drip_enrollments,to_regclass('public.whatsapp_group_broadcast_jobs') AS group_broadcast_jobs`;
       if (!schema?.bot_jobs || !schema?.drip_enrollments) {
         if (!schemaWarningLogged) console.warn('WhatsApp automation menunggu migrasi 015-whatsapp-command-center.sql.');
         schemaWarningLogged = true;
@@ -219,6 +270,10 @@ async function tick() {
         if (config.starsender.apiKey) {
           await processBotJob(config);
           await processDrip();
+          if (schema.group_broadcast_jobs) {
+            await sql`UPDATE whatsapp_group_broadcast_jobs SET status='unknown',last_error='Worker berhenti saat pengiriman. Periksa StarSender sebelum mengulang.',updated_at=now() WHERE status='processing' AND updated_at<now()-interval '5 minutes'`;
+            await processGroupBroadcast();
+          }
         }
       }
     } catch (error) { console.error('WhatsApp automation paused:', safeText(error instanceof Error ? error.message : 'Database error',200)); }

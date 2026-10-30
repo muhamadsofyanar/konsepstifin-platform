@@ -136,7 +136,7 @@ export async function saveWhatsappBotSettings(principal: Principal, input: { ena
   return row;
 }
 
-export async function createWhatsappDripCampaign(principal: Principal, input: { name: string; description?: string; leadIds: number[]; steps: Array<{ delayMinutes: number; message: string }> }) {
+export async function createWhatsappDripCampaign(principal: Principal, input: { name: string; description?: string; leadIds: number[]; scheduledAt?: string; steps: Array<{ delayMinutes: number; message: string }> }) {
   if (!principal.roles.includes('admin') && !principal.roles.includes('super_admin')) throw new Error('Hanya admin yang dapat membuat campaign.');
   const name = input.name.trim().slice(0, 120);
   const description = String(input.description ?? '').trim().slice(0, 500);
@@ -144,6 +144,8 @@ export async function createWhatsappDripCampaign(principal: Principal, input: { 
   const integration = await getIntegrationConfig();
   if (!integration.starsender.apiKey || !integration.starsender.webhookSecret) throw new Error('Konfigurasikan Device API key dan Webhook Premium StarSender sebelum membuat drip campaign.');
   if (!name) throw new Error('Nama campaign wajib diisi.');
+  const scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : new Date();
+  if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() - 60_000) throw new Error('Jadwal mulai campaign tidak valid atau berada di masa lalu.');
   if (!leadIds.length || leadIds.length > 100) throw new Error('Pilih 1 sampai 100 kontak.');
   if (!Array.isArray(input.steps) || input.steps.length < 1 || input.steps.length > 30) throw new Error('Campaign harus memiliki 1 sampai 30 tahapan pesan.');
   const steps = input.steps.map((step, index) => {
@@ -158,7 +160,7 @@ export async function createWhatsappDripCampaign(principal: Principal, input: { 
   const result = await sql.begin(async tx => {
     const contacts = await tx`SELECT id,name,phone FROM public_interest_leads WHERE id=ANY(${leadIds}::bigint[]) AND whatsapp_marketing_consent=TRUE ORDER BY id FOR UPDATE`;
     if (!contacts.length) throw new Error('Tidak ada kontak dengan persetujuan promosi aktif.');
-    const [campaign] = await tx`INSERT INTO whatsapp_drip_campaigns(id,name,description,active,created_by) VALUES (${campaignId}::uuid,${name},${description},TRUE,${principal.userId}::uuid) RETURNING id`;
+    const [campaign] = await tx`INSERT INTO whatsapp_drip_campaigns(id,name,description,active,scheduled_at,created_by) VALUES (${campaignId}::uuid,${name},${description},TRUE,${scheduledAt.toISOString()}::timestamptz,${principal.userId}::uuid) RETURNING id`;
     for (const [index, step] of steps.entries()) {
       await tx`INSERT INTO whatsapp_drip_steps(campaign_id,step_order,delay_minutes,message) VALUES (${campaignId}::uuid,${index + 1},${step.delayMinutes},${step.message})`;
     }
@@ -168,14 +170,14 @@ export async function createWhatsappDripCampaign(principal: Principal, input: { 
       try { normalizeWhatsAppNumber(String(contact.phone)); } catch { continue; }
       const [conversation] = await tx`SELECT id FROM whatsapp_conversations WHERE phone_e164=${normalizeWhatsAppNumber(String(contact.phone))}`;
       await tx`INSERT INTO whatsapp_drip_enrollments(campaign_id,lead_id,status,current_step,next_send_at)
-        VALUES (${campaignId}::uuid,${contact.id},'active',0,now()+interval '1 minute'*${firstDelay}) ON CONFLICT(campaign_id,lead_id) DO NOTHING`;
+        VALUES (${campaignId}::uuid,${contact.id},'active',0,GREATEST(${scheduledAt.toISOString()}::timestamptz,now())+interval '1 minute'*${firstDelay}) ON CONFLICT(campaign_id,lead_id) DO NOTHING`;
       if (conversation) await tx`UPDATE whatsapp_conversations SET lead_id=${contact.id},updated_at=now() WHERE id=${conversation.id}::uuid`;
       enrolled++;
     }
     if (!enrolled) throw new Error('Tidak ada nomor valid untuk diikutkan ke campaign.');
     await tx`INSERT INTO platform_admin_audit(actor_id,action,target,details)
       VALUES (${principal.userId}::uuid,'whatsapp.drip.created',${campaignId},${JSON.stringify({name,recipients:enrolled,steps:steps.length})}::jsonb)`;
-    return { id: String(campaign.id), enrolled, steps: steps.length };
+    return { id: String(campaign.id), enrolled, steps: steps.length, scheduledAt: scheduledAt.toISOString() };
   });
   return result;
 }
@@ -183,7 +185,8 @@ export async function createWhatsappDripCampaign(principal: Principal, input: { 
 export async function listWhatsappDripCampaigns() {
   const sql = getDatabaseClient();
   return await sql`
-    SELECT c.id,c.name,c.description,c.active,c.created_at,
+    SELECT c.id,c.name,c.description,c.active,c.scheduled_at,c.created_at,
+      MIN(e.next_send_at) FILTER (WHERE e.status='active') AS next_send_at,
       COUNT(DISTINCT s.id)::int AS step_count,
       COUNT(DISTINCT e.id)::int AS enrolled_count,
       COUNT(DISTINCT e.id) FILTER (WHERE e.status='active')::int AS active_count,

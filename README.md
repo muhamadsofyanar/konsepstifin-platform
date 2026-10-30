@@ -40,3 +40,7 @@ Rilis peningkatan pengalaman pengunjung dengan fokus pada kebutuhan pengguna, in
 ## WhatsApp Command Center 0.10.21
 
 Rilis 0.10.21 menambahkan Inbox percakapan dua arah StarSender Premium, balasan admin/promotor dengan pembatasan akses lead, chatbot internal berbasis OpenAI dan pustaka STIFIn, template balasan cepat, ringkasan Inbox, serta drip campaign yang memeriksa persetujuan promosi, STOP/MULAI, dan jendela percakapan 24 jam. Lihat `UPGRADE-KONSEPSTIFIN-0.10.21.md` untuk prasyarat, migrasi 015, dan prosedur verifikasi.
+
+## WhatsApp Group Broadcast 0.10.22
+
+Rilis 0.10.22 menambahkan sinkronisasi grup StarSender, izin broadcast per grup, preset target grup yang dapat diedit dan diduplikasi, broadcast terjadwal dengan riwayat status, serta Group Inbox yang bergantung pada add-on Webhook Group StarSender. Jadwal drip campaign personal juga ditampilkan secara eksplisit dalam zona Asia/Jakarta. Lihat `UPGRADE-KONSEPSTIFIN-0.10.22.md` dan jalankan migrasi 016 setelah deployment source.

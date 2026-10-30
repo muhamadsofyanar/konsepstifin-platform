@@ -1,0 +1,22 @@
+KONSEPSTIFIN 0.10.22 — WHATSAPP GROUP BROADCAST
+
+PERUBAHAN SOURCE
+- Grup StarSender disinkronkan menggunakan Device API GET /api/whatsapp/groups.
+- Pengiriman grup menggunakan Device API POST /api/send/grup.
+- Allowlist per grup, preset target yang dapat diedit/duplikasi, broadcast terjadwal, status antrean, jeda/lanjutkan/batalkan, dan Group Inbox disiapkan.
+- Jadwal drip campaign personal ditambahkan dan ditampilkan dengan zona Asia/Jakarta.
+- Webhook Group dibuat terpisah dari webhook personal.
+
+PENGUJIAN OTOMATIS
+- Uji API grup StarSender ditambahkan pada src/lib/starsender-client.groups.test.ts.
+- Pemeriksaan sintaks worker dilakukan dengan node --check.
+
+BELUM DAPAT DIVERIFIKASI DI LINGKUNGAN INI
+- npm ci belum selesai karena unduhan dependency melewati batas waktu; npm run typecheck, npm run build, dan Vitest belum dapat dijalankan.
+- Migrasi 016 belum diterapkan pada database produksi.
+- API StarSender grup belum diuji dengan Device API key produksi.
+- Webhook Group memerlukan add-on terpisah dan belum diverifikasi aktif pada akun.
+- Pengiriman broadcast live dan jadwal worker perlu diuji pada satu grup internal sebelum penggunaan operasional.
+
+STATUS
+Source 0.10.22 telah diperbarui, tetapi belum dinyatakan production-ready sampai build, migrasi 016, dan uji integrasi StarSender selesai.
